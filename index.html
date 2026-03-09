@@ -48,7 +48,7 @@
     
     #successScreen { display: none; padding: 0; overflow: hidden; }
     
-    /* 💡【修正】スライド完全再現用の会員証デザイン（位置・サイズ大幅調整版） */
+    /* 💡【修正】スライド完全再現用の会員証デザイン（決定版） */
     .membership-card-visual { 
       position: relative; 
       width: 100%; 
@@ -70,37 +70,37 @@
       position: absolute;
       z-index: 2;
     }
-    /* 年度：カヌーとロゴのすぐ下へ（重ならないよう大きく下げました） */
+    /* 年度：B&Gロゴのすぐ下（上から28%の位置） */
     .card-year {
-      top: 42%; 
-      left: 50%; transform: translateX(-50%);
+      top: 28%; 
+      left: 60%; transform: translateX(-50%);
       font-size: clamp(10px, 2.5vw, 14px);
       font-weight: bold; color: #555; letter-spacing: 1px;
-      width: 100%; text-align: center;
+      white-space: nowrap; 
     }
-    /* 顔写真：左下へ */
+    /* 顔写真：上から46%、左から5% */
     .card-photo {
-      bottom: 8%; left: 5%; width: 27%; aspect-ratio: 1 / 1;
-      background: #fff; border: 2px solid #ddd; box-sizing: border-box;
+      top: 46%; left: 5%; width: 28%; aspect-ratio: 1 / 1;
+      background: #fff; border: 1px solid #ddd; box-sizing: border-box;
     }
     .card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    /* QRコード：右下へ */
+    
+    /* QRコード：上から46%、右から5% */
     .card-qr {
-      bottom: 8%; right: 5%; width: 25%; aspect-ratio: 1 / 1;
+      top: 46%; right: 5%; width: 25%; aspect-ratio: 1 / 1;
       background: #fff; padding: 2%; border: 1px solid #ddd; box-sizing: border-box;
     }
     .card-qr img { width: 100%; height: 100%; display: block; }
-    /* 会員情報：写真とQRの間（下から上に積むように配置） */
+    
+    /* 会員情報：上から46%、中央 */
     .card-info {
-      bottom: 8%; left: 35%; width: 36%;
-      height: 40%; 
-      display: flex; flex-direction: column; justify-content: flex-end;
+      top: 46%; left: 36%; width: 34%;
     }
     .card-info .info-label {
       font-size: clamp(9px, 2vw, 11px); color: #666; font-weight: bold; margin-bottom: 2px;
     }
     .card-info .info-value {
-      font-size: clamp(13px, 3.5vw, 18px); color: #333; font-weight: bold; margin-bottom: 6px;
+      font-size: clamp(14px, 4vw, 20px); color: #555; font-weight: bold; margin-bottom: 8px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
   </style>
@@ -200,7 +200,7 @@
       <div class="membership-card-visual" id="cardVisual">
         <img src="https://bg-hirata-marineclub.github.io/members/card-bg.png" class="card-bg-image" alt="背景">
         
-        <div class="card-year"><span id="resultYear"></span> 年度 MEMBER CARD</div>
+        <div class="card-year"><span id="resultYear"></span> MEMBER CARD</div>
         <div class="card-photo"><img id="resultPhoto" src="" alt="顔写真"></div>
         
         <div class="card-info">
