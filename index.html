@@ -48,11 +48,11 @@
     
     #successScreen { display: none; padding: 0; overflow: hidden; }
     
-    /* 💡【修正】スライド完全再現用の会員証デザイン */
+    /* 💡【修正】スライド完全再現用の会員証デザイン（位置・サイズ調整版） */
     .membership-card-visual { 
       position: relative; 
       width: 100%; 
-      aspect-ratio: 16 / 9; /* スライドと同じ横長比率 */
+      aspect-ratio: 16 / 9; 
       background-color: #fff; 
       border-radius: 10px; 
       box-shadow: 0 10px 20px rgba(0,0,0,0.2); 
@@ -66,38 +66,39 @@
       object-fit: cover;
       z-index: 1;
     }
-    /* 全ての要素を背景画像の上に配置 (z-index: 2) */
     .card-year, .card-photo, .card-info, .card-qr {
       position: absolute;
       z-index: 2;
     }
-    /* 年度 */
+    /* 年度：カヌーとロゴの下へ移動 */
     .card-year {
-      top: 28%; left: 50%; transform: translateX(-50%);
-      font-size: clamp(12px, 3.5vw, 16px);
+      top: 38%; /* 位置を下に下げました */
+      left: 50%; transform: translateX(-50%);
+      font-size: clamp(11px, 3vw, 16px);
       font-weight: bold; color: #555; letter-spacing: 1px;
+      width: 100%; text-align: center;
     }
-    /* 顔写真 */
+    /* 顔写真：左下へ */
     .card-photo {
-      bottom: 8%; left: 5%; width: 25%; aspect-ratio: 1 / 1;
+      bottom: 8%; left: 6%; width: 28%; aspect-ratio: 1 / 1;
       background: #fff; border: 2px solid #ddd; box-sizing: border-box;
     }
     .card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    /* QRコード */
+    /* QRコード：右下へ */
     .card-qr {
-      bottom: 8%; right: 5%; width: 22%; aspect-ratio: 1 / 1;
+      bottom: 8%; right: 6%; width: 26%; aspect-ratio: 1 / 1;
       background: #fff; padding: 2%; border: 1px solid #ddd; box-sizing: border-box;
     }
     .card-qr img { width: 100%; height: 100%; display: block; }
-    /* 会員情報（中央） */
+    /* 会員情報：中央下へ */
     .card-info {
-      bottom: 15%; left: 34%; width: 38%;
+      bottom: 10%; left: 38%; width: 30%;
     }
     .card-info .info-label {
-      font-size: clamp(10px, 2.5vw, 12px); color: #666; font-weight: bold; margin-bottom: 2px;
+      font-size: clamp(9px, 2vw, 11px); color: #666; font-weight: bold; margin-bottom: 2px;
     }
     .card-info .info-value {
-      font-size: clamp(16px, 4.5vw, 24px); color: #333; font-weight: bold; margin-bottom: 10px;
+      font-size: clamp(14px, 3.5vw, 18px); color: #333; font-weight: bold; margin-bottom: 6px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
   </style>
@@ -261,36 +262,27 @@
       initializeLiff(); 
     });
 
-    // 💡【テスト用】どこで止まっているかを画面にポップアップ表示するバージョン
+    // 💡【修正】本番用LIFF初期化（ポップアップを出さずに裏側でIDを取得）
     function initializeLiff() {
-      // 1. まず関数が呼ばれたか確認
-      // alert("LIFF初期化を開始します"); 
-
       liff.init({
         liffId: "2009367368-y3QjH5y6" 
       }).then(() => {
-        // 2. LIFFの起動（初期化）に成功した場合
-        // alert("LIFFの初期化に成功しました！ログイン状態を確認します。");
-
         if (liff.isLoggedIn()) {
           liff.getProfile().then(profile => {
+            // 裏側でこっそり隠しフィールドにIDをセットするだけ（画面には何も出さない）
             document.getElementById('lineUid').value = profile.userId;
-            // 3. IDの取得に成功した場合（実際のIDを表示）
-            alert("✅ 成功！LINE IDを取得しました:\n" + profile.userId);
-          }).catch(err => {
-            // 4. プロフィール取得でエラーになった場合
-            alert("❌ プロファイル取得エラー:\n" + JSON.stringify(err));
-          });
+            console.log("LINE連携成功");
+            
+            // 💡【次回予告】いずれここに「自動ログイン処理」を追加します
+          }).catch(err => console.error("プロファイル取得エラー:", err));
         } else {
-          // 5. 未ログイン状態の場合
-          alert("⚠️ LIFFは起動しましたが、未ログイン状態です。");
+          // 未ログイン状態なら、LINEアプリ内であれば自動でログインさせる
           if (liff.isInClient()) {
             liff.login();
           }
         }
       }).catch((err) => {
-        // 6. そもそもLIFFの初期化に失敗した場合
-        alert("❌ LIFF初期化エラー:\n" + JSON.stringify(err) + "\n\n※GASのリダイレクトが原因の可能性があります。");
+        console.error("LIFF初期化エラー:", err);
       });
     }
 
