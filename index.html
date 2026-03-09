@@ -452,7 +452,10 @@
     function resetButton(btn) { btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755"; }
 
     function displayDigitalCard(result, isNewRegistration) {
-      document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('loginSection').style.display = 'none'; document.getElementById('registerSection').style.display = 'none'; document.getElementById('tabContainer').style.display = 'none';
+      document.getElementById('confirmScreen').style.display = 'none'; 
+      document.getElementById('loginSection').style.display = 'none'; 
+      document.getElementById('registerSection').style.display = 'none'; 
+      document.getElementById('tabContainer').style.display = 'none';
       document.getElementById('successScreen').style.display = 'block'; 
       
       if (isNewRegistration) {
@@ -465,7 +468,8 @@
       }
       
       document.getElementById('resultYear').innerText = result.schoolYear; 
-      document.getElementById('resultClubName').innerText = result.clubName; 
+      
+      // 💡【削除】クラブ名をテキストで挿入する処理を消しました（背景画像にあるため不要）
       
       if (result.imageUrl) { 
         document.getElementById('resultPhoto').src = result.imageUrl; 
@@ -484,17 +488,14 @@
       });
       document.getElementById('resultQr').src = qr.toDataURL(); 
       
+      // 💡【修正】常に新しいCSSデザイン（cardVisual）を表示するように変更
+      document.getElementById('cardVisual').style.display = 'block'; 
+      document.getElementById('finalCardImage').style.display = 'none'; // スライド画像は一旦隠す
+      
       if (result.cardImageBase64) {
-        document.getElementById('cardVisual').style.display = 'none'; 
         currentCardBase64 = result.cardImageBase64; 
-        
-        var blobUrl = createBlobUrl(result.cardImageBase64);
-        document.getElementById('finalCardImage').src = blobUrl;
-        document.getElementById('finalCardImage').style.display = 'block'; 
-        
         document.getElementById('saveInstructionArea').style.display = 'block';
       } else {
-        document.getElementById('cardVisual').style.display = 'block';
         document.getElementById('saveInstructionArea').style.display = 'block';
         document.getElementById('saveInstructionArea').innerHTML = '<p style="color:#e74c3c; font-weight:bold;">お手数ですが、この画面をスクリーンショットして保存してください。</p>';
       }
