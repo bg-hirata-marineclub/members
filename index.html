@@ -48,41 +48,70 @@
     
     #successScreen { display: none; padding: 0; overflow: hidden; }
     
-    /* 💡【修正】スライド完全再現用の会員証デザイン（スマホ幅対応・決定版） */
+    /* 💡【修正】スライド完全再現用の会員証デザイン（決定版） */
     .membership-card-visual { 
-      position: relative; width: 100%; aspect-ratio: 16 / 9; 
-      background-color: #fff; border-radius: 10px; 
+      position: relative; 
+      width: 100%; 
+      aspect-ratio: 16 / 9; 
+      background-color: #fff; 
+      border-radius: 10px; 
       box-shadow: 0 10px 20px rgba(0,0,0,0.2); 
-      margin-top: 10px; overflow: hidden; font-family: sans-serif;
+      margin-top: 10px; 
+      overflow: hidden;
+      font-family: sans-serif;
     }
     .card-bg-image {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      object-fit: cover;
+      z-index: 1;
     }
+    .card-year, .card-photo, .card-info, .card-qr {
+      position: absolute;
+      z-index: 2;
+    }
+    /* 年度：上から30%、右揃え。B&Gロゴの右下に完璧に配置 */
     .card-year {
-      position: absolute; top: 30%; left: 0; width: 100%; text-align: center;
-      font-size: clamp(12px, 3.5vw, 16px); font-weight: bold; color: #555; z-index: 2;
+      top: 30%; 
+      right: 5%; /* 右端基準に変更。QRコードの右端と揃える */
+      width: 50%; /* ロゴの右側エリアを占めるように */
+      text-align: right; /* 右揃え */
+      font-size: clamp(12px, 3.5vw, 16px);
+      font-weight: bold; color: #555;
+      white-space: nowrap; 
     }
+    /* 顔写真：上から46%、左から5% */
     .card-photo {
-      position: absolute; bottom: 6%; left: 5%; width: 28%; aspect-ratio: 1/1;
-      border: 1px solid #ddd; z-index: 2; background: #fff;
+      top: 46%; left: 5%; width: 28%; aspect-ratio: 1 / 1;
+      background: #fff; border: 1px solid #ddd; box-sizing: border-box;
     }
     .card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
     
+    /* QRコード：上から46%、右から5% */
     .card-qr {
-      position: absolute; bottom: 6%; right: 5%; width: 25%; aspect-ratio: 1/1;
-      background: #fff; padding: 1.5%; border: 1px solid #ddd; box-sizing: border-box; z-index: 2;
+      top: 46%; right: 5%; width: 25%; aspect-ratio: 1 / 1;
+      background: #fff; padding: 1.5%; border: 1px solid #ddd; box-sizing: border-box;
     }
     .card-qr img { width: 100%; height: 100%; display: block; }
     
+    /* 会員情報：上から46%、中央 */
     .card-info {
-      position: absolute; bottom: 10%; left: 35%; width: 33%; z-index: 2;
+      top: 46%; left: 36%; width: 34%;
     }
     .card-info .info-label {
       font-size: clamp(9px, 2.2vw, 11px); color: #666; font-weight: bold; margin-bottom: 2px;
     }
     .card-info .info-value {
-      font-size: clamp(14px, 4.5vw, 20px); color: #444; font-weight: bold; margin-bottom: 6px;
+      font-size: clamp(14px, 4.5vw, 20px); color: #444; font-weight: bold; margin-bottom: 8px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    
+    /* 💡【追加】手動トリミング用の操作キャンバス */
+    #trimCanvasContainer canvas {
+      cursor: move; 
+      border-radius: 8px; 
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2); 
+      display: block; 
     }
   </style>
 </head>
@@ -99,16 +128,23 @@
       <form id="myForm">
         <div class="form-group">
           <label>顔写真</label>
-          <span class="help-text">会員証に使用します。下のボタンをタップして自撮りしてください。</span>
-          <label for="photoInput" class="photo-upload-btn">📸 顔写真を撮影する</label>
+          <span class="help-text">会員証に使用します。自撮りするか、写真を選んでください。</span>
+          <label for="photoInput" class="photo-upload-btn">📸 写真を撮影/選択</label>
           <input type="file" id="photoInput" accept="image/*" capture="user" style="display: none;">
           
           <div id="previewContainer" style="display: none; margin-top: 15px; text-align: center;">
-            <p style="font-size: 13px; color: #d32f2f; font-weight: bold; margin-bottom: 5px;">※以下のように正方形でトリミングされました</p>
-            <div style="display: inline-block; padding: 5px; border: 3px dashed #0056b3; background: #fff; border-radius: 8px;">
-              <img id="photoPreview" alt="プレビュー" style="width: 120px; height: 120px; object-fit: cover; display: block; border-radius: 4px;">
+            <p style="font-size: 13px; color: #d32f2f; font-weight: bold; margin-bottom: 5px;">👇 枠内をドラッグして位置を調整してください</p>
+            <div id="trimCanvasContainer" style="display: inline-block; position: relative; padding: 5px; border: 3px dashed #0056b3; background: #fff; border-radius: 8px; touch-action: none; overflow: hidden;">
+              <canvas id="trimCanvas" width="300" height="300" style="display: block;"></canvas>
             </div>
+            <button type="button" id="cropBtn" style="background-color: #0056b3; margin-top: 10px; padding: 10px; font-size: 14px; width: 50%; display: inline-block;">この位置で決定</button>
           </div>
+          
+          <div id="finalPreviewContainer" style="display: none; text-align: center; margin-top: 15px;">
+            <p style="font-size: 13px; color: #05b34c; font-weight: bold; margin-bottom: 5px;">✅ トリミングが完了しました</p>
+            <img id="photoPreview" alt="プレビュー" style="width: 120px; height: 120px; object-fit: cover; border: 3px dashed #0056b3; border-radius: 4px;">
+          </div>
+
           <input type="hidden" id="imageBase64" name="profileImageBase64">
         </div>
         <div class="form-group flex-row">
@@ -285,32 +321,109 @@
       }
     });
 
-    document.getElementById('photoInput').addEventListener('change', function(e) {
+    // 💡【追加】手動トリミング機能の実装
+    const pInput = document.getElementById('photoInput');
+    const trimCanvas = document.getElementById('trimCanvas');
+    const tCtx = trimCanvas.getContext('2d');
+    const cropBtn = document.getElementById('cropBtn');
+    const hImageBase64 = document.getElementById('imageBase64');
+    const pPreview = document.getElementById('photoPreview');
+    const pCont = document.getElementById('previewContainer');
+    const fPCont = document.getElementById('finalPreviewContainer');
+
+    let originalImg = new Image();
+    let imgW, imgH;
+    let imgScale = 1;
+    let offX = 0, offY = 0;
+    let isDragging = false;
+    let startX, startY;
+
+    pInput.addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
-      document.querySelector('.photo-upload-btn').innerText = '✅ 写真をセットしました';
-      document.querySelector('.photo-upload-btn').style.backgroundColor = '#05b34c';
-      
+      document.querySelector('.photo-upload-btn').innerText = '⏳ 写真を読み込み中...';
+
       const reader = new FileReader();
       reader.onload = function(event) {
-        const img = new Image();
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const size = 500; canvas.width = size; canvas.height = size;
-          let sourceX = 0, sourceY = 0, sourceSize = 0;
-          if (img.width > img.height) { sourceSize = img.height; sourceX = (img.width - sourceSize) / 2; } 
-          else { sourceSize = img.width; sourceY = (img.height - sourceSize) / 2; }
-          ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
-          
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          document.getElementById('imageBase64').value = dataUrl;
-          document.getElementById('photoPreview').src = dataUrl;
-          document.getElementById('previewContainer').style.display = 'block'; // 枠を表示
+        originalImg.onload = function() {
+          imgW = originalImg.width;
+          imgH = originalImg.height;
+          // 初期スケール：短辺が300pxになるように調整
+          imgScale = Math.max(300 / imgW, 300 / imgH);
+          // 初期位置：中央
+          offX = (300 - imgW * imgScale) / 2;
+          offY = (300 - imgH * imgScale) / 2;
+
+          drawCropCanvas();
+          pCont.style.display = 'block';
+          fPCont.style.display = 'none'; // 最終プレビューは隠す
+          hImageBase64.value = ''; // データは一旦クリア
+          document.querySelector('.photo-upload-btn').innerText = '📸 写真を再選択';
+          document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
         }
-        img.src = event.target.result;
+        originalImg.src = event.target.result;
       }
       reader.readAsDataURL(file);
+    });
+
+    // キャンバスを描画する関数
+    function drawCropCanvas() {
+      tCtx.clearRect(0, 0, trimCanvas.width, trimCanvas.height);
+      // 画像を描画
+      tCtx.drawImage(originalImg, offX, offY, imgW * imgScale, imgH * imgScale);
+      // 今回は300x300全体がトリミング範囲とする
+    }
+
+    // イベント処理（ドラッグ）
+    function startMove(e) {
+      isDragging = true;
+      if (e.touches) e = e.touches[0]; // タッチ対応
+      startX = e.clientX - offX;
+      startY = e.clientY - offY;
+    }
+    function moveImg(e) {
+      if (!isDragging) return;
+      e.preventDefault();
+      if (e.touches) e = e.touches[0]; // タッチ対応
+      offX = e.clientX - startX;
+      offY = e.clientY - startY;
+      drawCropCanvas();
+    }
+    function stopMove() {
+      isDragging = false;
+    }
+
+    // マウスイベント
+    trimCanvas.addEventListener('mousedown', startMove);
+    window.addEventListener('mousemove', moveImg);
+    window.addEventListener('mouseup', stopMove);
+    // タッチイベント
+    trimCanvas.addEventListener('touchstart', startMove);
+    window.addEventListener('touchmove', moveImg);
+    window.addEventListener('touchend', stopMove);
+
+    // トリミング決定ボタン
+    cropBtn.addEventListener('click', function() {
+      const finalCanvas = document.createElement('canvas');
+      const finalCtx = finalCanvas.getContext('2d');
+      finalCanvas.width = 500; finalCanvas.height = 500; // 最終データサイズ
+      
+      // 元の画像から切り抜く位置（sx, sy）とサイズ（sSize）を計算
+      const sx = -offX / imgScale;
+      const sy = -offY / imgScale;
+      const sSize = 300 / imgScale; 
+      
+      // 最終的な高解像度データを作成
+      finalCtx.drawImage(originalImg, sx, sy, sSize, sSize, 0, 0, 500, 500);
+      
+      const dUrl = finalCanvas.toDataURL('image/jpeg', 0.8);
+      hImageBase64.value = dUrl;
+      pPreview.src = dUrl;
+      
+      pCont.style.display = 'none'; // 操作パネルを隠す
+      fPCont.style.display = 'block'; // 最終プレビューを表示
+      document.querySelector('.photo-upload-btn').innerText = '✅ 写真をセットしました';
+      document.querySelector('.photo-upload-btn').style.backgroundColor = '#05b34c';
     });
 
     function addFamilyMember() {
