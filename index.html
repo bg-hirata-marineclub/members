@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>B&G 平田海洋クラブ - 会員登録</title>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; padding: 10px; margin: 0; color: #333; font-size: 16px; }
+    .container { max-width: 100%; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); box-sizing: border-box; }
+    h2 { text-align: center; font-size: 22px; margin-bottom: 25px; color: #0056b3; }
+    .form-group { margin-bottom: 25px; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 16px; }
+    .help-text { font-size: 13px; color: #666; margin-bottom: 10px; display: block; line-height: 1.4; }
+    input[type="text"], input[type="tel"], input[type="email"], input[type="date"], select { width: 100%; padding: 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
+    input:focus { outline: none; border-color: #0056b3; background-color: #fff; }
+    .flex-row { display: flex; gap: 15px; } .flex-row > div { flex: 1; }
+    
+    button { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    button:hover { background-color: #05b34c; }
+    button.btn-secondary { background-color: #e4e6eb; color: #4b4f56; margin-bottom: 20px; font-size: 16px; padding: 15px; }
+    button.btn-back { background-color: #95a5a6; margin-top: 10px; }
+    
+    .family-member-card { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px dashed #bbb; margin-bottom: 20px; position: relative; }
+    .remove-btn { position: absolute; top: -10px; right: -10px; background: #ff4d4f; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 16px; padding: 0; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .photo-upload-btn { display: block; width: 100%; padding: 18px; background-color: #0056b3; color: white; text-align: center; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; box-sizing: border-box; margin-bottom: 10px; }
+    
+    /* ??【修正済】プレビュー画像の角丸をなくし正方形に */
+    #photoPreview { width: 120px; height: 120px; border-radius: 0; margin: 15px auto 0; display: none; border: 3px solid #ddd; object-fit: cover; }
+    
+    .tab-container { display: flex; margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #0056b3; }
+    .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; font-size: 14px; background-color: #fff; color: #0056b3; cursor: pointer; border: none; outline: none; margin: 0; box-shadow: none;}
+    .tab-btn.active { background-color: #0056b3; color: white; }
+    .hidden-section { display: none; }
+    
+    #confirmScreen { display: none; }
+    .conf-list { margin-bottom: 20px; text-align: left; }
+    .conf-item { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+    .conf-label { font-size: 13px; color: #666; font-weight: bold; margin-bottom: 4px; }
+    .conf-value { font-size: 16px; color: #333; word-break: break-all; }
+    #conf-photo { width: 100px; height: 100px; border-radius: 0; display: block; margin: 0 auto 15px; border: 3px solid #ddd; object-fit: cover;}
+    
+    #successScreen { display: none; padding: 0; overflow: hidden; }
+    
+    /* 会員証のデザイン（フェールセーフ用） */
+    .membership-card-visual { background-color: #0056b3; background-image: linear-gradient(135deg, #02316e 0%, #0056b3 50%, #1e90ff 100%); color: white; padding: 25px; border-radius: 15px; box-shadow: 0 15px 30px rgba(0,0,0,0.3); position: relative; margin-top: 10px; font-family: 'Helvetica Neue', Arial, sans-serif; }
+    .card-header { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 15px;}
+    .year-badge-container { margin-bottom: 10px; }
+    .year-badge { background-color: #e31e2b; color: white; padding: 6px 12px; border-radius: 50px; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+    .club-name { font-size: 20px; font-weight: bold; line-height: 1.3; }
+    
+    .card-body { display: flex; align-items: center; margin-bottom: 10px; }
+    .card-photo-wrapper { margin-right: 15px; flex-shrink: 0; width: 90px; height: 90px; border-radius: 50%; border: 4px solid white; box-shadow: 0 5px 10px rgba(0,0,0,0.2); overflow: hidden; background-color: #fff; }
+    .card-photo-wrapper img.profile { width: 100%; height: 100%; object-fit: cover; display: block; }
+    
+    .card-info { flex-grow: 1; padding-right: 80px; overflow: hidden; }
+    .info-label { font-size: 11px; color: rgba(255,255,255,0.7); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    .info-value { font-size: 16px; font-weight: bold; margin-bottom: 8px; word-break: break-all; }
+    .name-value { font-size: 20px; margin-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .card-footer { position: absolute; bottom: 15px; right: 15px; text-align: right; }
+    .qr-code-wrapper { display: inline-block; padding: 5px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+    .qr-code-wrapper img.qr-code { width: 70px; height: 70px; display: block; }
+    
+    .id-input-wrapper { display: flex; align-items: center; background-color: #fafafa; border: 1px solid #ccc; border-radius: 8px; padding: 0 15px; }
+    .id-input-wrapper span { font-weight: bold; font-size: 18px; color: #333; margin-right: 5px; }
+    .id-input-wrapper input { border: none; background: transparent; padding: 15px 0; width: 100%; font-size: 18px; outline: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>B&G 平田海洋クラブ<br>会員システム</h2>
+    
+    <div class="tab-container" id="tabContainer">
+      <button class="tab-btn active" onclick="switchTab('register')">?? 新規入会</button>
+      <button class="tab-btn" onclick="switchTab('login')">?? 会員証の再表示</button>
+    </div>
+
+    <div id="registerSection">
+      <form id="myForm">
+        <div class="form-group">
+          <label>顔写真</label>
+          <span class="help-text">会員証に使用します。下のボタンをタップして自撮りしてください。</span>
+          <label for="photoInput" class="photo-upload-btn">?? 顔写真を撮影する</label>
+          <input type="file" id="photoInput" accept="image/*" capture="user" style="display: none;">
+          
+          <div id="previewContainer" style="text-align: center; display: none; margin-top: 15px; padding: 10px; background: #e9ecef;">
+            <p style="font-size: 13px; color: #d32f2f; font-weight: bold; margin: 0 0 10px 0;">※顔を中心に、以下の正方形で自動トリミングされました</p>
+            <div style="width: 150px; height: 150px; margin: 0 auto; border: 3px dashed #0056b3; position: relative;">
+              <img id="photoPreview" alt="プレビュー" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+            </div>
+          </div>
+          <input type="hidden" id="imageBase64" name="profileImageBase64">
+        </div>
+        <div class="form-group flex-row">
+          <div><label>姓</label><input type="text" name="姓" id="rep-sei" placeholder="例: 平田"></div>
+          <div><label>名</label><input type="text" name="名" id="rep-mei" placeholder="例: 太郎"></div>
+        </div>
+        <div class="form-group flex-row">
+          <div><label>せい</label><input type="text" name="せい" id="rep-kana-sei" pattern="^[ぁ-んー\s]+$" placeholder="例: ひらた"></div>
+          <div><label>めい</label><input type="text" name="めい" id="rep-kana-mei" pattern="^[ぁ-んー\s]+$" placeholder="例: たろう"></div>
+        </div>
+        <div class="form-group"><label>生年月日</label><input type="date" name="生年月日" id="birthDate"></div>
+        <div class="form-group"><label>メールアドレス</label><input type="email" name="メールアドレス" id="email" placeholder="例: sample@example.com"></div>
+        <div class="form-group"><label>電話番号</label><input type="tel" name="電話番号" id="phone" pattern="[\d\-]{10,14}" placeholder="例: 090-1234-5678"></div>
+        <div class="form-group flex-row">
+          <div style="flex: 0 0 100px;"><label>郵便番号</label><input type="tel" name="郵便番号" id="postalCode" maxlength="7" pattern="\d*" placeholder="9980000"></div>
+          <div><label>住所</label><input type="text" name="住所" id="address" placeholder="例: 酒田市〇〇町1-2-3"></div>
+        </div>
+        <div class="form-group">
+          <label>会員種別</label>
+          <select name="会員種別" id="memberType">
+            <option value="">選択してください</option>
+            <option value="個人会員（一般）">個人会員（一般）</option>
+            <option value="個人会員（こども）">個人会員（こども）※小4?中3</option>
+            <option value="家族会員">家族会員（※代表者として登録）</option>
+          </select>
+        </div>
+        <div id="familySection"></div>
+        <button type="button" class="btn-secondary" onclick="addFamilyMember()">＋ 家族（同行者）を追加する</button>
+        <input type="hidden" name="LINE_UID" id="lineUid" value="">
+        <button type="button" onclick="showConfirm()">確認画面へ進む</button>
+      </form>
+    </div>
+
+    <div id="loginSection" class="hidden-section">
+      <p class="help-text" style="text-align: center; margin-bottom:20px;">登録済みの「会員ID」と「生年月日」を入力してください。</p>
+      <div class="form-group">
+        <label>会員ID</label>
+        <div class="id-input-wrapper">
+          <span>M</span>
+          <input type="tel" id="loginIdNum" maxlength="4" pattern="\d*" placeholder="例: 0001">
+        </div>
+        <span class="help-text" style="margin-top: 5px;">※数字のみ入力してください（例: 14 と入力しても自動で 0014 として検索されます）</span>
+      </div>
+      <div class="form-group"><label>生年月日</label><input type="date" id="loginBirthDate"></div>
+      <button type="button" id="loginBtn" onclick="executeLogin()">会員証を表示する</button>
+    </div>
+
+    <div id="confirmScreen" class="hidden-section">
+      <h2>入力内容の確認</h2>
+      <p class="help-text" style="text-align: center;">以下の内容で登録します。よろしいですか？</p>
+      <img id="conf-photo" src="" alt="顔写真">
+      <div class="conf-list">
+        <div class="conf-item"><div class="conf-label">氏名</div><div class="conf-value" id="conf-name"></div></div>
+        <div class="conf-item"><div class="conf-label">ふりがな</div><div class="conf-value" id="conf-kana"></div></div>
+        <div class="conf-item"><div class="conf-label">生年月日</div><div class="conf-value" id="conf-birth"></div></div>
+        <div class="conf-item"><div class="conf-label">メールアドレス</div><div class="conf-value" id="conf-email"></div></div>
+        <div class="conf-item"><div class="conf-label">電話番号</div><div class="conf-value" id="conf-phone"></div></div>
+        <div class="conf-item"><div class="conf-label">住所</div><div class="conf-value" id="conf-address"></div></div>
+        <div class="conf-item"><div class="conf-label">会員種別</div><div class="conf-value" id="conf-type"></div></div>
+        <div id="conf-family"></div>
+      </div>
+      <button type="button" id="submitBtn" onclick="executeSubmit()">この内容で送信する</button>
+      <button type="button" class="btn-back" onclick="hideConfirm()">修正する</button>
+    </div>
+
+    <div id="successScreen" class="hidden-section">
+      <h2 id="successTitle">登録完了</h2>
+      <p id="successMessage" style="text-align: center; font-size: 15px; margin-bottom: 20px;">ご入会ありがとうございます。<br>以下の「デジタル会員証」が発行されました。</p>
+      
+      <div class="membership-card-visual" id="cardVisual">
+        <div class="card-header">
+          <div class="year-badge-container"><span class="year-badge"><span id="resultYear"></span>年度 MEMBERS</span></div>
+          <div class="club-name" id="resultClubName"></div>
+        </div>
+        <div class="card-body">
+          <div class="card-photo-wrapper"><img id="resultPhoto" class="profile" src="" alt="顔写真"></div>
+          <div class="card-info">
+            <div class="info-label">会員ID</div><div class="info-value" id="resultId"></div>
+            <div class="info-label">お名前</div><div class="info-value name-value" id="resultName"></div>
+          </div>
+        </div>
+        <div class="card-footer"><div class="qr-code-wrapper"><img id="resultQr" class="qr-code" src="" alt="QRコード"></div></div>
+      </div>
+      
+      <div style="text-align: center; margin-top: 10px;">
+        <img id="finalCardImage" src="" alt="デジタル会員証" style="width: 100%; border-radius: 15px; box-shadow: 0 15px 30px rgba(0,0,0,0.3); display: none;">
+      </div>
+      
+      <div id="saveInstructionArea" style="display:none; text-align:center; margin-top: 20px;">
+        <p style="color:#333; font-weight:bold; font-size:14px; margin-bottom: 10px;">?? 以下のボタンから写真アプリに保存してください</p>
+        <button type="button" onclick="shareToPhotos()" style="background-color: #0056b3; color: white; border: none; padding: 15px; border-radius: 8px; width: 100%; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+          ?? スマホに保存する（共有メニュー）
+        </button>
+      </div>
+      
+      <button type="button" id="backToTopBtn" class="btn-back" onclick="location.reload()" style="display:none;">最初の画面に戻る</button>
+    </div>
+  </div>
+
+  <script>
+    let familyCount = 0;
+    let currentCardBase64 = ""; // ??画像データを一時保存
+    
+    function switchTab(tabName) {
+      document.getElementById('registerSection').style.display = (tabName === 'register') ? 'block' : 'none';
+      document.getElementById('loginSection').style.display = (tabName === 'login') ? 'block' : 'none';
+      const tabs = document.getElementsByClassName('tab-btn');
+      tabs[0].className = (tabName === 'register') ? 'tab-btn active' : 'tab-btn';
+      tabs[1].className = (tabName === 'login') ? 'tab-btn active' : 'tab-btn';
+    }
+
+    function bindFurigana(nameId, kanaId) {
+      const nameEl = document.getElementById(nameId);
+      const kanaEl = document.getElementById(kanaId);
+      if (!nameEl || !kanaEl) return;
+      let isComposing = false; let committedKana = '';
+      nameEl.addEventListener('compositionstart', () => { isComposing = true; committedKana = kanaEl.value; });
+      nameEl.addEventListener('compositionupdate', (e) => {
+        const text = e.data;
+        if (/^[ぁ-んーa-zA-Z]*$/.test(text)) {
+          const hiragana = text.match(/[ぁ-んー]/g);
+          kanaEl.value = committedKana + (hiragana ? hiragana.join('') : '');
+        }
+      });
+      nameEl.addEventListener('compositionend', () => { isComposing = false; });
+      nameEl.addEventListener('input', () => { if (!isComposing && nameEl.value === '') { kanaEl.value = ''; committedKana = ''; } });
+    }
+    document.addEventListener("DOMContentLoaded", function() { 
+      bindFurigana('rep-sei', 'rep-kana-sei'); 
+      bindFurigana('rep-mei', 'rep-kana-mei'); 
+      
+      // ▼ここを追加（画面が開いたと同時にLIFFを起動する）
+      initializeLiff(); 
+    });
+
+    // ??【テスト用】どこで止まっているかを画面にポップアップ表示するバージョン
+    function initializeLiff() {
+      // 1. まず関数が呼ばれたか確認
+      // alert("LIFF初期化を開始します"); 
+
+      liff.init({
+        liffId: "2009367368-y3QjH5y6" 
+      }).then(() => {
+        // 2. LIFFの起動（初期化）に成功した場合
+        // alert("LIFFの初期化に成功しました！ログイン状態を確認します。");
+
+        if (liff.isLoggedIn()) {
+          liff.getProfile().then(profile => {
+            document.getElementById('lineUid').value = profile.userId;
+            // 3. IDの取得に成功した場合（実際のIDを表示）
+            alert("? 成功！LINE IDを取得しました:\n" + profile.userId);
+          }).catch(err => {
+            // 4. プロフィール取得でエラーになった場合
+            alert("? プロファイル取得エラー:\n" + JSON.stringify(err));
+          });
+        } else {
+          // 5. 未ログイン状態の場合
+          alert("?? LIFFは起動しましたが、未ログイン状態です。");
+          if (liff.isInClient()) {
+            liff.login();
+          }
+        }
+      }).catch((err) => {
+        // 6. そもそもLIFFの初期化に失敗した場合
+        alert("? LIFF初期化エラー:\n" + JSON.stringify(err) + "\n\n※GASのリダイレクトが原因の可能性があります。");
+      });
+    }
+
+    document.getElementById('postalCode').addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^0-9]/g, ''); 
+      let zip = this.value;
+      if (zip.length === 7) {
+        fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + zip)
+          .then(response => response.json())
+          .then(data => {
+            if (data.results) {
+              const address = data.results[0].address1 + data.results[0].address2 + data.results[0].address3;
+              document.getElementById('address').value = address;
+            }
+          })
+          .catch(error => console.log('住所検索エラー:', error));
+      }
+    });
+
+    document.getElementById('photoInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.querySelector('.photo-upload-btn').innerText = '? 写真をセットしました';
+      document.querySelector('.photo-upload-btn').style.backgroundColor = '#05b34c';
+      
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const size = 500; canvas.width = size; canvas.height = size;
+          let sourceX = 0, sourceY = 0, sourceSize = 0;
+          if (img.width > img.height) { sourceSize = img.height; sourceX = (img.width - sourceSize) / 2; } 
+          else { sourceSize = img.width; sourceY = (img.height - sourceSize) / 2; }
+          ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
+          
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          document.getElementById('imageBase64').value = dataUrl;
+          document.getElementById('photoPreview').src = dataUrl;
+          document.getElementById('previewContainer').style.display = 'block'; // 枠を表示
+        }
+        img.src = event.target.result;
+      }
+      reader.readAsDataURL(file);
+    });
+
+    function addFamilyMember() {
+      familyCount++; document.getElementById('memberType').value = "家族会員"; 
+      const container = document.getElementById('familySection');
+      const html = `<div class="family-member-card" id="family_${familyCount}"><button type="button" class="remove-btn" onclick="removeFamilyMember(${familyCount})">×</button><label>同行者${familyCount} 氏名</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-sei-${familyCount}" class="fam-sei" placeholder="姓"></div><div><input type="text" id="fam-mei-${familyCount}" class="fam-mei" placeholder="名"></div></div><label>ふりがな</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-kana-sei-${familyCount}" class="fam-kana-sei" pattern="^[ぁ-んー\\s]+$" placeholder="せい"></div><div><input type="text" id="fam-kana-mei-${familyCount}" class="fam-kana-mei" pattern="^[ぁ-んー\\s]+$" placeholder="めい"></div></div><label>生年月日</label><input type="date" id="fam-date-${familyCount}" class="fam-date"></div>`;
+      container.insertAdjacentHTML('beforeend', html);
+      bindFurigana(`fam-sei-${familyCount}`, `fam-kana-sei-${familyCount}`);
+      bindFurigana(`fam-mei-${familyCount}`, `fam-kana-mei-${familyCount}`);
+    }
+    function removeFamilyMember(id) { const el = document.getElementById(`family_${id}`); if(el) el.remove(); if (document.querySelectorAll('.family-member-card').length === 0) { document.getElementById('memberType').value = "個人会員（一般）"; } }
+
+    function isValidChildGrade(birthDateString) {
+      const today = new Date(); let currentSchoolYear = today.getFullYear(); if (today.getMonth() < 3) currentSchoolYear -= 1;
+      const birthDate = new Date(birthDateString); let ageOnApril1st = currentSchoolYear - birthDate.getFullYear();
+      if (birthDate.getMonth() > 3 || (birthDate.getMonth() === 3 && birthDate.getDate() > 1)) ageOnApril1st--;
+      return ageOnApril1st >= 9 && ageOnApril1st <= 14; 
+    }
+
+    function validateForm() {
+      let errors = [];
+      if(!document.getElementById('imageBase64').value) errors.push("顔写真");
+      const requireds = [
+        {id:'rep-sei', name:'姓'}, {id:'rep-mei', name:'名'}, {id:'rep-kana-sei', name:'せい'}, {id:'rep-kana-mei', name:'めい'},
+        {id:'birthDate', name:'生年月日'}, {id:'email', name:'メールアドレス'}, {id:'phone', name:'電話番号'}, {id:'address', name:'住所'}, {id:'memberType', name:'会員種別'}
+      ];
+      requireds.forEach(f => { if(!document.getElementById(f.id).value.trim()) errors.push(f.name); });
+      for(let i=1; i<=familyCount; i++) {
+        if(document.getElementById(`family_${i}`)) {
+          if(!document.getElementById(`fam-sei-${i}`).value.trim()) errors.push(`同行者${i}の姓`);
+          if(!document.getElementById(`fam-mei-${i}`).value.trim()) errors.push(`同行者${i}の名`);
+          if(!document.getElementById(`fam-kana-sei-${i}`).value.trim()) errors.push(`同行者${i}のせい`);
+          if(!document.getElementById(`fam-kana-mei-${i}`).value.trim()) errors.push(`同行者${i}のめい`);
+          if(!document.getElementById(`fam-date-${i}`).value.trim()) errors.push(`同行者${i}の生年月日`);
+        }
+      }
+      if(errors.length > 0) { alert("以下の項目が未入力です：\n\n・" + errors.join("\n・")); return false; }
+      if (document.getElementById('memberType').value === "個人会員（こども）" && !isValidChildGrade(document.getElementById('birthDate').value)) { alert("エラー：生年月日が対象外です。"); return false; }
+      return true;
+    }
+
+    function showConfirm() {
+      if(!validateForm()) return;
+      document.getElementById('conf-photo').src = document.getElementById('imageBase64').value;
+      document.getElementById('conf-name').innerText = document.getElementById('rep-sei').value + ' ' + document.getElementById('rep-mei').value;
+      document.getElementById('conf-kana').innerText = document.getElementById('rep-kana-sei').value + ' ' + document.getElementById('rep-kana-mei').value;
+      document.getElementById('conf-birth').innerText = document.getElementById('birthDate').value;
+      document.getElementById('conf-email').innerText = document.getElementById('email').value;
+      document.getElementById('conf-phone').innerText = document.getElementById('phone').value;
+      document.getElementById('conf-address').innerText = document.getElementById('postalCode').value + ' ' + document.getElementById('address').value;
+      document.getElementById('conf-type').innerText = document.getElementById('memberType').value;
+      const famCon = document.getElementById('conf-family'); famCon.innerHTML = ''; let fIdx = 1;
+      for(let i=1; i<=familyCount; i++) { if(document.getElementById(`family_${i}`)) { famCon.innerHTML += `<div class="conf-item"><div class="conf-label">同行者${fIdx}</div><div class="conf-value">${document.getElementById(`fam-sei-${i}`).value} ${document.getElementById(`fam-mei-${i}`).value}</div></div>`; fIdx++; } }
+      document.getElementById('registerSection').style.display = 'none'; document.getElementById('tabContainer').style.display = 'none'; document.getElementById('confirmScreen').style.display = 'block'; window.scrollTo(0, 0);
+    }
+    function hideConfirm() { document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('tabContainer').style.display = 'flex'; document.getElementById('registerSection').style.display = 'block'; window.scrollTo(0, 0); }
+
+    // ??【修正】新規登録の送信処理を fetch API に変更
+    function executeSubmit() {
+      const familyMembers = [];
+      document.querySelectorAll('.family-member-card').forEach(card => {
+        familyMembers.push({ "姓": card.querySelector('.fam-sei').value, "名": card.querySelector('.fam-mei').value, "せい": card.querySelector('.fam-kana-sei').value, "めい": card.querySelector('.fam-kana-mei').value, "生年月日": card.querySelector('.fam-date').value });
+      });
+      const data = { "姓": document.getElementById('rep-sei').value, "名": document.getElementById('rep-mei').value, "せい": document.getElementById('rep-kana-sei').value, "めい": document.getElementById('rep-kana-mei').value, "生年月日": document.getElementById('birthDate').value, "メールアドレス": document.getElementById('email').value, "電話番号": document.getElementById('phone').value, "郵便番号": document.getElementById('postalCode').value, "住所": document.getElementById('address').value, "会員種別": document.getElementById('memberType').value, "LINE_UID": document.getElementById('lineUid').value, "profileImageBase64": document.getElementById('imageBase64').value, "familyMembers": familyMembers };
+      
+      const btn = document.getElementById('submitBtn'); btn.innerText = "処理中..."; btn.disabled = true; btn.style.backgroundColor = "#ccc";
+
+      // ?? 先ほどコピーした「あなたのGASデプロイURL」をここに貼り付けます
+      const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
+
+      fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" }, // ※GASのセキュリティをスムーズに通過するための設定
+        body: JSON.stringify({ action: "register", data: data })
+      })
+      .then(response => response.json())
+      .then(res => {
+        if (res.status === "success") { displayDigitalCard(res, true); } 
+        else { alert(res.message); resetButton(btn); }
+      })
+      .catch(error => {
+        alert("通信エラーが発生しました。"); resetButton(btn);
+      });
+    }
+    
+    // ??【修正】ログイン（再表示）処理を fetch API に変更
+    function executeLogin() {
+      const idNum = document.getElementById('loginIdNum').value.trim(); 
+      const birthDate = document.getElementById('loginBirthDate').value;
+      if (!idNum || !birthDate) { alert("入力してください。"); return; }
+      
+      const paddedId = String(idNum).padStart(4, '0');
+      const fullLoginId = "M" + paddedId;
+      
+      const btn = document.getElementById('loginBtn'); btn.innerText = "検索中..."; btn.disabled = true;
+
+      // ?? 先ほどコピーした「あなたのGASデプロイURL」をここにも貼り付けます
+      const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
+
+      fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "login", data: { loginId: fullLoginId, birthDate: birthDate } })
+      })
+      .then(response => response.json())
+      .then(res => {
+        if (res.status === "success") { displayDigitalCard(res, false); } 
+        else { alert(res.message); btn.innerText = "表示する"; btn.disabled = false; }
+      })
+      .catch(error => {
+        alert("通信エラーが発生しました。"); btn.innerText = "表示する"; btn.disabled = false;
+      });
+    }
+    function resetButton(btn) { btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755"; }
+
+    function displayDigitalCard(result, isNewRegistration) {
+      document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('loginSection').style.display = 'none'; document.getElementById('registerSection').style.display = 'none'; document.getElementById('tabContainer').style.display = 'none';
+      document.getElementById('successScreen').style.display = 'block'; 
+      
+      if (isNewRegistration) {
+        document.getElementById('successTitle').innerText = "登録完了";
+        document.getElementById('successMessage').innerHTML = "ご入会ありがとうございます。<br>控えのメールを送信しました。";
+      } else {
+        document.getElementById('successTitle').innerText = "会員証の表示";
+        document.getElementById('successMessage').innerHTML = "会員情報の確認が完了しました。";
+        document.getElementById('backToTopBtn').style.display = 'block'; 
+      }
+      
+      document.getElementById('resultYear').innerText = result.schoolYear; 
+      document.getElementById('resultClubName').innerText = result.clubName; 
+      
+      if (result.imageUrl) { 
+        document.getElementById('resultPhoto').src = result.imageUrl; 
+      } else {
+        document.getElementById('resultPhoto').src = "data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Ccircle cx=\"50\" cy=\"50\" r=\"50\" fill=\"%23ccc\"/%3E%3C/svg%3E";
+      }
+      
+      document.getElementById('resultId').innerText = result.memberId; 
+      document.getElementById('resultName').innerText = result.memberName + ' 様'; 
+      
+      const qr = new QRious({
+        value: result.memberId,
+        size: 150,
+        background: 'white',
+        foreground: 'black'
+      });
+      document.getElementById('resultQr').src = qr.toDataURL(); 
+      
+      if (result.cardImageBase64) {
+        document.getElementById('cardVisual').style.display = 'none'; 
+        currentCardBase64 = result.cardImageBase64; 
+        
+        var blobUrl = createBlobUrl(result.cardImageBase64);
+        document.getElementById('finalCardImage').src = blobUrl;
+        document.getElementById('finalCardImage').style.display = 'block'; 
+        
+        document.getElementById('saveInstructionArea').style.display = 'block';
+      } else {
+        document.getElementById('cardVisual').style.display = 'block';
+        document.getElementById('saveInstructionArea').style.display = 'block';
+        document.getElementById('saveInstructionArea').innerHTML = '<p style="color:#e74c3c; font-weight:bold;">お手数ですが、この画面をスクリーンショットして保存してください。</p>';
+      }
+      
+      window.scrollTo(0, 0);
+    }
+
+    function createBlobUrl(base64) {
+      var bin = atob(base64.split(',')[1]);
+      var buffer = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) {
+        buffer[i] = bin.charCodeAt(i);
+      }
+      var blob = new Blob([buffer.buffer], {type: 'image/png'});
+      return window.URL.createObjectURL(blob);
+    }
+
+    async function shareToPhotos() {
+      if (!currentCardBase64) return;
+      try {
+        var bin = atob(currentCardBase64.split(',')[1]);
+        var buffer = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) {
+          buffer[i] = bin.charCodeAt(i);
+        }
+        var file = new File([buffer.buffer], 'member_card.png', {type: 'image/png'});
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: '会員証',
+            text: 'B&G 平田海洋クラブのデジタル会員証です。'
+          });
+        } else {
+          window.open(createBlobUrl(currentCardBase64), '_blank');
+        }
+      } catch (err) {
+        console.log('共有がキャンセルされたか、エラーが発生しました。');
+      }
+    }
+  </script>
+</body>
+</html>
