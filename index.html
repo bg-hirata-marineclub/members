@@ -31,7 +31,7 @@
     .remove-btn { position: absolute; top: -10px; right: -10px; background: #ff4d4f; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 16px; padding: 0; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .photo-upload-btn { display: block; width: 100%; padding: 18px; background-color: #0056b3; color: white; text-align: center; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; box-sizing: border-box; margin-bottom: 10px; }
     
-    /* ??【修正済】プレビュー画像の角丸をなくし正方形に */
+    /* 💡【修正済】プレビュー画像の角丸をなくし正方形に */
     #photoPreview { width: 120px; height: 120px; border-radius: 0; margin: 15px auto 0; display: none; border: 3px solid #ddd; object-fit: cover; }
     
     .tab-container { display: flex; margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #0056b3; }
@@ -78,8 +78,8 @@
     <h2>B&G 平田海洋クラブ<br>会員システム</h2>
     
     <div class="tab-container" id="tabContainer">
-      <button class="tab-btn active" onclick="switchTab('register')">?? 新規入会</button>
-      <button class="tab-btn" onclick="switchTab('login')">?? 会員証の再表示</button>
+      <button class="tab-btn active" onclick="switchTab('register')">📝 新規入会</button>
+      <button class="tab-btn" onclick="switchTab('login')">💳 会員証の再表示</button>
     </div>
 
     <div id="registerSection">
@@ -87,7 +87,7 @@
         <div class="form-group">
           <label>顔写真</label>
           <span class="help-text">会員証に使用します。下のボタンをタップして自撮りしてください。</span>
-          <label for="photoInput" class="photo-upload-btn">?? 顔写真を撮影する</label>
+          <label for="photoInput" class="photo-upload-btn">📸 顔写真を撮影する</label>
           <input type="file" id="photoInput" accept="image/*" capture="user" style="display: none;">
           
           <div id="previewContainer" style="text-align: center; display: none; margin-top: 15px; padding: 10px; background: #e9ecef;">
@@ -118,7 +118,7 @@
           <select name="会員種別" id="memberType">
             <option value="">選択してください</option>
             <option value="個人会員（一般）">個人会員（一般）</option>
-            <option value="個人会員（こども）">個人会員（こども）※小4?中3</option>
+            <option value="個人会員（こども）">個人会員（こども）※小4〜中3</option>
             <option value="家族会員">家族会員（※代表者として登録）</option>
           </select>
         </div>
@@ -185,9 +185,9 @@
       </div>
       
       <div id="saveInstructionArea" style="display:none; text-align:center; margin-top: 20px;">
-        <p style="color:#333; font-weight:bold; font-size:14px; margin-bottom: 10px;">?? 以下のボタンから写真アプリに保存してください</p>
+        <p style="color:#333; font-weight:bold; font-size:14px; margin-bottom: 10px;">👇 以下のボタンから写真アプリに保存してください</p>
         <button type="button" onclick="shareToPhotos()" style="background-color: #0056b3; color: white; border: none; padding: 15px; border-radius: 8px; width: 100%; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-          ?? スマホに保存する（共有メニュー）
+          📤 スマホに保存する（共有メニュー）
         </button>
       </div>
       
@@ -197,7 +197,7 @@
 
   <script>
     let familyCount = 0;
-    let currentCardBase64 = ""; // ??画像データを一時保存
+    let currentCardBase64 = ""; // 💡画像データを一時保存
     
     function switchTab(tabName) {
       document.getElementById('registerSection').style.display = (tabName === 'register') ? 'block' : 'none';
@@ -231,7 +231,7 @@
       initializeLiff(); 
     });
 
-    // ??【テスト用】どこで止まっているかを画面にポップアップ表示するバージョン
+    // 💡【テスト用】どこで止まっているかを画面にポップアップ表示するバージョン
     function initializeLiff() {
       // 1. まず関数が呼ばれたか確認
       // alert("LIFF初期化を開始します"); 
@@ -246,21 +246,21 @@
           liff.getProfile().then(profile => {
             document.getElementById('lineUid').value = profile.userId;
             // 3. IDの取得に成功した場合（実際のIDを表示）
-            alert("? 成功！LINE IDを取得しました:\n" + profile.userId);
+            alert("✅ 成功！LINE IDを取得しました:\n" + profile.userId);
           }).catch(err => {
             // 4. プロフィール取得でエラーになった場合
-            alert("? プロファイル取得エラー:\n" + JSON.stringify(err));
+            alert("❌ プロファイル取得エラー:\n" + JSON.stringify(err));
           });
         } else {
           // 5. 未ログイン状態の場合
-          alert("?? LIFFは起動しましたが、未ログイン状態です。");
+          alert("⚠️ LIFFは起動しましたが、未ログイン状態です。");
           if (liff.isInClient()) {
             liff.login();
           }
         }
       }).catch((err) => {
         // 6. そもそもLIFFの初期化に失敗した場合
-        alert("? LIFF初期化エラー:\n" + JSON.stringify(err) + "\n\n※GASのリダイレクトが原因の可能性があります。");
+        alert("❌ LIFF初期化エラー:\n" + JSON.stringify(err) + "\n\n※GASのリダイレクトが原因の可能性があります。");
       });
     }
 
@@ -283,7 +283,7 @@
     document.getElementById('photoInput').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
-      document.querySelector('.photo-upload-btn').innerText = '? 写真をセットしました';
+      document.querySelector('.photo-upload-btn').innerText = '✅ 写真をセットしました';
       document.querySelector('.photo-upload-btn').style.backgroundColor = '#05b34c';
       
       const reader = new FileReader();
@@ -363,7 +363,7 @@
     }
     function hideConfirm() { document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('tabContainer').style.display = 'flex'; document.getElementById('registerSection').style.display = 'block'; window.scrollTo(0, 0); }
 
-    // ??【修正】新規登録の送信処理を fetch API に変更
+    // 💡【修正】新規登録の送信処理を fetch API に変更
     function executeSubmit() {
       const familyMembers = [];
       document.querySelectorAll('.family-member-card').forEach(card => {
@@ -373,7 +373,7 @@
       
       const btn = document.getElementById('submitBtn'); btn.innerText = "処理中..."; btn.disabled = true; btn.style.backgroundColor = "#ccc";
 
-      // ?? 先ほどコピーした「あなたのGASデプロイURL」をここに貼り付けます
+      // 💡 先ほどコピーした「あなたのGASデプロイURL」をここに貼り付けます
       const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
 
       fetch(GAS_URL, {
@@ -391,7 +391,7 @@
       });
     }
     
-    // ??【修正】ログイン（再表示）処理を fetch API に変更
+    // 💡【修正】ログイン（再表示）処理を fetch API に変更
     function executeLogin() {
       const idNum = document.getElementById('loginIdNum').value.trim(); 
       const birthDate = document.getElementById('loginBirthDate').value;
@@ -402,7 +402,7 @@
       
       const btn = document.getElementById('loginBtn'); btn.innerText = "検索中..."; btn.disabled = true;
 
-      // ?? 先ほどコピーした「あなたのGASデプロイURL」をここにも貼り付けます
+      // 💡 先ほどコピーした「あなたのGASデプロイURL」をここにも貼り付けます
       const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
 
       fetch(GAS_URL, {
