@@ -36,51 +36,56 @@
   </div>
 
   <script>
-    let html5QrcodeScanner;
+    let html5QrCode;
 
-    // 画面が読み込まれたらカメラを起動する
+    // 画面が読み込まれたらカメラの準備をする
     document.addEventListener("DOMContentLoaded", function() {
+      // 💡プロ仕様のコア機能を初期化
+      html5QrCode = new Html5Qrcode("reader");
       startScanner();
-      // 💡次回のステップで、ここに「GASから名簿をダウンロードしてキャッシュする処理」を追加します
     });
 
     function startScanner() {
       document.getElementById('resultArea').style.display = 'none';
       document.getElementById('reader').style.display = 'block';
 
-      html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader", 
-        { fps: 10, qrbox: {width: 250, height: 250} },
-        /* verbose= */ false
-      );
-      
-      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+      // 💡【重要】facingMode: "environment" で背面カメラを強制指定
+      html5QrCode.start(
+        { facingMode: "environment" }, 
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        onScanSuccess,
+        onScanFailure
+      ).catch(err => {
+        console.error("カメラの起動に失敗しました", err);
+        alert("カメラが見つからないか、アクセスが拒否されました。ブラウザのカメラ設定を確認してください。");
+      });
     }
 
     // QRコードを読み取った瞬間に動く処理
     function onScanSuccess(decodedText, decodedResult) {
-      // ピッと読んだらカメラを一旦止める
-      html5QrcodeScanner.clear().then(() => {
+      // ピッと読んだらカメラを即座に停止する
+      html5QrCode.stop().then(() => {
         document.getElementById('reader').style.display = 'none';
         document.getElementById('resultArea').style.display = 'block';
         
-        // 読み取った文字（M0032など）を画面に表示
+        // 読み取った文字を画面に表示
         document.getElementById('displayId').innerText = decodedText;
-        
-        // 💡次回のステップで、ここに「キャッシュから名前を探して表示する処理」を追加します
         document.getElementById('displayName').innerText = "（機材選択機能と連動予定）";
         
-        // スマホのバイブレーションを鳴らす（対応機種のみ）
+        // スマホのバイブレーションを鳴らす
         if (navigator.vibrate) {
           navigator.vibrate(200);
         }
-      }).catch(error => {
-        console.error("スキャナーの停止に失敗しました", error);
+      }).catch(err => {
+        console.error("カメラの停止に失敗", err);
       });
     }
 
     function onScanFailure(error) {
-      // 読み取れない間は常に呼ばれ続けるため、基本は何もしない
+      // 読み取れない間は常に呼ばれるため何もしない
     }
 
     function resetScanner() {
