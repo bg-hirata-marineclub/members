@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>B&G 平田海洋クラブ - ビジター受付</title>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; padding: 10px; margin: 0; color: #333; font-size: 16px; }
+    .container { max-width: 100%; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); box-sizing: border-box; }
+    h2 { text-align: center; font-size: 22px; margin-bottom: 10px; color: #0056b3; }
+    .description { text-align: center; font-size: 14px; color: #666; margin-bottom: 25px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 15px; }
+    input[type="text"], input[type="tel"], select { width: 100%; padding: 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
+    input:focus, select:focus { outline: none; border-color: #0056b3; background-color: #fff; }
+    .flex-row { display: flex; gap: 10px; } .flex-row > div { flex: 1; }
+    
+    button.submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    button.submit-btn:hover { background-color: #05b34c; }
+    button:disabled { background-color: #ccc !important; cursor: not-allowed; }
+    
+    #successScreen { display: none; text-align: center; padding: 30px 10px; }
+    .check-icon { font-size: 50px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="formScreen">
+      <h2>ビジター利用受付</h2>
+      <p class="description">本日のご利用ありがとうございます。<br>代表者様のご連絡先を入力してください。</p>
+      
+      <form id="visitorForm">
+        <div class="form-group flex-row">
+          <div><label>姓</label><input type="text" id="lastName" placeholder="例: 平田"></div>
+          <div><label>名</label><input type="text" id="firstName" placeholder="例: 太郎"></div>
+        </div>
+        <div class="form-group flex-row">
+          <div><label>せい</label><input type="text" id="kanaLast" placeholder="例: ひらた"></div>
+          <div><label>めい</label><input type="text" id="kanaFirst" placeholder="例: たろう"></div>
+        </div>
+        <div class="form-group"><label>電話番号</label><input type="tel" id="phone" placeholder="例: 090-1234-5678"></div>
+        
+        <div class="form-group flex-row">
+          <div style="flex: 0 0 110px;"><label>郵便番号</label><input type="tel" id="postalCode" maxlength="7" placeholder="9980000"></div>
+          <div><label>住所</label><input type="text" id="address" placeholder="例: 酒田市〇〇町1-2-3"></div>
+        </div>
+        
+        <div class="form-group">
+          <label>利用する機材（主なもの）</label>
+          <select id="equipment">
+            <option value="">選択してください</option>
+            <option value="カヌー">カヌー</option>
+            <option value="ペアカヌー">ペアカヌー</option>
+            <option value="ローボート">ローボート</option>
+            <option value="SUP">SUP</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+
+        <button type="button" id="submitBtn" class="submit-btn" onclick="submitVisitor()">受付を完了する</button>
+      </form>
+    </div>
+
+    <div id="successScreen">
+      <div class="check-icon">✅</div>
+      <h2 style="color: #28a745;">受付完了</h2>
+      <p style="font-size: 16px; color: #333; margin-top: 20px; line-height: 1.6;">
+        ご入力ありがとうございました。<br><br>
+        お帰りの際に、受付スタッフへ<br><b>「利用料」</b>のお支払いをお願いいたします。<br><br>
+        それでは、安全に気をつけてお楽しみください！
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // 💡【重要】最新のGAS WebアプリURLをここに貼り付けてください！
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
+
+    // ふりがな自動入力
+    function bindFurigana(nameId, kanaId) {
+      const nameEl = document.getElementById(nameId);
+      const kanaEl = document.getElementById(kanaId);
+      if (!nameEl || !kanaEl) return;
+      let isComposing = false; let committedKana = '';
+      nameEl.addEventListener('compositionstart', () => { isComposing = true; committedKana = kanaEl.value; });
+      nameEl.addEventListener('compositionupdate', (e) => {
+        const text = e.data;
+        if (/^[ぁ-んーa-zA-Z]*$/.test(text)) {
+          const hiragana = text.match(/[ぁ-んー]/g);
+          kanaEl.value = committedKana + (hiragana ? hiragana.join('') : '');
+        }
+      });
+      nameEl.addEventListener('compositionend', () => { isComposing = false; });
+      nameEl.addEventListener('input', () => { if (!isComposing && nameEl.value === '') { kanaEl.value = ''; committedKana = ''; } });
+    }
+    
+    document.addEventListener("DOMContentLoaded", function() { 
+      bindFurigana('lastName', 'kanaLast'); 
+      bindFurigana('firstName', 'kanaFirst'); 
+    });
+
+    // 郵便番号からの住所自動検索
+    document.getElementById('postalCode').addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^0-9]/g, ''); 
+      let zip = this.value;
+      if (zip.length === 7) {
+        fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + zip)
+          .then(response => response.json())
+          .then(data => {
+            if (data.results) {
+              const address = data.results[0].address1 + data.results[0].address2 + data.results[0].address3;
+              document.getElementById('address').value = address;
+            }
+          })
+          .catch(error => console.log('住所検索エラー:', error));
+      }
+    });
+
+    // 送信処理
+    function submitVisitor() {
+      // 必須チェック
+      const fields = ['lastName', 'firstName', 'kanaLast', 'kanaFirst', 'phone', 'equipment'];
+      for (let id of fields) {
+        if (!document.getElementById(id).value.trim()) {
+          alert("入力されていない項目があります。");
+          return;
+        }
+      }
+
+      const btn = document.getElementById('submitBtn');
+      btn.innerText = "送信中...";
+      btn.disabled = true;
+
+      const data = {
+        lastName: document.getElementById('lastName').value,
+        firstName: document.getElementById('firstName').value,
+        kanaLast: document.getElementById('kanaLast').value,
+        kanaFirst: document.getElementById('kanaFirst').value,
+        phone: document.getElementById('phone').value,
+        postalCode: document.getElementById('postalCode').value,
+        address: document.getElementById('address').value,
+        equipment: document.getElementById('equipment').value
+      };
+
+      fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "registerVisitor", data: data })
+      })
+      .then(response => response.json())
+      .then(res => {
+        if (res.status === "success") {
+          document.getElementById('formScreen').style.display = 'none';
+          document.getElementById('successScreen').style.display = 'block';
+          window.scrollTo(0, 0);
+        } else {
+          alert("エラーが発生しました: " + res.message);
+          btn.innerText = "受付を完了する";
+          btn.disabled = false;
+        }
+      })
+      .catch(error => {
+        alert("通信エラーが発生しました。");
+        btn.innerText = "受付を完了する";
+        btn.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
