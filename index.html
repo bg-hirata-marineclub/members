@@ -72,7 +72,7 @@
     }
     /* 年度：上から25%、ロゴ全体の中央（左から58%）に配置 */
     .card-year {
-      top: 25%;  /* 💡ここを31%から25%に修正（上に移動） */
+      top: 25%;  
       left: 58%; 
       transform: translateX(-50%);
       width: auto; 
@@ -117,6 +117,11 @@
 <body>
   <div class="container">
     <h2>B&G 平田海洋クラブ<br>会員システム</h2>
+    
+    <div id="loadingScreen" style="text-align: center; padding: 50px 10px; display: none;">
+      <p style="font-size: 18px; font-weight: bold; color: #0056b3; margin-bottom: 10px;">⏳ アカウントを確認中...</p>
+      <p style="font-size: 13px; color: #666;">（自動ログインしています）</p>
+    </div>
     
     <div class="tab-container" id="tabContainer">
       <button class="tab-btn active" onclick="switchTab('register')">📝 新規入会</button>
@@ -247,7 +252,7 @@
   <script>
     let familyCount = 0;
     let currentCardBase64 = ""; 
-    let cropper; // 💡Cropper.js用の変数
+    let cropper; 
     
     function switchTab(tabName) {
       document.getElementById('registerSection').style.display = (tabName === 'register') ? 'block' : 'none';
@@ -281,21 +286,61 @@
     });
 
     function initializeLiff() {
+      document.getElementById('tabContainer').style.display = 'none';
+      document.getElementById('registerSection').style.display = 'none';
+      document.getElementById('loadingScreen').style.display = 'block';
+
       liff.init({
         liffId: "2009367368-y3QjH5y6" 
       }).then(() => {
         if (liff.isLoggedIn()) {
           liff.getProfile().then(profile => {
             document.getElementById('lineUid').value = profile.userId;
-          }).catch(err => console.error("プロファイル取得エラー:", err));
+            executeAutoLogin(profile.userId);
+          }).catch(err => {
+            console.error("プロファイル取得エラー:", err);
+            showRegisterScreen(); 
+          });
         } else {
           if (liff.isInClient()) {
             liff.login();
+          } else {
+            showRegisterScreen(); 
           }
         }
       }).catch((err) => {
         console.error("LIFF初期化エラー:", err);
+        showRegisterScreen();
       });
+    }
+
+    function executeAutoLogin(uid) {
+      const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
+
+      fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "autoLogin", uid: uid })
+      })
+      .then(response => response.json())
+      .then(res => {
+        if (res.status === "success") {
+          document.getElementById('loadingScreen').style.display = 'none';
+          displayDigitalCard(res, false);
+        } else {
+          showRegisterScreen();
+        }
+      })
+      .catch(error => {
+        console.log("自動ログイン通信エラー", error);
+        showRegisterScreen();
+      });
+    }
+
+    function showRegisterScreen() {
+      document.getElementById('loadingScreen').style.display = 'none';
+      document.getElementById('tabContainer').style.display = 'flex';
+      document.getElementById('registerSection').style.display = 'block';
     }
 
     document.getElementById('postalCode').addEventListener('input', function(e) {
@@ -314,7 +359,6 @@
       }
     });
 
-    // 💡【修正】Cropper.jsを用いたプロ仕様の手動トリミング処理
     const pInput = document.getElementById('photoInput');
     const imageToCrop = document.getElementById('imageToCrop');
     const cropBtn = document.getElementById('cropBtn');
@@ -335,19 +379,17 @@
         fPCont.style.display = 'none';
         hImageBase64.value = ''; 
         
-        // 以前のトリミング機能が残っていたらリセット
         if (cropper) {
           cropper.destroy();
         }
         
-        // ライブラリを起動（枠を固定し、写真を指で動かすモード）
         cropper = new Cropper(imageToCrop, {
-          aspectRatio: 1 / 1, // 正方形枠
-          viewMode: 1, // 枠外に余白を作らない
-          dragMode: 'move', // 写真自体を指で動かす
+          aspectRatio: 1 / 1, 
+          viewMode: 1, 
+          dragMode: 'move', 
           autoCropArea: 0.9,
-          cropBoxMovable: false, // 切り抜き枠の位置は固定
-          cropBoxResizable: false, // 切り抜き枠のサイズも固定
+          cropBoxMovable: false, 
+          cropBoxResizable: false, 
           toggleDragModeOnDblclick: false,
           guides: true,
           center: true,
@@ -362,7 +404,6 @@
 
     cropBtn.addEventListener('click', function() {
       if (!cropper) return;
-      // ユーザーが合わせた位置で500x500の綺麗な画像を生成
       const canvas = cropper.getCroppedCanvas({
         width: 500,
         height: 500,
@@ -370,8 +411,8 @@
       });
       const dUrl = canvas.toDataURL('image/jpeg', 0.8);
       
-      hImageBase64.value = dUrl; // 隠しフィールドにセット
-      pPreview.src = dUrl;       // プレビューにセット
+      hImageBase64.value = dUrl; 
+      pPreview.src = dUrl; 
       
       pCont.style.display = 'none';
       fPCont.style.display = 'block';
