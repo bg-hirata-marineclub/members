@@ -21,7 +21,6 @@
 
   <div class="container">
     <h2>受付スキャナー</h2>
-    
     <div id="reader"></div>
 
     <div id="resultArea">
@@ -29,13 +28,34 @@
       <div style="font-size: 12px; color: #666;">会員ID</div>
       <div class="member-id" id="displayId">M----</div>
       <div class="member-name" id="displayName">（データ準備中...）</div>
-      
       <button onclick="resetScanner()">次の人をスキャンする</button>
     </div>
   </div>
 
   <script>
     let html5QrCode;
+
+    // 💡【追加】読み取り成功時に「ピッ」と鳴らすための関数
+    function playBeep() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, ctx.currentTime); // 高めの「ピッ」という音
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);  // 音量
+        
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        osc.start();
+        osc.stop(ctx.currentTime + 0.1); // 0.1秒間だけ鳴らす
+      } catch (e) {
+        console.log("音声再生エラー", e);
+      }
+    }
 
     document.addEventListener("DOMContentLoaded", function() {
       html5QrCode = new Html5Qrcode("reader");
@@ -49,20 +69,21 @@
       html5QrCode.start(
         { facingMode: "environment" }, 
         {
-          fps: 10
-          // 💡qrbox（読み取り枠）の設定を削除し、画面全体で超高感度スキャンするように変更
+          fps: 15, // 💡コマ数を上げて処理を速くする
+          qrbox: { width: 250, height: 250 } // 💡処理を軽くするため、読み取り枠を復活
         },
         onScanSuccess,
         onScanFailure
       ).catch(err => {
         console.error("カメラの起動に失敗しました", err);
-        alert("カメラの起動に失敗しました。ブラウザの再読み込みをお試しください。");
       });
     }
 
     function onScanSuccess(decodedText, decodedResult) {
-      // 💡読み取ったらすぐにカメラを停止
       if (html5QrCode.isScanning) {
+        // 💡読み取った瞬間に「ピッ！」と鳴らす
+        playBeep();
+
         html5QrCode.stop().then(() => {
           document.getElementById('reader').style.display = 'none';
           document.getElementById('resultArea').style.display = 'block';
@@ -70,6 +91,7 @@
           document.getElementById('displayId').innerText = decodedText;
           document.getElementById('displayName').innerText = "（機材選択機能と連動予定）";
           
+          // Android用バイブレーション
           if (navigator.vibrate) navigator.vibrate(200);
         }).catch(err => {
           console.error("カメラの停止に失敗", err);
