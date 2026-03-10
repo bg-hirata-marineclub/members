@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>B&G 平田海洋クラブ - 受付スキャナー</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; margin: 0; padding: 10px; color: #333; }
+    .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #0056b3; margin-top: 0; font-size: 20px; }
+    #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+    #resultArea { display: none; background: #e8f4fd; padding: 15px; border-radius: 8px; border: 1px solid #b6d4fe; text-align: center; }
+    .member-id { font-size: 24px; font-weight: bold; color: #0056b3; margin: 5px 0; }
+    .member-name { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+    button { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+    button.btn-cancel { background-color: #6c757d; }
+    .status-badge { display: inline-block; padding: 5px 10px; background-color: #28a745; color: white; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>受付スキャナー</h2>
+    
+    <div id="reader"></div>
+
+    <div id="resultArea">
+      <div class="status-badge">読取成功</div>
+      <div style="font-size: 12px; color: #666;">会員ID</div>
+      <div class="member-id" id="displayId">M----</div>
+      <div class="member-name" id="displayName">（データ準備中...）</div>
+      
+      <button onclick="resetScanner()">次の人をスキャンする</button>
+    </div>
+  </div>
+
+  <script>
+    let html5QrcodeScanner;
+
+    // 画面が読み込まれたらカメラを起動する
+    document.addEventListener("DOMContentLoaded", function() {
+      startScanner();
+      // 💡次回のステップで、ここに「GASから名簿をダウンロードしてキャッシュする処理」を追加します
+    });
+
+    function startScanner() {
+      document.getElementById('resultArea').style.display = 'none';
+      document.getElementById('reader').style.display = 'block';
+
+      html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader", 
+        { fps: 10, qrbox: {width: 250, height: 250} },
+        /* verbose= */ false
+      );
+      
+      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    }
+
+    // QRコードを読み取った瞬間に動く処理
+    function onScanSuccess(decodedText, decodedResult) {
+      // ピッと読んだらカメラを一旦止める
+      html5QrcodeScanner.clear().then(() => {
+        document.getElementById('reader').style.display = 'none';
+        document.getElementById('resultArea').style.display = 'block';
+        
+        // 読み取った文字（M0032など）を画面に表示
+        document.getElementById('displayId').innerText = decodedText;
+        
+        // 💡次回のステップで、ここに「キャッシュから名前を探して表示する処理」を追加します
+        document.getElementById('displayName').innerText = "（機材選択機能と連動予定）";
+        
+        // スマホのバイブレーションを鳴らす（対応機種のみ）
+        if (navigator.vibrate) {
+          navigator.vibrate(200);
+        }
+      }).catch(error => {
+        console.error("スキャナーの停止に失敗しました", error);
+      });
+    }
+
+    function onScanFailure(error) {
+      // 読み取れない間は常に呼ばれ続けるため、基本は何もしない
+    }
+
+    function resetScanner() {
+      startScanner();
+    }
+  </script>
+</body>
+</html>
