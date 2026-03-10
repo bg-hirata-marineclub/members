@@ -537,14 +537,12 @@
       document.getElementById('successScreen').style.display = 'block'; 
       
       if (isNewRegistration) {
-        // 新規入会の時は、お礼のメッセージを表示する
         document.getElementById('successTitle').style.display = 'block';
         document.getElementById('successMessage').style.display = 'block';
         document.getElementById('successTitle').innerText = "登録完了";
         document.getElementById('successMessage').innerHTML = "ご入会ありがとうございます。<br>控えのメールを送信しました。";
         document.getElementById('backToTopBtn').style.display = 'none';
       } else {
-        // 💡【修正】自動ログイン時は、タイトルもメッセージもすべて隠してカードを「ドーン」と出す！
         document.getElementById('successTitle').style.display = 'none';
         document.getElementById('successMessage').style.display = 'none';
         document.getElementById('backToTopBtn').style.display = 'none'; 
@@ -559,6 +557,9 @@
       }
       
       document.getElementById('resultId').innerText = result.memberId; 
+      // 💡【重要】後から画像を要求するためにIDを保持しておく
+      document.getElementById('resultId').setAttribute("data-member-id", result.memberId);
+      
       document.getElementById('resultName').innerText = result.memberName + ' 様'; 
       
       const qr = new QRious({
@@ -572,13 +573,8 @@
       document.getElementById('cardVisual').style.display = 'block'; 
       document.getElementById('finalCardImage').style.display = 'none'; 
       
-      if (result.cardImageBase64) {
-        currentCardBase64 = result.cardImageBase64; 
-        document.getElementById('saveInstructionArea').style.display = 'block';
-      } else {
-        document.getElementById('saveInstructionArea').style.display = 'block';
-        document.getElementById('saveInstructionArea').innerHTML = '<p style="color:#e74c3c; font-weight:bold;">お手数ですが、この画面をスクリーンショットして保存してください。</p>';
-      }
+      // 💡【爆速化】画像はまだ作られていないので、保存ボタンエリアだけ表示しておく
+      document.getElementById('saveInstructionArea').style.display = 'block';
       
       window.scrollTo(0, 0);
     }
@@ -593,27 +589,56 @@
       return window.URL.createObjectURL(blob);
     }
 
+    // 💡【修正】ボタンを押した瞬間にGASへ通信し、画像を生成して保存させる
     async function shareToPhotos() {
-      if (!currentCardBase64) return;
-      try {
-        var bin = atob(currentCardBase64.split(',')[1]);
-        var buffer = new Uint8Array(bin.length);
-        for (var i = 0; i < bin.length; i++) {
-          buffer[i] = bin.charCodeAt(i);
-        }
-        var file = new File([buffer.buffer], 'member_card.png', {type: 'image/png'});
+      const btn = document.querySelector('#saveInstructionArea button');
+      const originalText = btn.innerText;
+      btn.innerText = "⏳ 画像を生成中... (数秒かかります)";
+      btn.disabled = true;
+      btn.style.backgroundColor = "#ccc";
 
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: '会員証',
-            text: 'B&G 平田海洋クラブのデジタル会員証です。'
-          });
+      try {
+        const memberId = document.getElementById('resultId').getAttribute("data-member-id");
+        // 💡【重要】ここに「ステップ1で発行した最新のGASデプロイURL」を貼り付けてください！
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
+
+        // GASに「画像作って」とリクエストを投げる
+        const response = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "generateImage", memberId: memberId })
+        });
+        const res = await response.json();
+
+        if (res.status === "success" && res.cardImageBase64) {
+          // 画像が完成したら、保存処理を実行
+          var bin = atob(res.cardImageBase64.split(',')[1]);
+          var buffer = new Uint8Array(bin.length);
+          for (var i = 0; i < bin.length; i++) {
+            buffer[i] = bin.charCodeAt(i);
+          }
+          var file = new File([buffer.buffer], 'member_card.png', {type: 'image/png'});
+
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: '会員証',
+              text: 'B&G 平田海洋クラブのデジタル会員証です。'
+            });
+          } else {
+            var blob = new Blob([buffer.buffer], {type: 'image/png'});
+            window.open(window.URL.createObjectURL(blob), '_blank');
+          }
         } else {
-          window.open(createBlobUrl(currentCardBase64), '_blank');
+          alert("画像の生成に失敗しました: " + res.message);
         }
       } catch (err) {
-        console.log('共有がキャンセルされたか、エラーが発生しました。');
+        console.log('通信エラーまたは共有キャンセル', err);
+      } finally {
+        // ボタンを元の状態に戻す
+        btn.innerText = originalText;
+        btn.disabled = false;
+        btn.style.backgroundColor = "#0056b3";
       }
     }
   </script>
