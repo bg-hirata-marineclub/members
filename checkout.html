@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>B&G 平田海洋クラブ - ビジター精算レジ</title>
+  <style>
+    body { font-family: sans-serif; background-color: #e9ecef; padding: 10px; margin: 0; color: #333; }
+    .header { text-align: center; margin-bottom: 20px; color: #0056b3; font-size: 20px; font-weight: bold; }
+    
+    /* リスト画面 */
+    #listScreen { max-width: 600px; margin: 0 auto; }
+    .visitor-card { background: #fff; padding: 15px 20px; margin-bottom: 10px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; border-left: 5px solid #ffc107; }
+    .visitor-card:active { transform: scale(0.98); background: #f8f9fa; }
+    .v-time { font-size: 14px; color: #666; }
+    .v-name { font-size: 18px; font-weight: bold; margin-top: 5px; }
+    .v-arrow { color: #007bff; font-weight: bold; }
+    .empty-msg { text-align: center; color: #666; margin-top: 50px; }
+
+    /* 精算詳細画面 */
+    #detailScreen { display: none; max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    .back-btn { background: none; border: none; color: #007bff; font-size: 16px; font-weight: bold; padding: 0; margin-bottom: 15px; cursor: pointer; }
+    .detail-name { font-size: 22px; font-weight: bold; margin-bottom: 5px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    .detail-people { font-size: 14px; color: #555; margin-bottom: 20px; }
+    
+    .eq-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #eee; }
+    .eq-name { font-size: 16px; font-weight: bold; }
+    .eq-price { font-size: 12px; color: #888; margin-top: 3px; }
+    .qty-controls { display: flex; align-items: center; gap: 10px; }
+    .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: #f0f2f5; font-size: 18px; font-weight: bold; color: #333; cursor: pointer; }
+    .qty-input { width: 30px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
+    
+    .total-area { margin-top: 25px; padding: 15px; background: #e8f4fd; border-radius: 8px; text-align: center; }
+    .total-label { font-size: 14px; color: #0056b3; }
+    .total-price { font-size: 32px; font-weight: bold; color: #0056b3; margin: 5px 0; }
+    
+    .checkout-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+    .checkout-btn:disabled { background-color: #ccc; }
+    
+    #loading { text-align: center; padding: 50px; color: #666; }
+  </style>
+</head>
+<body>
+
+  <div class="header">💳 ビジター精算レジ</div>
+
+  <div id="loading">🔄 データを読み込み中...</div>
+
+  <div id="listScreen" style="display: none;">
+    <div id="visitorList"></div>
+  </div>
+
+  <div id="detailScreen">
+    <button class="back-btn" onclick="showList()">← リストに戻る</button>
+    <div class="detail-name" id="d-name">お名前</div>
+    <div class="detail-people" id="d-people">大人: 0名 / 子ども: 0名</div>
+    
+    <div id="boatList">
+      </div>
+
+    <div class="total-area">
+      <div class="total-label">ご請求金額</div>
+      <div class="total-price">¥<span id="d-total">0</span></div>
+    </div>
+
+    <button class="checkout-btn" id="checkoutBtn" onclick="processCheckout()">精算を完了する</button>
+  </div>
+
+  <script>
+    // 💡【重要】最新のGAS WebアプリURLをここに貼り付けてください
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
+
+    let priceMaster = {};
+    let visitorsData = [];
+    let currentVisitor = null;
+
+    // 舟艇の固定リスト（表示順）
+    const BOAT_TYPES = [
+      "カヌー（大人）", "カヌー（子ども）", 
+      "ペアカヌー（大人）", "ペアカヌー（子ども）", 
+      "ローボート（大人）", "ローボート（子ども）"
+    ];
+
+    document.addEventListener("DOMContentLoaded", loadData);
+
+    // 1. GASからデータを取得
+    function loadData() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('listScreen').style.display = 'none';
+      document.getElementById('detailScreen').style.display = 'none';
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "getCheckoutData" })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          priceMaster = data.prices;
+          visitorsData = data.visitors;
+          renderList();
+        } else {
+          alert("データ取得エラー: " + data.message);
+        }
+      })
+      .catch(e => alert("通信エラー"));
+    }
+
+    // 2. 未払いリストの表示
+    function renderList() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('listScreen').style.display = 'block';
+      const listDiv = document.getElementById('visitorList');
+      listDiv.innerHTML = '';
+
+      if (visitorsData.length === 0) {
+        listDiv.innerHTML = '<div class="empty-msg">✅ 現在、未払いのビジターはいません</div>';
+        return;
+      }
+
+      visitorsData.forEach((v, index) => {
+        const card = document.createElement('div');
+        card.className = 'visitor-card';
+        card.onclick = () => openDetail(index);
+        card.innerHTML = `
+          <div>
+            <div class="v-time">受付: ${v.time}</div>
+            <div class="v-name">${v.name} 様</div>
+          </div>
+          <div class="v-arrow">精算する ＞</div>
+        `;
+        listDiv.appendChild(card);
+      });
+    }
+
+    // 3. 詳細（レジ）画面を開く
+    function openDetail(index) {
+      currentVisitor = visitorsData[index];
+      document.getElementById('listScreen').style.display = 'none';
+      document.getElementById('detailScreen').style.display = 'block';
+      
+      document.getElementById('d-name').innerText = currentVisitor.name + " 様";
+      document.getElementById('d-people').innerText = `👨大人: ${currentVisitor.adults || 0}名 / 👦子ども: ${currentVisitor.children || 0}名`;
+
+      renderBoats();
+      calcTotal();
+    }
+
+    // 4. 舟艇の+/-UIを生成
+    function renderBoats() {
+      const container = document.getElementById('boatList');
+      container.innerHTML = '';
+      
+      BOAT_TYPES.forEach(boatName => {
+        const price = priceMaster[boatName] || 0;
+        // 注文データに無ければ0スタート
+        const currentQty = currentVisitor.orderData[boatName] || 0; 
+        
+        const div = document.createElement('div');
+        div.className = 'eq-item';
+        div.innerHTML = `
+          <div>
+            <div class="eq-name">${boatName}</div>
+            <div class="eq-price">@${price}円</div>
+          </div>
+          <div class="qty-controls">
+            <button class="qty-btn" onclick="changeQty('${boatName}', -1)">-</button>
+            <input type="number" id="qty-${boatName}" class="qty-input" value="${currentQty}" readonly>
+            <button class="qty-btn" onclick="changeQty('${boatName}', 1)">+</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function changeQty(boatName, delta) {
+      const input = document.getElementById(`qty-${boatName}`);
+      let next = parseInt(input.value) + delta;
+      if (next < 0) next = 0;
+      input.value = next;
+      calcTotal();
+    }
+
+    // 5. 合計金額の自動計算
+    function calcTotal() {
+      let total = 0;
+      BOAT_TYPES.forEach(boatName => {
+        const qty = parseInt(document.getElementById(`qty-${boatName}`).value) || 0;
+        const price = priceMaster[boatName] || 0;
+        total += qty * price;
+      });
+      document.getElementById('d-total').innerText = total.toLocaleString();
+    }
+
+    function showList() {
+      document.getElementById('detailScreen').style.display = 'none';
+      document.getElementById('listScreen').style.display = 'block';
+    }
+
+    // 6. 精算完了処理
+    function processCheckout() {
+      if (!confirm("精算を完了し、記録を更新しますか？")) return;
+
+      const btn = document.getElementById('checkoutBtn');
+      btn.innerText = "通信中...";
+      btn.disabled = true;
+
+      // 最新の入力から、新しい注文データと文字列を作り直す
+      let newOrderData = { ...currentVisitor.orderData };
+      let newEqList = [];
+      let total = 0;
+
+      BOAT_TYPES.forEach(boatName => {
+        const qty = parseInt(document.getElementById(`qty-${boatName}`).value) || 0;
+        newOrderData[boatName] = qty; // 隠しデータを更新
+        if (qty > 0) {
+          newEqList.push(`${boatName}×${qty}`);
+          total += qty * (priceMaster[boatName] || 0);
+        }
+      });
+      
+      // その他の持込などがあれば引き継ぐ
+      if (newOrderData['その他']) newEqList.push(`その他(${newOrderData['その他']})`);
+      
+      const payload = {
+        row: currentVisitor.row,
+        equipment: newEqList.join("、 "),
+        orderData: newOrderData,
+        total: total
+      };
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "processCheckout", data: payload })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert(`✅ 精算が完了しました！\n領収額: ${total.toLocaleString()}円`);
+          btn.innerText = "精算を完了する";
+          btn.disabled = false;
+          loadData(); // リストを再読み込みして未払いから消す
+        } else {
+          alert("エラー: " + data.message);
+          btn.innerText = "精算を完了する"; btn.disabled = false;
+        }
+      }).catch(e => { alert("通信エラー"); btn.innerText = "精算を完了する"; btn.disabled = false; });
+    }
+  </script>
+</body>
+</html>
