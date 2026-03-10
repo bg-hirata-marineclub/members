@@ -10,24 +10,21 @@
     h2 { text-align: center; font-size: 22px; margin-bottom: 10px; color: #0056b3; }
     .description { text-align: center; font-size: 14px; color: #666; margin-bottom: 25px; }
     .form-group { margin-bottom: 20px; }
-    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 15px; }
-    input[type="text"], input[type="tel"] { width: 100%; padding: 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 15px; background: #e8f4fd; padding: 5px 10px; border-left: 4px solid #0056b3; }
+    input[type="text"], input[type="tel"] { width: 100%; padding: 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; margin-bottom: 10px;}
     input:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     .flex-row { display: flex; gap: 10px; } .flex-row > div { flex: 1; }
     
-    .eq-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .eq-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
     .eq-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; background: #fafafa; }
     .eq-item:last-child { border-bottom: none; }
-    .eq-name { font-size: 16px; font-weight: bold; color: #444; }
+    .eq-name { font-size: 15px; font-weight: bold; color: #444; }
     .qty-controls { display: flex; align-items: center; gap: 10px; }
     .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: #e4e6eb; font-size: 18px; font-weight: bold; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .qty-btn:active { background: #ccc; }
-    .qty-input { width: 40px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
+    .qty-input { width: 30px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
     
     button.submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    button.submit-btn:hover { background-color: #05b34c; }
-    button:disabled { background-color: #ccc !important; cursor: not-allowed; }
-    
     #successScreen { display: none; text-align: center; padding: 30px 10px; }
     .check-icon { font-size: 50px; margin-bottom: 10px; }
   </style>
@@ -39,73 +36,72 @@
       <p class="description">本日のご利用ありがとうございます。<br>代表者様のご連絡先を入力してください。</p>
       
       <form id="visitorForm">
-        <div class="form-group flex-row">
-          <div><label>姓</label><input type="text" id="lastName" placeholder="例: 平田"></div>
-          <div><label>名</label><input type="text" id="firstName" placeholder="例: 太郎"></div>
-        </div>
-        <div class="form-group flex-row">
-          <div><label>せい</label><input type="text" id="kanaLast" placeholder="例: ひらた"></div>
-          <div><label>めい</label><input type="text" id="kanaFirst" placeholder="例: たろう"></div>
-        </div>
-        <div class="form-group"><label>電話番号</label><input type="tel" id="phone" placeholder="例: 090-1234-5678"></div>
-        
-        <div class="form-group flex-row">
-          <div style="flex: 0 0 110px;"><label>郵便番号</label><input type="tel" id="postalCode" maxlength="7" placeholder="9980000"></div>
-          <div><label>住所</label><input type="text" id="address" placeholder="例: 酒田市〇〇町1-2-3"></div>
+        <div class="form-group">
+          <label>代表者情報</label>
+          <div class="flex-row">
+            <div><input type="text" id="lastName" placeholder="姓 (例: 平田)"></div>
+            <div><input type="text" id="firstName" placeholder="名 (例: 太郎)"></div>
+          </div>
+          <div class="flex-row">
+            <div><input type="text" id="kanaLast" placeholder="せい (例: ひらた)"></div>
+            <div><input type="text" id="kanaFirst" placeholder="めい (例: たろう)"></div>
+          </div>
+          <input type="tel" id="phone" placeholder="電話番号 (例: 090-1234-5678)">
+          <div class="flex-row">
+            <div style="flex: 0 0 110px;"><input type="tel" id="postalCode" maxlength="7" placeholder="郵便番号"></div>
+            <div><input type="text" id="address" placeholder="住所 (自動入力)"></div>
+          </div>
         </div>
 
         <div class="form-group">
           <label>本人を含む利用人数</label>
           <div class="eq-list">
             <div class="eq-item">
-              <div class="eq-name">👥 利用人数</div>
+              <div class="eq-name">👨👩 大人（高校生以上）</div>
               <div class="qty-controls">
-                <button type="button" class="qty-btn" onclick="changeQty('qty-people', -1, 1)">-</button>
-                <input type="number" id="qty-people" class="qty-input" value="1" readonly>
-                <button type="button" class="qty-btn" onclick="changeQty('qty-people', 1, 1)">+</button>
+                <button type="button" class="qty-btn" onclick="changeQty('qty-adults', -1, 0)">-</button>
+                <input type="number" id="qty-adults" class="qty-input" value="1" readonly>
+                <button type="button" class="qty-btn" onclick="changeQty('qty-adults', 1, 0)">+</button>
+              </div>
+            </div>
+            <div class="eq-item">
+              <div class="eq-name">👦👧 子ども（中学生以下）</div>
+              <div class="qty-controls">
+                <button type="button" class="qty-btn" onclick="changeQty('qty-kids', -1, 0)">-</button>
+                <input type="number" id="qty-kids" class="qty-input" value="0" readonly>
+                <button type="button" class="qty-btn" onclick="changeQty('qty-kids', 1, 0)">+</button>
               </div>
             </div>
           </div>
         </div>
         
         <div class="form-group">
-          <label>利用する舟艇と数量</label>
+          <label>利用する舟艇の数</label>
+          <p style="font-size: 12px; color: #666; margin: 0 0 10px 0;">※子ども同士でシェアする場合は「子ども」の数量を増やしてください。</p>
           <div class="eq-list">
-            <div class="eq-item">
-              <div class="eq-name">🛶 カヌー</div>
-              <div class="qty-controls">
-                <button type="button" class="qty-btn" onclick="changeQty('qty-canoe', -1, 0)">-</button>
-                <input type="number" id="qty-canoe" class="qty-input" value="0" readonly>
-                <button type="button" class="qty-btn" onclick="changeQty('qty-canoe', 1, 0)">+</button>
-              </div>
+            <div class="eq-item"><div class="eq-name">🛶 カヌー（大人）</div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('canoe-adult', -1, 0)">-</button><input type="number" id="canoe-adult" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('canoe-adult', 1, 0)">+</button></div>
             </div>
-            <div class="eq-item">
-              <div class="eq-name">🛶 ペアカヌー</div>
-              <div class="qty-controls">
-                <button type="button" class="qty-btn" onclick="changeQty('qty-pair', -1, 0)">-</button>
-                <input type="number" id="qty-pair" class="qty-input" value="0" readonly>
-                <button type="button" class="qty-btn" onclick="changeQty('qty-pair', 1, 0)">+</button>
-              </div>
+            <div class="eq-item"><div class="eq-name">🛶 カヌー（子ども）</div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('canoe-kid', -1, 0)">-</button><input type="number" id="canoe-kid" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('canoe-kid', 1, 0)">+</button></div>
             </div>
-            <div class="eq-item">
-              <div class="eq-name">🚣 ローボート</div>
-              <div class="qty-controls">
-                <button type="button" class="qty-btn" onclick="changeQty('qty-row', -1, 0)">-</button>
-                <input type="number" id="qty-row" class="qty-input" value="0" readonly>
-                <button type="button" class="qty-btn" onclick="changeQty('qty-row', 1, 0)">+</button>
-              </div>
+            <div class="eq-item"><div class="eq-name">🛶 ペアカヌー（大人）</div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('pair-adult', -1, 0)">-</button><input type="number" id="pair-adult" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('pair-adult', 1, 0)">+</button></div>
+            </div>
+            <div class="eq-item"><div class="eq-name">🛶 ペアカヌー（子ども）</div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('pair-kid', -1, 0)">-</button><input type="number" id="pair-kid" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('pair-kid', 1, 0)">+</button></div>
+            </div>
+            <div class="eq-item"><div class="eq-name">🚣 ローボート（大人）</div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('row-adult', -1, 0)">-</button><input type="number" id="row-adult" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('row-adult', 1, 0)">+</button></div>
+            </div>
+            <div class="eq-item"><div class="eq-name">🚣 ローボート（子ども）</div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('row-kid', -1, 0)">-</button><input type="number" id="row-kid" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('row-kid', 1, 0)">+</button></div>
             </div>
             
             <div class="eq-item" style="background-color: #fff3f3;">
-              <div class="eq-name" style="color: #666; font-size: 14px;">
-                🏄 SUP<br>
-                <span style="font-size: 11px; color: #d9534f;">※メンバー限定の利用となります</span>
-              </div>
-              <div class="qty-controls">
-                <span style="font-size: 12px; color: #d9534f; font-weight: bold; margin-right: 5px;">選択不可</span>
-              </div>
+              <div class="eq-name" style="color: #666; font-size: 14px;">🏄 SUP<br><span style="font-size: 11px; color: #d9534f;">※メンバー限定の利用となります</span></div>
+              <div class="qty-controls"><span style="font-size: 12px; color: #d9534f; font-weight: bold;">選択不可</span></div>
             </div>
-
             <div class="eq-item" style="display: block;">
               <div class="eq-name" style="margin-bottom: 8px;">その他</div>
               <input type="text" id="eq-other" placeholder="例: ○○ × 1" style="padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
@@ -120,24 +116,17 @@
     <div id="successScreen">
       <div class="check-icon">✅</div>
       <h2 style="color: #28a745;">受付完了</h2>
-      <p style="font-size: 16px; color: #333; margin-top: 20px; line-height: 1.6;">
-        ご入力ありがとうございました。<br><br>
-        お帰りの際に、受付スタッフへ<br><b>「利用料」</b>のお支払いをお願いいたします。<br><br>
-        それでは、安全に気をつけてお楽しみください！
-      </p>
+      <p style="font-size: 16px; color: #333; margin-top: 20px; line-height: 1.6;">ご入力ありがとうございました。<br><br>お帰りの際に、受付スタッフへ<br><b>「利用料」</b>のお支払いをお願いいたします。</p>
     </div>
   </div>
 
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
 
-    // 💡数量変更ボタンの処理（minパラメータを追加して、人数は1未満にならないようにする）
     function changeQty(id, delta, min) {
       const input = document.getElementById(id);
-      let current = parseInt(input.value) || 0;
-      let next = current + delta;
-      if (next < min) next = min; 
-      input.value = next;
+      let next = (parseInt(input.value) || 0) + delta;
+      input.value = next < min ? min : next;
     }
 
     function bindFurigana(nameId, kanaId) {
@@ -148,68 +137,61 @@
       nameEl.addEventListener('compositionstart', () => { isComposing = true; committedKana = kanaEl.value; });
       nameEl.addEventListener('compositionupdate', (e) => {
         const text = e.data;
-        if (/^[ぁ-んーa-zA-Z]*$/.test(text)) {
-          const hiragana = text.match(/[ぁ-んー]/g);
-          kanaEl.value = committedKana + (hiragana ? hiragana.join('') : '');
-        }
+        if (/^[ぁ-んーa-zA-Z]*$/.test(text)) kanaEl.value = committedKana + (text.match(/[ぁ-んー]/g) ? text.match(/[ぁ-んー]/g).join('') : '');
       });
       nameEl.addEventListener('compositionend', () => { isComposing = false; });
       nameEl.addEventListener('input', () => { if (!isComposing && nameEl.value === '') { kanaEl.value = ''; committedKana = ''; } });
     }
     
     document.addEventListener("DOMContentLoaded", function() { 
-      bindFurigana('lastName', 'kanaLast'); 
-      bindFurigana('firstName', 'kanaFirst'); 
+      bindFurigana('lastName', 'kanaLast'); bindFurigana('firstName', 'kanaFirst'); 
     });
 
     document.getElementById('postalCode').addEventListener('input', function(e) {
       this.value = this.value.replace(/[^0-9]/g, ''); 
-      let zip = this.value;
-      if (zip.length === 7) {
-        fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + zip)
-          .then(response => response.json())
-          .then(data => {
-            if (data.results) {
-              const address = data.results[0].address1 + data.results[0].address2 + data.results[0].address3;
-              document.getElementById('address').value = address;
-            }
-          })
-          .catch(error => console.log('住所検索エラー:', error));
+      if (this.value.length === 7) {
+        fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + this.value)
+          .then(res => res.json()).then(data => { if (data.results) document.getElementById('address').value = data.results[0].address1 + data.results[0].address2 + data.results[0].address3; });
       }
     });
 
     function submitVisitor() {
       const fields = ['lastName', 'firstName', 'kanaLast', 'kanaFirst', 'phone'];
       for (let id of fields) {
-        if (!document.getElementById(id).value.trim()) {
-          alert("お名前や電話番号など、未入力の項目があります。");
-          return;
-        }
+        if (!document.getElementById(id).value.trim()) { alert("未入力の項目があります。"); return; }
       }
 
-      const peopleCount = parseInt(document.getElementById('qty-people').value) || 1;
+      const adults = parseInt(document.getElementById('qty-adults').value) || 0;
+      const kids = parseInt(document.getElementById('qty-kids').value) || 0;
+      if (adults + kids === 0) { alert("利用人数を入力してください。"); return; }
+
+      // 💡精算アプリ用のシステムデータ（JSON）を作成
+      const orderData = {};
+      const boats = [
+        { id: 'canoe-adult', name: 'カヌー（大人）' }, { id: 'canoe-kid', name: 'カヌー（子ども）' },
+        { id: 'pair-adult', name: 'ペアカヌー（大人）' }, { id: 'pair-kid', name: 'ペアカヌー（子ども）' },
+        { id: 'row-adult', name: 'ローボート（大人）' }, { id: 'row-kid', name: 'ローボート（子ども）' }
+      ];
 
       let eqList = [];
-      const canoe = parseInt(document.getElementById('qty-canoe').value) || 0;
-      const pair = parseInt(document.getElementById('qty-pair').value) || 0;
-      const row = parseInt(document.getElementById('qty-row').value) || 0;
+      boats.forEach(b => {
+        const qty = parseInt(document.getElementById(b.id).value) || 0;
+        if (qty > 0) {
+          eqList.push(`${b.name}×${qty}`);
+          orderData[b.name] = qty; // 隠しデータに記録
+        }
+      });
+
       const other = document.getElementById('eq-other').value.trim();
-
-      if (canoe > 0) eqList.push("カヌー×" + canoe);
-      if (pair > 0) eqList.push("ペアカヌー×" + pair);
-      if (row > 0) eqList.push("ローボート×" + row);
-      if (other) eqList.push("その他(" + other + ")");
-
-      if (eqList.length === 0) {
-        alert("利用する舟艇の数量を入力してください。");
-        return;
+      if (other) {
+        eqList.push(`その他(${other})`);
+        orderData['その他'] = other;
       }
-      
-      const combinedEquipment = eqList.join("、 "); 
+
+      if (eqList.length === 0) { alert("利用する舟艇の数量を入力してください。"); return; }
 
       const btn = document.getElementById('submitBtn');
-      btn.innerText = "送信中...";
-      btn.disabled = true;
+      btn.innerText = "送信中..."; btn.disabled = true;
 
       const data = {
         lastName: document.getElementById('lastName').value,
@@ -219,32 +201,26 @@
         phone: document.getElementById('phone').value,
         postalCode: document.getElementById('postalCode').value,
         address: document.getElementById('address').value,
-        peopleCount: peopleCount, // 💡追加した利用人数
-        equipment: combinedEquipment
+        adults: adults,
+        children: kids,
+        equipment: eqList.join("、 "),
+        orderData: orderData // 💡隠しデータをGASへ送る
       };
 
       fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action: "registerVisitor", data: data })
+        method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "registerVisitor", data: data })
       })
-      .then(response => response.json())
+      .then(res => res.json())
       .then(res => {
         if (res.status === "success") {
           document.getElementById('formScreen').style.display = 'none';
           document.getElementById('successScreen').style.display = 'block';
           window.scrollTo(0, 0);
         } else {
-          alert("エラーが発生しました: " + res.message);
-          btn.innerText = "受付を完了する";
-          btn.disabled = false;
+          alert("エラー: " + res.message);
+          btn.innerText = "受付を完了する"; btn.disabled = false;
         }
-      })
-      .catch(error => {
-        alert("通信エラーが発生しました。");
-        btn.innerText = "受付を完了する";
-        btn.disabled = false;
-      });
+      }).catch(e => { alert("通信エラー"); btn.innerText = "受付を完了する"; btn.disabled = false; });
     }
   </script>
 </body>
