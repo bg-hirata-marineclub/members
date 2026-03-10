@@ -4,17 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>B&G 平田海洋クラブ - 受付スキャナー</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
     body { font-family: sans-serif; background-color: #f0f2f5; margin: 0; padding: 10px; color: #333; }
     .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     h2 { text-align: center; color: #0056b3; margin-top: 0; font-size: 20px; }
-    #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+    #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: #000; }
     #resultArea { display: none; background: #e8f4fd; padding: 15px; border-radius: 8px; border: 1px solid #b6d4fe; text-align: center; }
     .member-id { font-size: 24px; font-weight: bold; color: #0056b3; margin: 5px 0; }
     .member-name { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
     button { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-    button.btn-cancel { background-color: #6c757d; }
     .status-badge { display: inline-block; padding: 5px 10px; background-color: #28a745; color: white; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
   </style>
 </head>
@@ -38,9 +37,7 @@
   <script>
     let html5QrCode;
 
-    // 画面が読み込まれたらカメラの準備をする
     document.addEventListener("DOMContentLoaded", function() {
-      // 💡プロ仕様のコア機能を初期化
       html5QrCode = new Html5Qrcode("reader");
       startScanner();
     });
@@ -49,43 +46,39 @@
       document.getElementById('resultArea').style.display = 'none';
       document.getElementById('reader').style.display = 'block';
 
-      // 💡【重要】facingMode: "environment" で背面カメラを強制指定
       html5QrCode.start(
         { facingMode: "environment" }, 
         {
-          fps: 10,
-          qrbox: { width: 250, height: 250 }
+          fps: 10
+          // 💡qrbox（読み取り枠）の設定を削除し、画面全体で超高感度スキャンするように変更
         },
         onScanSuccess,
         onScanFailure
       ).catch(err => {
         console.error("カメラの起動に失敗しました", err);
-        alert("カメラが見つからないか、アクセスが拒否されました。ブラウザのカメラ設定を確認してください。");
+        alert("カメラの起動に失敗しました。ブラウザの再読み込みをお試しください。");
       });
     }
 
-    // QRコードを読み取った瞬間に動く処理
     function onScanSuccess(decodedText, decodedResult) {
-      // ピッと読んだらカメラを即座に停止する
-      html5QrCode.stop().then(() => {
-        document.getElementById('reader').style.display = 'none';
-        document.getElementById('resultArea').style.display = 'block';
-        
-        // 読み取った文字を画面に表示
-        document.getElementById('displayId').innerText = decodedText;
-        document.getElementById('displayName').innerText = "（機材選択機能と連動予定）";
-        
-        // スマホのバイブレーションを鳴らす
-        if (navigator.vibrate) {
-          navigator.vibrate(200);
-        }
-      }).catch(err => {
-        console.error("カメラの停止に失敗", err);
-      });
+      // 💡読み取ったらすぐにカメラを停止
+      if (html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+          document.getElementById('reader').style.display = 'none';
+          document.getElementById('resultArea').style.display = 'block';
+          
+          document.getElementById('displayId').innerText = decodedText;
+          document.getElementById('displayName').innerText = "（機材選択機能と連動予定）";
+          
+          if (navigator.vibrate) navigator.vibrate(200);
+        }).catch(err => {
+          console.error("カメラの停止に失敗", err);
+        });
+      }
     }
 
     function onScanFailure(error) {
-      // 読み取れない間は常に呼ばれるため何もしない
+      // 読み取り待機中
     }
 
     function resetScanner() {
