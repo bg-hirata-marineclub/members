@@ -537,12 +537,17 @@
       document.getElementById('successScreen').style.display = 'block'; 
       
       if (isNewRegistration) {
+        // 新規入会の時は、お礼のメッセージを表示する
+        document.getElementById('successTitle').style.display = 'block';
+        document.getElementById('successMessage').style.display = 'block';
         document.getElementById('successTitle').innerText = "登録完了";
         document.getElementById('successMessage').innerHTML = "ご入会ありがとうございます。<br>控えのメールを送信しました。";
+        document.getElementById('backToTopBtn').style.display = 'none';
       } else {
-        document.getElementById('successTitle').innerText = "会員証の表示";
-        document.getElementById('successMessage').innerHTML = "会員情報の確認が完了しました。";
-        document.getElementById('backToTopBtn').style.display = 'block'; 
+        // 💡【修正】自動ログイン時は、タイトルもメッセージもすべて隠してカードを「ドーン」と出す！
+        document.getElementById('successTitle').style.display = 'none';
+        document.getElementById('successMessage').style.display = 'none';
+        document.getElementById('backToTopBtn').style.display = 'none'; 
       }
       
       document.getElementById('resultYear').innerText = result.schoolYear; 
