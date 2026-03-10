@@ -143,7 +143,9 @@
     // 💡【追加】機材ボタンを押した時に、裏側でスプレッドシートに送信する処理
     function submitRecord(equipmentName) {
       const memberId = document.getElementById('displayId').innerText;
-      const memberName = document.getElementById('displayName').innerText;
+      
+      // 💡【修正】画面の表示から「 様」という文字だけを消し去ってから、純粋な名前として送る
+      const memberName = document.getElementById('displayName').innerText.replace(' 様', '');
 
       // 画面上は一瞬で「完了」にする（遅延ゼロ体験）
       document.getElementById('resultArea').style.display = 'none';
