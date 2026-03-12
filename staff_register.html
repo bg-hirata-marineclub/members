@@ -4,11 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>スタッフ情報登録</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; color: #333; }
     .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 25px 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     h2 { text-align: center; color: #0056b3; margin-top: 0; font-size: 20px; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px; }
+    
+    /* セキュリティチェック画面 */
+    #loading, #errorScreen { text-align: center; padding: 50px 20px; color: #666; line-height: 1.6; }
+    #errorScreen { display: none; color: #d9534f; font-weight: bold; }
+    #appContent { display: none; }
+    
     .section-title { font-size: 16px; font-weight: bold; margin: 25px 0 15px 0; color: #444; border-left: 4px solid #0056b3; padding-left: 8px; }
+    
+    /* 会員ID・氏名ロックエリア */
+    .locked-info { background: #e8f4fd; border: 1px solid #b6d4fe; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center; }
+    .locked-label { font-size: 12px; color: #0056b3; font-weight: bold; margin-bottom: 5px; }
+    .locked-value { font-size: 20px; font-weight: bold; color: #333; }
     
     .form-group { margin-bottom: 20px; }
     label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #555; }
@@ -17,15 +29,12 @@
     
     input[type="text"], input[type="tel"], input[type="date"], input[type="file"], select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
     input:focus, select:focus { outline: none; border-color: #0056b3; background-color: #fff; }
-    
     .help-text { font-size: 12px; color: #666; margin-top: 5px; line-height: 1.4; }
     
-    /* ボタン類 */
     .btn-primary { width: 100%; padding: 15px; background-color: #0056b3; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .btn-submit { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .btn-submit { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .btn-back { width: 100%; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
     
-    /* 確認画面用 */
     #confirmScreen { display: none; }
     .confirm-box { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     .confirm-item { margin-bottom: 12px; border-bottom: 1px dashed #ccc; padding-bottom: 8px; }
@@ -41,238 +50,171 @@
 
   <div class="container">
     
-    <div id="formScreen">
-      <h2>スタッフ情報 登録フォーム</h2>
-      <p style="font-size: 13px; color: #666; text-align: center; margin-bottom: 20px;">
-        給与振込口座と、保有している場合は船舶免許の登録をお願いします。
-      </p>
+    <div id="loading">🔄 セキュリティチェック中...<br><span style="font-size: 12px;">会員情報を取得しています</span></div>
+    
+    <div id="errorScreen">
+      ⛔️ アクセス拒否<br><br>
+      <span id="errorText" style="font-size: 14px; font-weight: normal; color: #333;">この画面を開く権限がありません。</span>
+    </div>
 
-      <form id="staffForm">
-        <div class="form-group">
-          <label>スタッフ氏名 <span class="badge">必須</span></label>
-          <input type="text" id="staffName" placeholder="例: 平田 太郎">
-        </div>
-
-        <div class="section-title">💳 給与振込口座</div>
-
-        <div class="form-group">
-          <label>銀行名 <span class="badge">必須</span></label>
-          <input type="text" id="bankName" list="bank-list" placeholder="例: ゆうちょ、楽天、みずほ" autocomplete="off">
-          <datalist id="bank-list"></datalist>
-        </div>
-
-        <div class="form-group">
-          <label>支店名 <span class="badge">必須</span></label>
-          <input type="text" id="branchName" list="branch-list" placeholder="先に銀行名を選択してください" disabled autocomplete="off">
-          <datalist id="branch-list"></datalist>
-        </div>
-
-        <div class="form-group">
-          <label>口座種別 <span class="badge">必須</span></label>
-          <select id="accountType">
-            <option value="普通">普通</option>
-            <option value="当座">当座</option>
-            <option value="貯蓄">貯蓄</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>口座番号（7桁） <span class="badge">必須</span></label>
-          <input type="tel" id="accountNumber" maxlength="7" placeholder="例: 1234567">
-        </div>
-
-        <div class="form-group">
-          <label>口座名義（カナ） <span class="badge">必須</span></label>
-          <input type="text" id="accountName" placeholder="例: ﾋﾗﾀ ﾀﾛｳ">
-          <div class="help-text">※全角で入力しても自動で半角カナに変換されます。</div>
-        </div>
-
-        <div class="section-title">🛥️ 資格情報（保有者のみ）</div>
+    <div id="appContent">
+      <div id="formScreen">
+        <h2>スタッフ情報 登録フォーム</h2>
         
-        <div class="form-group">
-          <label>小型船舶免許の画像 <span class="badge-opt">任意</span></label>
-          <input type="file" id="licenseImage" accept="image/*" capture="environment">
+        <div class="locked-info">
+          <div class="locked-label">👤 以下の内容で紐付け・登録します</div>
+          <div class="locked-value"><span id="displayMemberId">M----</span> <br> <span id="displayStaffName">取得中...</span> 様</div>
         </div>
 
-        <div class="form-group">
-          <label>有効期限 <span class="badge-opt">任意</span></label>
-          <input type="date" id="licenseExpiry">
-        </div>
+        <form id="staffForm">
+          <div class="section-title">💳 給与振込口座</div>
+          <div class="form-group"><label>銀行名 <span class="badge">必須</span></label><input type="text" id="bankName" list="bank-list" placeholder="例: ゆうちょ、楽天、みずほ" autocomplete="off"><datalist id="bank-list"></datalist></div>
+          <div class="form-group"><label>支店名 <span class="badge">必須</span></label><input type="text" id="branchName" list="branch-list" placeholder="先に銀行名を選択" disabled autocomplete="off"><datalist id="branch-list"></datalist></div>
+          <div class="form-group"><label>口座種別 <span class="badge">必須</span></label><select id="accountType"><option value="普通">普通</option><option value="当座">当座</option><option value="貯蓄">貯蓄</option></select></div>
+          <div class="form-group"><label>口座番号（7桁） <span class="badge">必須</span></label><input type="tel" id="accountNumber" maxlength="7" placeholder="例: 1234567"></div>
+          <div class="form-group"><label>口座名義（カナ） <span class="badge">必須</span></label><input type="text" id="accountName" placeholder="例: ﾋﾗﾀ ﾀﾛｳ"><div class="help-text">※自動で半角カナに変換されます。</div></div>
 
-        <button type="button" class="btn-primary" onclick="showConfirm()">入力内容を確認する</button>
-      </form>
-    </div>
+          <div class="section-title">🛥️ 資格情報（保有者のみ）</div>
+          <div class="form-group"><label>小型船舶免許の画像 <span class="badge-opt">任意</span></label><input type="file" id="licenseImage" accept="image/*" capture="environment"></div>
+          <div class="form-group"><label>有効期限 <span class="badge-opt">任意</span></label><input type="date" id="licenseExpiry"></div>
 
-    <div id="confirmScreen">
-      <h2>入力内容のご確認</h2>
-      <div class="alert-text">
-        ⚠️ 口座番号や名義に1文字でも誤りがあると、給与の振込ができません。キャッシュカードをお手元に用意し、よくご確認ください。
+          <button type="button" class="btn-primary" onclick="showConfirm()">入力内容を確認する</button>
+        </form>
       </div>
 
-      <div class="confirm-box">
-        <div class="confirm-item">
-          <div class="confirm-label">スタッフ氏名</div>
-          <div class="confirm-value" id="c-staffName"></div>
+      <div id="confirmScreen">
+        <h2>入力内容のご確認</h2>
+        <div class="alert-text">⚠️ 口座番号や名義に1文字でも誤りがあると給与の振込ができません。よくご確認ください。</div>
+        <div class="confirm-box">
+          <div class="confirm-item"><div class="confirm-label">スタッフ氏名・会員ID</div><div class="confirm-value" id="c-staffName"></div></div>
         </div>
+        <div class="confirm-box">
+          <div class="confirm-item"><div class="confirm-label">金融機関・支店名</div><div class="confirm-value" id="c-bank"></div></div>
+          <div class="confirm-item"><div class="confirm-label">口座種別・口座番号</div><div class="confirm-value" id="c-accountNum"></div></div>
+          <div class="confirm-item"><div class="confirm-label">口座名義（半角カナ）</div><div class="confirm-value" id="c-accountName" style="color: #0056b3; font-size: 22px;"></div></div>
+        </div>
+        <div class="confirm-box">
+          <div class="confirm-item"><div class="confirm-label">船舶免許</div><div class="confirm-value" id="c-license"></div></div>
+        </div>
+        <button type="button" id="submitBtn" class="btn-submit" onclick="submitData()">間違いありません（登録）</button>
+        <button type="button" class="btn-back" onclick="hideConfirm()">修正する</button>
       </div>
 
-      <div class="confirm-box">
-        <div class="confirm-item">
-          <div class="confirm-label">金融機関・支店名</div>
-          <div class="confirm-value" id="c-bank"></div>
-        </div>
-        <div class="confirm-item">
-          <div class="confirm-label">口座種別・口座番号</div>
-          <div class="confirm-value" id="c-accountNum"></div>
-        </div>
-        <div class="confirm-item">
-          <div class="confirm-label">口座名義（半角カナ）</div>
-          <div class="confirm-value" id="c-accountName" style="color: #0056b3; font-size: 22px;"></div>
-        </div>
+      <div id="successScreen">
+        <div style="font-size: 50px; margin-bottom: 10px;">✅</div><h2 style="color: #28a745; border-bottom: none;">登録完了</h2>
+        <p style="font-size: 15px; color: #333; margin-top: 20px;">情報の登録が完了しました。<br>ご協力ありがとうございました。</p>
       </div>
-
-      <div class="confirm-box">
-        <div class="confirm-item">
-          <div class="confirm-label">船舶免許</div>
-          <div class="confirm-value" id="c-license"></div>
-        </div>
-      </div>
-
-      <button type="button" id="submitBtn" class="btn-submit" onclick="submitData()">間違いありません（登録）</button>
-      <button type="button" class="btn-back" onclick="hideConfirm()">修正する</button>
-    </div>
-
-    <div id="successScreen">
-      <div style="font-size: 50px; margin-bottom: 10px;">✅</div>
-      <h2 style="color: #28a745; border-bottom: none;">登録完了</h2>
-      <p style="font-size: 15px; color: #333; margin-top: 20px;">
-        情報の登録が完了しました。<br>ご協力ありがとうございました。
-      </p>
     </div>
   </div>
 
   <script>
-    // 💡【重要】最新のGAS WebアプリURLを貼り付けてください
+    // 💡LIFF IDと最新のGAS URL
+    const LIFF_ID = "2009367368-ZhOwtXwt";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
 
-    let banksData = {};
-    let branchesData = {};
+    let banksData = {}; let branchesData = {};
+    let currentMemberId = ""; let currentStaffName = "";
 
-    document.addEventListener("DOMContentLoaded", async () => {
-      try {
-        const res = await fetch('https://zengin-code.github.io/api/banks.json');
-        banksData = await res.json();
-        const bankList = document.getElementById('bank-list');
-        for (const code in banksData) {
-          const option = document.createElement('option'); option.value = banksData[code].name; bankList.appendChild(option);
-        }
-      } catch (e) { console.error("銀行データの取得失敗", e); }
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchBanks(); initializeApp();
     });
 
+    // 💡LIFF初期化と権限チェック
+    function initializeApp() {
+      liff.init({ liffId: LIFF_ID })
+        .then(() => {
+          if (!liff.isLoggedIn()) liff.login();
+          else liff.getProfile().then(p => verifyStaffAccess(p.userId)).catch(e => showError("プロフィールの取得失敗"));
+        }).catch(e => showError("LIFF初期化エラー"));
+    }
+
+    function verifyStaffAccess(uid) {
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "verifyStaff", uid: uid }) })
+      .then(res => res.json()).then(data => {
+        if (data.status === "success") {
+          currentMemberId = data.memberId; currentStaffName = data.staffName;
+          document.getElementById('displayMemberId').innerText = currentMemberId;
+          document.getElementById('displayStaffName').innerText = currentStaffName;
+          
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('appContent').style.display = 'block';
+        } else showError(data.message);
+      }).catch(e => showError("通信エラー"));
+    }
+
+    function showError(msg) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('errorScreen').style.display = 'block'; document.getElementById('errorText').innerText = msg;
+    }
+
+    // 銀行データ処理
+    async function fetchBanks() {
+      try {
+        const res = await fetch('https://zengin-code.github.io/api/banks.json'); banksData = await res.json();
+        const bankList = document.getElementById('bank-list');
+        for (const c in banksData) { const o = document.createElement('option'); o.value = banksData[c].name; bankList.appendChild(o); }
+      } catch (e) {}
+    }
+
     document.getElementById('bankName').addEventListener('change', async (e) => {
-      const selectedName = e.target.value;
-      const branchInput = document.getElementById('branchName');
-      const branchList = document.getElementById('branch-list');
-      const bank = Object.values(banksData).find(b => b.name === selectedName);
-      
+      const bank = Object.values(banksData).find(b => b.name === e.target.value);
+      const branchInput = document.getElementById('branchName'); const branchList = document.getElementById('branch-list');
       if (bank) {
-        branchInput.disabled = false; branchInput.placeholder = "例: 本店、新宿、マルマル"; branchInput.value = ""; branchList.innerHTML = "";
-        const res = await fetch(`https://zengin-code.github.io/api/branches/${bank.code}.json`);
-        branchesData = await res.json();
-        for (const code in branchesData) {
-          const option = document.createElement('option'); option.value = branchesData[code].name; branchList.appendChild(option);
-        }
+        branchInput.disabled = false; branchInput.placeholder = "例: 本店、新宿"; branchInput.value = ""; branchList.innerHTML = "";
+        const res = await fetch(`https://zengin-code.github.io/api/branches/${bank.code}.json`); branchesData = await res.json();
+        for (const c in branchesData) { const o = document.createElement('option'); o.value = branchesData[c].name; branchList.appendChild(o); }
       } else { branchInput.disabled = true; branchInput.value = ""; }
     });
 
-    // カナ変換（全角を半角に）
     document.getElementById('accountName').addEventListener('blur', function(e) {
-      let val = e.target.value;
-      val = val.replace(/[\u3041-\u3096]/g, match => String.fromCharCode(match.charCodeAt(0) + 0x60));
-      const small = "ァィゥェォッャュョヮヵヶ"; const large = "アイウエオツヤユヨワカケ";
-      for (let i = 0; i < small.length; i++) val = val.split(small[i]).join(large[i]);
-      const kanaMap = {
-        'ガ':'ｶﾞ','ギ':'ｷﾞ','グ':'ｸﾞ','ゲ':'ｹﾞ','ゴ':'ｺﾞ','ザ':'ｻﾞ','ジ':'ｼﾞ','ズ':'ｽﾞ','ゼ':'ｾﾞ','ゾ':'ｿﾞ',
-        'ダ':'ﾀﾞ','ヂ':'ﾁﾞ','ヅ':'ﾂﾞ','デ':'ﾃﾞ','ド':'ﾄﾞ','バ':'ﾊﾞ','ビ':'ﾋﾞ','ブ':'ﾌﾞ','ベ':'ﾍﾞ','ボ':'ﾎﾞ',
-        'パ':'ﾊﾟ','ピ':'ﾋﾟ','プ':'ﾌﾟ','ペ':'ﾍﾟ','ポ':'ﾎﾟ','ヴ':'ｳﾞ','ア':'ｱ','イ':'ｲ','ウ':'ｳ','エ':'ｴ','オ':'ｵ',
-        'カ':'ｶ','キ':'ｷ','ク':'ｸ','ケ':'ｹ','コ':'ｺ','サ':'ｻ','シ':'ｼ','ス':'ｽ','セ':'ｾ','ソ':'ｿ',
-        'タ':'ﾀ','チ':'ﾁ','ツ':'ﾂ','テ':'ﾃ','ト':'ﾄ','ナ':'ﾅ','ニ':'ﾆ','ヌ':'ﾇ','ネ':'ﾈ','ノ':'ﾉ',
-        'ハ':'ﾊ','ヒ':'ﾋ','フ':'ﾌ','ヘ':'ﾍ','ホ':'ﾎ','マ':'ﾏ','ミ':'ﾐ','ム':'ﾑ','メ':'ﾒ','モ':'ﾓ',
-        'ヤ':'ﾔ','ユ':'ﾕ','ヨ':'ﾖ','ラ':'ﾗ','リ':'ﾘ','ル':'ﾙ','レ':'ﾚ','ロ':'ﾛ','ワ':'ﾜ','ヲ':'ｦ','ン':'ﾝ',
-        'ー':'ｰ','・':'･','　':' '
-      };
-      let result = ''; for (let i = 0; i < val.length; i++) result += kanaMap[val[i]] || val[i];
-      e.target.value = result.toUpperCase();
+      let val = e.target.value.replace(/[\u3041-\u3096]/g, m => String.fromCharCode(m.charCodeAt(0) + 0x60));
+      const s="ァィゥェォッャュョヮヵヶ", l="アイウエオツヤユヨワカケ"; for(let i=0; i<s.length; i++) val = val.split(s[i]).join(l[i]);
+      const kMap = {'ガ':'ｶﾞ','ギ':'ｷﾞ','グ':'ｸﾞ','ゲ':'ｹﾞ','ゴ':'ｺﾞ','ザ':'ｻﾞ','ジ':'ｼﾞ','ズ':'ｽﾞ','ゼ':'ｾﾞ','ゾ':'ｿﾞ','ダ':'ﾀﾞ','ヂ':'ﾁﾞ','ヅ':'ﾂﾞ','デ':'ﾃﾞ','ド':'ﾄﾞ','バ':'ﾊﾞ','ビ':'ﾋﾞ','ブ':'ﾌﾞ','ベ':'ﾍﾞ','ボ':'ﾎﾞ','パ':'ﾊﾟ','ピ':'ﾋﾟ','プ':'ﾌﾟ','ペ':'ﾍﾟ','ポ':'ﾎﾟ','ヴ':'ｳﾞ','ア':'ｱ','イ':'ｲ','ウ':'ｳ','エ':'ｴ','オ':'ｵ','カ':'ｶ','キ':'ｷ','ク':'ｸ','ケ':'ｹ','コ':'ｺ','サ':'ｻ','シ':'ｼ','ス':'ｽ','セ':'ｾ','ソ':'ｿ','タ':'ﾀ','チ':'ﾁ','ツ':'ﾂ','テ':'ﾃ','ト':'ﾄ','ナ':'ﾅ','ニ':'ﾆ','ヌ':'ﾇ','ネ':'ﾈ','ノ':'ﾉ','ハ':'ﾊ','ヒ':'ﾋ','フ':'ﾌ','ヘ':'ﾍ','ホ':'ﾎ','マ':'ﾏ','ミ':'ﾐ','ム':'ﾑ','メ':'ﾒ','モ':'ﾓ','ヤ':'ﾔ','ユ':'ﾕ','ヨ':'ﾖ','ラ':'ﾗ','リ':'ﾘ','ル':'ﾙ','レ':'ﾚ','ロ':'ﾛ','ワ':'ﾜ','ヲ':'ｦ','ン':'ﾝ','ー':'ｰ','・':'･','　':' '};
+      let r=''; for(let i=0; i<val.length; i++) r += kMap[val[i]] || val[i]; e.target.value = r.toUpperCase();
     });
 
     document.getElementById('accountNumber').addEventListener('input', function(e) { this.value = this.value.replace(/[^0-9]/g, ''); });
 
-    // 💡確認画面を表示する関数
     function showConfirm() {
-      const staffName = document.getElementById('staffName').value.trim();
-      const bank = document.getElementById('bankName').value;
-      const branch = document.getElementById('branchName').value;
-      const type = document.getElementById('accountType').value;
-      const num = document.getElementById('accountNumber').value;
+      const bank = document.getElementById('bankName').value; const branch = document.getElementById('branchName').value;
+      const type = document.getElementById('accountType').value; const num = document.getElementById('accountNumber').value;
       const name = document.getElementById('accountName').value;
 
-      // 必須チェック
-      if(!staffName || !bank || !branch || !num || !name) {
-        alert("必須項目が入力されていません。"); return;
-      }
-      if(num.length < 7) {
-        alert("口座番号は7桁で入力してください。足りない場合は先頭に「0」をつけてください。"); return;
-      }
+      if(!bank || !branch || !num || !name) { alert("必須項目が入力されていません。"); return; }
+      if(num.length < 7) { alert("口座番号は7桁で入力してください。足りない場合は先頭に「0」をつけてください。"); return; }
 
-      // 画面に値をセット
-      document.getElementById('c-staffName').innerText = staffName;
+      document.getElementById('c-staffName').innerText = `${currentStaffName} (${currentMemberId})`;
       document.getElementById('c-bank').innerText = `${bank} \n${branch}`;
       document.getElementById('c-accountNum').innerText = `${type}預金　${num}`;
-      document.getElementById('c-accountName').innerText = name; // カナを大きく表示
+      document.getElementById('c-accountName').innerText = name;
 
-      const fileInput = document.getElementById('licenseImage');
-      const expiry = document.getElementById('licenseExpiry').value;
-      if (fileInput.files.length > 0) {
-        document.getElementById('c-license').innerText = `画像添付あり (有効期限: ${expiry || "未入力"})`;
-      } else {
-        document.getElementById('c-license').innerText = "登録なし";
-      }
+      const fileInput = document.getElementById('licenseImage'); const expiry = document.getElementById('licenseExpiry').value;
+      if (fileInput.files.length > 0) document.getElementById('c-license').innerText = `画像添付あり (有効期限: ${expiry || "未入力"})`;
+      else document.getElementById('c-license').innerText = "登録なし";
 
-      // 画面切り替え
-      document.getElementById('formScreen').style.display = 'none';
-      window.scrollTo(0, 0);
-      document.getElementById('confirmScreen').style.display = 'block';
+      document.getElementById('formScreen').style.display = 'none'; window.scrollTo(0, 0); document.getElementById('confirmScreen').style.display = 'block';
     }
 
-    // 💡修正ボタン（入力フォームに戻る）
     function hideConfirm() {
-      document.getElementById('confirmScreen').style.display = 'none';
-      window.scrollTo(0, 0);
-      document.getElementById('formScreen').style.display = 'block';
+      document.getElementById('confirmScreen').style.display = 'none'; window.scrollTo(0, 0); document.getElementById('formScreen').style.display = 'block';
     }
 
     function getBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader(); reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error);
-      });
+      return new Promise((res, rej) => { const r = new FileReader(); r.readAsDataURL(file); r.onload = () => res(r.result); r.onerror = e => rej(e); });
     }
 
-    // 💡最終送信処理
     async function submitData() {
-      const btn = document.getElementById('submitBtn');
-      btn.innerText = "送信中...（画像がある場合は少し時間がかかります）";
-      btn.disabled = true;
+      const btn = document.getElementById('submitBtn'); btn.innerText = "送信中..."; btn.disabled = true;
 
-      let base64Data = "";
-      const fileInput = document.getElementById('licenseImage');
+      let base64Data = ""; const fileInput = document.getElementById('licenseImage');
       if (fileInput.files.length > 0) {
-        try { base64Data = await getBase64(fileInput.files[0]); } 
-        catch (e) { alert("画像の読み込みに失敗しました。"); btn.innerText = "間違いありません（登録）"; btn.disabled = false; return; }
+        try { base64Data = await getBase64(fileInput.files[0]); } catch (e) { alert("画像エラー"); btn.innerText = "間違いありません"; btn.disabled = false; return; }
       }
 
+      // 💡会員IDをバックエンドに送信！
       const payload = {
-        staffName: document.getElementById('staffName').value.trim(),
+        memberId: currentMemberId,
+        staffName: currentStaffName,
         bankName: document.getElementById('bankName').value,
         branchName: document.getElementById('branchName').value,
         accountType: document.getElementById('accountType').value,
@@ -282,24 +224,11 @@
         licenseExpiry: document.getElementById('licenseExpiry').value
       };
 
-      fetch(GAS_URL, {
-        method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "registerStaff", data: payload })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === "success") {
-          document.getElementById('confirmScreen').style.display = 'none';
-          document.getElementById('successScreen').style.display = 'block';
-          window.scrollTo(0, 0);
-        } else {
-          alert("エラー: " + data.message);
-          btn.innerText = "間違いありません（登録）"; btn.disabled = false;
-        }
-      })
-      .catch(e => {
-        alert("通信エラーが発生しました。");
-        btn.innerText = "間違いありません（登録）"; btn.disabled = false;
-      });
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "registerStaff", data: payload }) })
+      .then(res => res.json()).then(data => {
+        if (data.status === "success") { document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('successScreen').style.display = 'block'; window.scrollTo(0, 0); }
+        else { alert("エラー: " + data.message); btn.innerText = "間違いありません"; btn.disabled = false; }
+      }).catch(e => { alert("通信エラー"); btn.innerText = "間違いありません"; btn.disabled = false; });
     }
   </script>
 </body>
