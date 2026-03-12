@@ -7,7 +7,7 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; color: #333; }
-    .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 25px 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 25px 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box; }
     h2 { text-align: center; color: #0056b3; margin-top: 0; font-size: 20px; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px; }
     
     #loading, #errorScreen { text-align: center; padding: 50px 20px; color: #666; line-height: 1.6; }
@@ -23,7 +23,7 @@
     label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #555; }
     .badge { background: #d9534f; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 5px; }
     
-    /* 💡修正：max-width:100% と margin:0 を追加して横幅のズレを解消 */
+    /* 💡修正：カレンダー等の横幅はみ出し防止のための max-width:100% と margin:0 */
     input[type="text"], input[type="tel"], input[type="date"], select { 
       width: 100%; max-width: 100%; margin: 0; padding: 12px; border: 1px solid #ccc; 
       border-radius: 6px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; 
@@ -31,7 +31,7 @@
     input:focus, select:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     .help-text { font-size: 12px; color: #666; margin-top: 5px; line-height: 1.4; }
     
-    /* 💡追加：画像アップロード用のカスタムボタン */
+    /* 💡追加：免許証撮影用のカスタムボタンUI */
     .btn-upload { display: block; width: 100%; padding: 15px; background-color: #fff; color: #0056b3; border: 2px dashed #0056b3; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; cursor: pointer; box-sizing: border-box; transition: 0.2s; }
     .btn-upload:active { background-color: #e8f4fd; }
     #fileNameDisplay { font-size: 13px; color: #28a745; font-weight: bold; margin-top: 8px; text-align: center; }
@@ -49,6 +49,8 @@
     .alert-text { color: #d9534f; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 15px; background: #fdf0f0; padding: 10px; border-radius: 5px;}
 
     #successScreen { display: none; text-align: center; padding: 40px 10px; }
+    
+    /* 資格情報エリア（対象者のみ表示） */
     #licenseSection { display: none; background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 8px; margin-top: 20px; }
   </style>
 </head>
@@ -69,11 +71,33 @@
 
         <form id="staffForm">
           <div class="section-title">💳 給与振込口座</div>
-          <div class="form-group"><label>銀行名 <span class="badge">必須</span></label><input type="text" id="bankName" list="bank-list" placeholder="例: ゆうちょ、楽天、みずほ" autocomplete="off"><datalist id="bank-list"></datalist></div>
-          <div class="form-group"><label>支店名 <span class="badge">必須</span></label><input type="text" id="branchName" list="branch-list" placeholder="先に銀行名を選択" disabled autocomplete="off"><datalist id="branch-list"></datalist></div>
-          <div class="form-group"><label>口座種別 <span class="badge">必須</span></label><select id="accountType"><option value="普通">普通</option><option value="当座">当座</option><option value="貯蓄">貯蓄</option></select></div>
-          <div class="form-group"><label>口座番号（7桁） <span class="badge">必須</span></label><input type="tel" id="accountNumber" maxlength="7" placeholder="例: 1234567"></div>
-          <div class="form-group"><label>口座名義（カナ） <span class="badge">必須</span></label><input type="text" id="accountName" placeholder="例: ﾋﾗﾀ ﾀﾛｳ"><div class="help-text">※自動で半角カナに変換されます。</div></div>
+          <div class="form-group">
+            <label>銀行名 <span class="badge">必須</span></label>
+            <input type="text" id="bankName" list="bank-list" placeholder="例: ゆうちょ、楽天、みずほ" autocomplete="off">
+            <datalist id="bank-list"></datalist>
+          </div>
+          <div class="form-group">
+            <label>支店名 <span class="badge">必須</span></label>
+            <input type="text" id="branchName" list="branch-list" placeholder="先に銀行名を選択" disabled autocomplete="off">
+            <datalist id="branch-list"></datalist>
+          </div>
+          <div class="form-group">
+            <label>口座種別 <span class="badge">必須</span></label>
+            <select id="accountType">
+              <option value="普通">普通</option>
+              <option value="当座">当座</option>
+              <option value="貯蓄">貯蓄</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>口座番号（7桁） <span class="badge">必須</span></label>
+            <input type="tel" id="accountNumber" maxlength="7" placeholder="例: 1234567">
+          </div>
+          <div class="form-group">
+            <label>口座名義（カナ） <span class="badge">必須</span></label>
+            <input type="text" id="accountName" placeholder="例: ﾋﾗﾀ ﾀﾛｳ">
+            <div class="help-text">※自動で半角カナに変換されます。</div>
+          </div>
 
           <div id="licenseSection">
             <div style="font-size: 16px; font-weight: bold; color: #d9534f; margin-bottom: 15px;">🛥️ 船舶免許の提出（必須）</div>
@@ -82,7 +106,8 @@
               <label>小型船舶免許の画像 <span class="badge">必須</span></label>
               <label for="licenseImage" class="btn-upload">📷 免許証を撮影・選択する</label>
               <input type="file" id="licenseImage" accept="image/*" capture="environment" style="display: none;">
-              <div id="fileNameDisplay"></div> </div>
+              <div id="fileNameDisplay"></div>
+            </div>
             
             <div class="form-group">
               <label>有効期限 <span class="badge">必須</span></label>
@@ -105,21 +130,25 @@
           <div class="confirm-item"><div class="confirm-label">口座種別・口座番号</div><div class="confirm-value" id="c-accountNum"></div></div>
           <div class="confirm-item"><div class="confirm-label">口座名義（半角カナ）</div><div class="confirm-value" id="c-accountName" style="color: #0056b3; font-size: 22px;"></div></div>
         </div>
+        
         <div class="confirm-box" id="c-licenseBox" style="display: none;">
           <div class="confirm-item"><div class="confirm-label">船舶免許</div><div class="confirm-value" id="c-license"></div></div>
         </div>
+
         <button type="button" id="submitBtn" class="btn-submit" onclick="submitData()">間違いありません（登録）</button>
         <button type="button" class="btn-back" onclick="hideConfirm()">修正する</button>
       </div>
 
       <div id="successScreen">
-        <div style="font-size: 50px; margin-bottom: 10px;">✅</div><h2 style="color: #28a745; border-bottom: none;">登録完了</h2>
+        <div style="font-size: 50px; margin-bottom: 10px;">✅</div>
+        <h2 style="color: #28a745; border-bottom: none;">登録完了</h2>
         <p style="font-size: 15px; color: #333; margin-top: 20px;">情報の登録が完了しました。<br>ご協力ありがとうございました。</p>
       </div>
     </div>
   </div>
 
   <script>
+    // LIFF IDとGAS URL
     const LIFF_ID = "2009367368-ZhOwtXwt";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
 
@@ -131,6 +160,7 @@
       fetchBanks(); initializeApp();
     });
 
+    // LIFFの初期化
     function initializeApp() {
       liff.init({ liffId: LIFF_ID })
         .then(() => {
@@ -139,27 +169,35 @@
         }).catch(e => showError("LIFF初期化エラー"));
     }
 
+    // 権限チェックとマスター情報の取得
     function verifyStaffAccess(uid) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "verifyStaff", uid: uid }) })
       .then(res => res.json()).then(data => {
         if (data.status === "success") {
           currentMemberId = data.memberId; currentStaffName = data.staffName;
-          document.getElementById('displayMemberId').innerText = currentMemberId; document.getElementById('displayStaffName').innerText = currentStaffName;
+          document.getElementById('displayMemberId').innerText = currentMemberId; 
+          document.getElementById('displayStaffName').innerText = currentStaffName;
           
+          // 小型船舶の資格があるかチェック
           if (data.certs && data.certs.includes("小型船舶")) {
             isLicenseRequired = true;
-            document.getElementById('licenseSection').style.display = 'block'; document.getElementById('c-licenseBox').style.display = 'block';
+            document.getElementById('licenseSection').style.display = 'block'; 
+            document.getElementById('c-licenseBox').style.display = 'block';
           }
-          document.getElementById('loading').style.display = 'none'; document.getElementById('appContent').style.display = 'block';
+          
+          document.getElementById('loading').style.display = 'none'; 
+          document.getElementById('appContent').style.display = 'block';
         } else showError(data.message);
       }).catch(e => showError("通信エラー"));
     }
 
     function showError(msg) {
-      document.getElementById('loading').style.display = 'none'; document.getElementById('errorScreen').style.display = 'block'; document.getElementById('errorText').innerText = msg;
+      document.getElementById('loading').style.display = 'none'; 
+      document.getElementById('errorScreen').style.display = 'block'; 
+      document.getElementById('errorText').innerText = msg;
     }
 
-    // 💡画像が選択されたらファイル名を画面に表示する処理
+    // 画像が選択されたらファイル名を表示
     document.getElementById('licenseImage').addEventListener('change', function(e) {
       const fileNameDisplay = document.getElementById('fileNameDisplay');
       if (this.files && this.files.length > 0) {
@@ -169,6 +207,7 @@
       }
     });
 
+    // 全銀API: 銀行リスト取得
     async function fetchBanks() {
       try {
         const res = await fetch('https://zengin-code.github.io/api/banks.json'); banksData = await res.json();
@@ -177,6 +216,7 @@
       } catch (e) {}
     }
 
+    // 全銀API: 支店リスト取得
     document.getElementById('bankName').addEventListener('change', async (e) => {
       const bank = Object.values(banksData).find(b => b.name === e.target.value);
       const branchInput = document.getElementById('branchName'); const branchList = document.getElementById('branch-list');
@@ -187,6 +227,7 @@
       } else { branchInput.disabled = true; branchInput.value = ""; }
     });
 
+    // カナ変換処理
     document.getElementById('accountName').addEventListener('blur', function(e) {
       let val = e.target.value.replace(/[\u3041-\u3096]/g, m => String.fromCharCode(m.charCodeAt(0) + 0x60));
       const s="ァィゥェォッャュョヮヵヶ", l="アイウエオツヤユヨワカケ"; for(let i=0; i<s.length; i++) val = val.split(s[i]).join(l[i]);
@@ -196,6 +237,7 @@
 
     document.getElementById('accountNumber').addEventListener('input', function(e) { this.value = this.value.replace(/[^0-9]/g, ''); });
 
+    // 確認画面へ
     function showConfirm() {
       const bank = document.getElementById('bankName').value; const branch = document.getElementById('branchName').value;
       const type = document.getElementById('accountType').value; const num = document.getElementById('accountNumber').value;
@@ -206,6 +248,8 @@
 
       const fileInput = document.getElementById('licenseImage'); 
       const expiry = document.getElementById('licenseExpiry').value;
+      
+      // 資格必須者のチェック
       if (isLicenseRequired) {
         if (fileInput.files.length === 0 || !expiry) {
           alert("マスターデータに小型船舶資格が登録されています。船舶免許の画像と有効期限を必ず入力してください。");
@@ -230,6 +274,7 @@
       return new Promise((res, rej) => { const r = new FileReader(); r.readAsDataURL(file); r.onload = () => res(r.result); r.onerror = e => rej(e); });
     }
 
+    // データ送信
     async function submitData() {
       const btn = document.getElementById('submitBtn'); btn.innerText = "送信中..."; btn.disabled = true;
 
@@ -239,16 +284,22 @@
       }
 
       const payload = {
-        memberId: currentMemberId, staffName: currentStaffName, bankName: document.getElementById('bankName').value, branchName: document.getElementById('branchName').value,
-        accountType: document.getElementById('accountType').value, accountNumber: document.getElementById('accountNumber').value, accountName: document.getElementById('accountName').value,
-        licenseImageBase64: base64Data, licenseExpiry: document.getElementById('licenseExpiry').value
+        memberId: currentMemberId, 
+        staffName: currentStaffName, 
+        bankName: document.getElementById('bankName').value, 
+        branchName: document.getElementById('branchName').value,
+        accountType: document.getElementById('accountType').value, 
+        accountNumber: document.getElementById('accountNumber').value, 
+        accountName: document.getElementById('accountName').value,
+        licenseImageBase64: base64Data, 
+        licenseExpiry: document.getElementById('licenseExpiry').value
       };
 
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "registerStaff", data: payload }) })
       .then(res => res.json()).then(data => {
         if (data.status === "success") { document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('successScreen').style.display = 'block'; window.scrollTo(0, 0); }
-        else { alert("エラー: " + data.message); btn.innerText = "間違いありません"; btn.disabled = false; }
-      }).catch(e => { alert("通信エラー"); btn.innerText = "間違いありません"; btn.disabled = false; });
+        else { alert("エラー: " + data.message); btn.innerText = "間違いありません（登録）"; btn.disabled = false; }
+      }).catch(e => { alert("通信エラー"); btn.innerText = "間違いありません（登録）"; btn.disabled = false; });
     }
   </script>
 </body>
