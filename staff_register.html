@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>スタッフ情報登録（口座入力テスト）</title>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; color: #333; }
+    .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 25px 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #0056b3; margin-top: 0; font-size: 20px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #555; }
+    .badge { background: #d9534f; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 5px; }
+    
+    input[type="text"], input[type="tel"], select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
+    input:focus, select:focus { outline: none; border-color: #0056b3; background-color: #fff; }
+    
+    .help-text { font-size: 12px; color: #666; margin-top: 5px; line-height: 1.4; }
+    .btn-submit { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>給与振込口座の登録</h2>
+    <p style="font-size: 13px; color: #666; text-align: center; margin-bottom: 20px;">
+      ご本人名義の口座情報を入力してください。<br>銀行名・支店名は一部を入力すると候補が出ます。
+    </p>
+
+    <form id="bankForm">
+      <div class="form-group">
+        <label>銀行名 <span class="badge">必須</span></label>
+        <input type="text" id="bankName" list="bank-list" placeholder="例: ゆうちょ、楽天、みずほ" autocomplete="off">
+        <datalist id="bank-list"></datalist>
+        <input type="hidden" id="bankCode">
+      </div>
+
+      <div class="form-group">
+        <label>支店名 <span class="badge">必須</span></label>
+        <input type="text" id="branchName" list="branch-list" placeholder="先に銀行名を選択してください" disabled autocomplete="off">
+        <datalist id="branch-list"></datalist>
+        <input type="hidden" id="branchCode">
+      </div>
+
+      <div class="form-group">
+        <label>口座種別 <span class="badge">必須</span></label>
+        <select id="accountType">
+          <option value="普通">普通</option>
+          <option value="当座">当座</option>
+          <option value="貯蓄">貯蓄</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>口座番号（7桁） <span class="badge">必須</span></label>
+        <input type="tel" id="accountNumber" maxlength="7" placeholder="例: 1234567">
+        <div class="help-text">※ゆうちょ銀行の場合は、店名・店番・口座番号に変換したものを入力してください。</div>
+      </div>
+
+      <div class="form-group">
+        <label>口座名義（カナ） <span class="badge">必須</span></label>
+        <input type="text" id="accountName" placeholder="例: ﾋﾗﾀ ﾀﾛｳ">
+        <div class="help-text">※全角で入力しても自動で半角カナ・大文字に変換されます。<br>※「濁点」もシステム用の正しい形式に変換されます。</div>
+      </div>
+
+      <button type="button" class="btn-submit" onclick="testSubmit()">入力内容を確認する</button>
+    </form>
+  </div>
+
+  <script>
+    let banksData = {};
+    let branchesData = {};
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // 💡全国の銀行リストを無料APIから取得
+      try {
+        const res = await fetch('https://zengin-code.github.io/api/banks.json');
+        banksData = await res.json();
+        const bankList = document.getElementById('bank-list');
+        for (const code in banksData) {
+          const option = document.createElement('option');
+          option.value = banksData[code].name;
+          bankList.appendChild(option);
+        }
+      } catch (e) {
+        console.error("銀行データの取得に失敗しました", e);
+      }
+    });
+
+    // 💡銀行名が選ばれたら、その銀行の支店リストを取得する
+    document.getElementById('bankName').addEventListener('change', async (e) => {
+      const selectedName = e.target.value;
+      const branchInput = document.getElementById('branchName');
+      const branchList = document.getElementById('branch-list');
+      
+      // 入力された名前から銀行コードを探す
+      const bank = Object.values(banksData).find(b => b.name === selectedName);
+      
+      if (bank) {
+        document.getElementById('bankCode').value = bank.code;
+        branchInput.disabled = false;
+        branchInput.placeholder = "例: 本店、新宿、マルマル";
+        branchInput.value = "";
+        branchList.innerHTML = ""; // リストをリセット
+
+        // その銀行の支店データを取得
+        const res = await fetch(`https://zengin-code.github.io/api/branches/${bank.code}.json`);
+        branchesData = await res.json();
+        for (const code in branchesData) {
+          const option = document.createElement('option');
+          option.value = branchesData[code].name;
+          branchList.appendChild(option);
+        }
+      } else {
+        branchInput.disabled = true;
+        branchInput.value = "";
+        document.getElementById('bankCode').value = "";
+      }
+    });
+
+    // 支店名が選ばれたら支店コードをセット
+    document.getElementById('branchName').addEventListener('change', (e) => {
+      const selectedName = e.target.value;
+      const branch = Object.values(branchesData).find(b => b.name === selectedName);
+      if (branch) document.getElementById('branchCode').value = branch.code;
+    });
+
+    // 💡口座名義の自動変換（全角カナ/ひらがな → 半角カナ大文字）
+    document.getElementById('accountName').addEventListener('blur', function(e) {
+      let val = e.target.value;
+      // 1. ひらがなを全角カタカナに変換
+      val = val.replace(/[\u3041-\u3096]/g, function(match) {
+        return String.fromCharCode(match.charCodeAt(0) + 0x60);
+      });
+      // 2. 小文字を大文字に変換（ァ→アなど）
+      const small = "ァィゥェォッャュョヮヵヶ";
+      const large = "アイウエオツヤユヨワカケ";
+      for (let i = 0; i < small.length; i++) {
+        val = val.split(small[i]).join(large[i]);
+      }
+      // 3. 全角カタカナを半角カタカナに変換
+      const kanaMap = {
+        'ガ': 'ｶﾞ', 'ギ': 'ｷﾞ', 'グ': 'ｸﾞ', 'ゲ': 'ｹﾞ', 'ゴ': 'ｺﾞ',
+        'ザ': 'ｻﾞ', 'ジ': 'ｼﾞ', 'ズ': 'ｽﾞ', 'ゼ': 'ｾﾞ', 'ゾ': 'ｿﾞ',
+        'ダ': 'ﾀﾞ', 'ヂ': 'ﾁﾞ', 'ヅ': 'ﾂﾞ', 'デ': 'ﾃﾞ', 'ド': 'ﾄﾞ',
+        'バ': 'ﾊﾞ', 'ビ': 'ﾋﾞ', 'ブ': 'ﾌﾞ', 'ベ': 'ﾍﾞ', 'ボ': 'ﾎﾞ',
+        'パ': 'ﾊﾟ', 'ピ': 'ﾋﾟ', 'プ': 'ﾌﾟ', 'ペ': 'ﾍﾟ', 'ポ': 'ﾎﾟ',
+        'ヴ': 'ｳﾞ', 'ヷ': 'ﾜﾞ', 'ヺ': 'ｦﾞ',
+        'ア': 'ｱ', 'イ': 'ｲ', 'ウ': 'ｳ', 'エ': 'ｴ', 'オ': 'ｵ',
+        'カ': 'ｶ', 'キ': 'ｷ', 'ク': 'ｸ', 'ケ': 'ｹ', 'コ': 'ｺ',
+        'サ': 'ｻ', 'シ': 'ｼ', 'ス': 'ｽ', 'セ': 'ｾ', 'ソ': 'ｿ',
+        'タ': 'ﾀ', 'チ': 'ﾁ', 'ツ': 'ﾂ', 'テ': 'ﾃ', 'ト': 'ﾄ',
+        'ナ': 'ﾅ', 'ニ': 'ﾆ', 'ヌ': 'ﾇ', 'ネ': 'ﾈ', 'ノ': 'ﾉ',
+        'ハ': 'ﾊ', 'ヒ': 'ﾋ', 'フ': 'ﾌ', 'ヘ': 'ﾍ', 'ホ': 'ﾎ',
+        'マ': 'ﾏ', 'ミ': 'ﾐ', 'ム': 'ﾑ', 'メ': 'ﾒ', 'モ': 'ﾓ',
+        'ヤ': 'ﾔ', 'ユ': 'ﾕ', 'ヨ': 'ﾖ',
+        'ラ': 'ﾗ', 'リ': 'ﾘ', 'ル': 'ﾙ', 'レ': 'ﾚ', 'ロ': 'ﾛ',
+        'ワ': 'ﾜ', 'ヲ': 'ｦ', 'ン': 'ﾝ',
+        'ー': 'ｰ', '・': '･', '　': ' ' // 全角スペースは半角スペースに
+      };
+      let result = '';
+      for (let i = 0; i < val.length; i++) {
+        let char = val[i];
+        result += kanaMap[char] || char;
+      }
+      e.target.value = result.toUpperCase(); // アルファベット等も大文字へ
+    });
+
+    // 口座番号の数字のみ制限
+    document.getElementById('accountNumber').addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    // テスト用の確認ポップアップ
+    function testSubmit() {
+      const bank = document.getElementById('bankName').value;
+      const bCode = document.getElementById('bankCode').value;
+      const branch = document.getElementById('branchName').value;
+      const brCode = document.getElementById('branchCode').value;
+      const type = document.getElementById('accountType').value;
+      const num = document.getElementById('accountNumber').value;
+      const name = document.getElementById('accountName').value;
+
+      if(!bank || !branch || !num || !name) {
+        alert("未入力の項目があります。"); return;
+      }
+
+      alert(`【送信されるデータ】\n\n金融機関: ${bank} (${bCode})\n支店名: ${branch} (${brCode})\n種別: ${type}\n番号: ${num}\n名義: ${name}\n\n※このデータがGASに送信されます。`);
+    }
+  </script>
+</body>
+</html>
