@@ -53,6 +53,12 @@
         <div class="status-badge">読取成功</div>
         <div class="member-id" id="displayId">M----</div>
         <div class="member-name" id="displayName">お名前</div>
+        
+        <div id="feeAlertArea" style="display: none; background: #fff3f3; border: 2px solid #d9534f; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <div style="color: #d9534f; font-weight: bold; font-size: 16px; margin-bottom: 10px;">⚠️ 今年度の会費が未納です</div>
+          <button class="btn-yes" style="width: 100%; padding: 12px; font-size: 16px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;" onclick="executeFeeCollection()">💰 現金を受領して入金済みにする</button>
+        </div>
+        
         <p style="font-size: 14px; font-weight: bold; color: #555; margin-bottom: 10px;">利用する舟艇をタップ</p>
         <div class="btn-grid">
           <button class="btn-equipment" onclick="submitRecord('カヌー')">🛶 カヌー</button>
@@ -94,6 +100,7 @@
 
     let html5QrCode;
     let memberCache = {}; 
+    let feeCache = {}; // 💡【追加】会費の入金状況を保持する変数
     let currentStaffName = "";
     let currentCerts = "";
     
@@ -141,10 +148,15 @@
       try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gainNode = ctx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(1200, ctx.currentTime); gainNode.gain.setValueAtTime(0.1, ctx.currentTime); osc.connect(gainNode); gainNode.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.1); } catch (e) {}
     }
 
+    // 💡【修正】名簿データの読み込み時に会費状況も取得
     function loadCache() {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getMembers" }) })
       .then(res => res.json()).then(data => {
-        if (data.status === "success") { memberCache = data.members; document.getElementById('cacheStatus').innerText = "✅ 準備完了"; }
+        if (data.status === "success") { 
+          memberCache = data.members; 
+          feeCache = data.feeStatuses || {}; // 💡追加
+          document.getElementById('cacheStatus').innerText = "✅ 準備完了"; 
+        }
       }).catch(err => document.getElementById('cacheStatus').innerText = "⚠️ 通信エラー");
     }
 
@@ -159,7 +171,7 @@
       html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 250 } }, onScanSuccess, () => {}).catch(e => console.error(e));
     }
 
-    // 💡QR読み取り成功時の処理（メンバー受付 or 勤怠打刻 の分岐）
+    // 💡【修正】QR読み取り成功時の処理
     function onScanSuccess(decodedText, decodedResult) {
       if (!html5QrCode.isScanning) return;
       playBeep();
@@ -167,18 +179,24 @@
       html5QrCode.stop().then(() => {
         document.getElementById('reader').style.display = 'none';
         
-        // 💡勤怠QRコードを読んだ場合
         if (decodedText === "CLOCK_IN" || decodedText === "CLOCK_OUT") {
           pendingTimecardType = (decodedText === "CLOCK_IN") ? "出勤" : "退勤";
           processTimecardFlow();
           return;
         }
         
-        // 通常のメンバー受付の場合
         document.getElementById('resultArea').style.display = 'block';
         document.getElementById('displayId').innerText = decodedText;
         const name = memberCache[decodedText] || "未登録の会員";
         document.getElementById('displayName').innerText = name.replace(' 様', '');
+        
+        // 💡【追加】会費状況のチェック
+        if (feeCache[decodedText] === "未入金") {
+          document.getElementById('feeAlertArea').style.display = 'block';
+        } else {
+          document.getElementById('feeAlertArea').style.display = 'none';
+        }
+
         if (navigator.vibrate) navigator.vibrate(200);
       });
     }
@@ -192,7 +210,6 @@
       document.getElementById('gpsLoading').style.display = 'block';
       document.getElementById('tcConfirmButtons').style.display = 'none';
 
-      // 💡GPS位置情報を取得
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -213,8 +230,6 @@
 
     function showTimecardConfirm() {
       document.getElementById('gpsLoading').style.display = 'none';
-      
-      // 💡退勤時 ＋ 小型船舶免許あり の場合のみ特別画面を表示
       if (pendingTimecardType === "退勤" && currentCerts.includes("小型船舶")) {
         document.getElementById('tcTitle').innerText = "退勤処理に進みます。";
         document.getElementById('shipAllowanceArea').style.display = 'block';
@@ -224,7 +239,7 @@
     }
 
     function executeTimecard() {
-      executeTimecardWithShip(0); // 手当なしで記録
+      executeTimecardWithShip(0);
     }
 
     function executeTimecardWithShip(allowanceAmount) {
@@ -267,6 +282,39 @@
           data: { memberId: memberId, memberName: memberName, equipment: equipmentName, staffName: currentStaffName }
         })
       }).catch(e => console.error("エラー", e));
+    }
+
+    // 💡【新規追加】集金処理を実行する関数
+    function executeFeeCollection() {
+      let amount = prompt("受領した金額を入力してください（半角数字）\n例: 3000", "");
+      if (amount === null) return; // キャンセル時
+      if (!amount.match(/^[0-9]+$/)) { alert("金額は半角数字で入力してください。"); return; }
+
+      if (!confirm(`【${amount}円】を受領しましたか？\nシステムを入金済みに更新します。`)) return;
+
+      const memberId = document.getElementById('displayId').innerText;
+      const memberName = document.getElementById('displayName').innerText;
+
+      document.getElementById('resultArea').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'block';
+      document.getElementById('successText').innerText = "⏳ 入金処理中...";
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ 
+          action: "processFeeCollection", 
+          data: { memberId: memberId, memberName: memberName, staffName: currentStaffName, amount: amount } 
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") { 
+          document.getElementById('successText').innerText = "✅ 入金処理が完了しました！\n（続けて舟艇の受付を行ってください）";
+          feeCache[memberId] = "入金済"; // ローカルのキャッシュも更新
+        } else { 
+          document.getElementById('successText').innerText = "⚠️ エラー: " + data.message; 
+        }
+      }).catch(e => document.getElementById('successText').innerText = "⚠️ 通信エラー");
     }
   </script>
 </body>
