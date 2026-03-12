@@ -19,15 +19,28 @@
     input:focus, select:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     
     .help-text { font-size: 12px; color: #666; margin-top: 5px; line-height: 1.4; }
-    .btn-submit { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
     
+    /* ボタン類 */
+    .btn-primary { width: 100%; padding: 15px; background-color: #0056b3; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .btn-submit { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .btn-back { width: 100%; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    
+    /* 確認画面用 */
+    #confirmScreen { display: none; }
+    .confirm-box { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .confirm-item { margin-bottom: 12px; border-bottom: 1px dashed #ccc; padding-bottom: 8px; }
+    .confirm-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .confirm-label { font-size: 12px; color: #666; margin-bottom: 3px; }
+    .confirm-value { font-size: 18px; font-weight: bold; color: #333; word-break: break-all; }
+    .alert-text { color: #d9534f; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 15px; background: #fdf0f0; padding: 10px; border-radius: 5px;}
+
     #successScreen { display: none; text-align: center; padding: 40px 10px; }
   </style>
 </head>
 <body>
 
   <div class="container">
+    
     <div id="formScreen">
       <h2>スタッフ情報 登録フォーム</h2>
       <p style="font-size: 13px; color: #666; text-align: center; margin-bottom: 20px;">
@@ -46,14 +59,12 @@
           <label>銀行名 <span class="badge">必須</span></label>
           <input type="text" id="bankName" list="bank-list" placeholder="例: ゆうちょ、楽天、みずほ" autocomplete="off">
           <datalist id="bank-list"></datalist>
-          <input type="hidden" id="bankCode">
         </div>
 
         <div class="form-group">
           <label>支店名 <span class="badge">必須</span></label>
           <input type="text" id="branchName" list="branch-list" placeholder="先に銀行名を選択してください" disabled autocomplete="off">
           <datalist id="branch-list"></datalist>
-          <input type="hidden" id="branchCode">
         </div>
 
         <div class="form-group">
@@ -81,7 +92,6 @@
         <div class="form-group">
           <label>小型船舶免許の画像 <span class="badge-opt">任意</span></label>
           <input type="file" id="licenseImage" accept="image/*" capture="environment">
-          <div class="help-text">※スマホのカメラで撮影するか、画像を選択してください。</div>
         </div>
 
         <div class="form-group">
@@ -89,8 +99,47 @@
           <input type="date" id="licenseExpiry">
         </div>
 
-        <button type="button" id="submitBtn" class="btn-submit" onclick="submitData()">この内容で登録する</button>
+        <button type="button" class="btn-primary" onclick="showConfirm()">入力内容を確認する</button>
       </form>
+    </div>
+
+    <div id="confirmScreen">
+      <h2>入力内容のご確認</h2>
+      <div class="alert-text">
+        ⚠️ 口座番号や名義に1文字でも誤りがあると、給与の振込ができません。キャッシュカードをお手元に用意し、よくご確認ください。
+      </div>
+
+      <div class="confirm-box">
+        <div class="confirm-item">
+          <div class="confirm-label">スタッフ氏名</div>
+          <div class="confirm-value" id="c-staffName"></div>
+        </div>
+      </div>
+
+      <div class="confirm-box">
+        <div class="confirm-item">
+          <div class="confirm-label">金融機関・支店名</div>
+          <div class="confirm-value" id="c-bank"></div>
+        </div>
+        <div class="confirm-item">
+          <div class="confirm-label">口座種別・口座番号</div>
+          <div class="confirm-value" id="c-accountNum"></div>
+        </div>
+        <div class="confirm-item">
+          <div class="confirm-label">口座名義（半角カナ）</div>
+          <div class="confirm-value" id="c-accountName" style="color: #0056b3; font-size: 22px;"></div>
+        </div>
+      </div>
+
+      <div class="confirm-box">
+        <div class="confirm-item">
+          <div class="confirm-label">船舶免許</div>
+          <div class="confirm-value" id="c-license"></div>
+        </div>
+      </div>
+
+      <button type="button" id="submitBtn" class="btn-submit" onclick="submitData()">間違いありません（登録）</button>
+      <button type="button" class="btn-back" onclick="hideConfirm()">修正する</button>
     </div>
 
     <div id="successScreen">
@@ -115,9 +164,7 @@
         banksData = await res.json();
         const bankList = document.getElementById('bank-list');
         for (const code in banksData) {
-          const option = document.createElement('option');
-          option.value = banksData[code].name;
-          bankList.appendChild(option);
+          const option = document.createElement('option'); option.value = banksData[code].name; bankList.appendChild(option);
         }
       } catch (e) { console.error("銀行データの取得失敗", e); }
     });
@@ -129,22 +176,16 @@
       const bank = Object.values(banksData).find(b => b.name === selectedName);
       
       if (bank) {
-        document.getElementById('bankCode').value = bank.code;
         branchInput.disabled = false; branchInput.placeholder = "例: 本店、新宿、マルマル"; branchInput.value = ""; branchList.innerHTML = "";
         const res = await fetch(`https://zengin-code.github.io/api/branches/${bank.code}.json`);
         branchesData = await res.json();
         for (const code in branchesData) {
           const option = document.createElement('option'); option.value = branchesData[code].name; branchList.appendChild(option);
         }
-      } else { branchInput.disabled = true; branchInput.value = ""; document.getElementById('bankCode').value = ""; }
+      } else { branchInput.disabled = true; branchInput.value = ""; }
     });
 
-    document.getElementById('branchName').addEventListener('change', (e) => {
-      const branch = Object.values(branchesData).find(b => b.name === e.target.value);
-      if (branch) document.getElementById('branchCode').value = branch.code;
-    });
-
-    // カナ変換
+    // カナ変換（全角を半角に）
     document.getElementById('accountName').addEventListener('blur', function(e) {
       let val = e.target.value;
       val = val.replace(/[\u3041-\u3096]/g, match => String.fromCharCode(match.charCodeAt(0) + 0x60));
@@ -166,17 +207,8 @@
 
     document.getElementById('accountNumber').addEventListener('input', function(e) { this.value = this.value.replace(/[^0-9]/g, ''); });
 
-    // 画像ファイルをBase64に変換する関数
-    function getBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-      });
-    }
-
-    async function submitData() {
+    // 💡確認画面を表示する関数
+    function showConfirm() {
       const staffName = document.getElementById('staffName').value.trim();
       const bank = document.getElementById('bankName').value;
       const branch = document.getElementById('branchName').value;
@@ -184,10 +216,50 @@
       const num = document.getElementById('accountNumber').value;
       const name = document.getElementById('accountName').value;
 
+      // 必須チェック
       if(!staffName || !bank || !branch || !num || !name) {
         alert("必須項目が入力されていません。"); return;
       }
+      if(num.length < 7) {
+        alert("口座番号は7桁で入力してください。足りない場合は先頭に「0」をつけてください。"); return;
+      }
 
+      // 画面に値をセット
+      document.getElementById('c-staffName').innerText = staffName;
+      document.getElementById('c-bank').innerText = `${bank} \n${branch}`;
+      document.getElementById('c-accountNum').innerText = `${type}預金　${num}`;
+      document.getElementById('c-accountName').innerText = name; // カナを大きく表示
+
+      const fileInput = document.getElementById('licenseImage');
+      const expiry = document.getElementById('licenseExpiry').value;
+      if (fileInput.files.length > 0) {
+        document.getElementById('c-license').innerText = `画像添付あり (有効期限: ${expiry || "未入力"})`;
+      } else {
+        document.getElementById('c-license').innerText = "登録なし";
+      }
+
+      // 画面切り替え
+      document.getElementById('formScreen').style.display = 'none';
+      window.scrollTo(0, 0);
+      document.getElementById('confirmScreen').style.display = 'block';
+    }
+
+    // 💡修正ボタン（入力フォームに戻る）
+    function hideConfirm() {
+      document.getElementById('confirmScreen').style.display = 'none';
+      window.scrollTo(0, 0);
+      document.getElementById('formScreen').style.display = 'block';
+    }
+
+    function getBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error);
+      });
+    }
+
+    // 💡最終送信処理
+    async function submitData() {
       const btn = document.getElementById('submitBtn');
       btn.innerText = "送信中...（画像がある場合は少し時間がかかります）";
       btn.disabled = true;
@@ -195,44 +267,38 @@
       let base64Data = "";
       const fileInput = document.getElementById('licenseImage');
       if (fileInput.files.length > 0) {
-        try {
-          // 💡ここで画像データを文字列（Base64）に変換します
-          base64Data = await getBase64(fileInput.files[0]);
-        } catch (e) {
-          alert("画像の読み込みに失敗しました。");
-          btn.innerText = "この内容で登録する"; btn.disabled = false; return;
-        }
+        try { base64Data = await getBase64(fileInput.files[0]); } 
+        catch (e) { alert("画像の読み込みに失敗しました。"); btn.innerText = "間違いありません（登録）"; btn.disabled = false; return; }
       }
 
       const payload = {
-        staffName: staffName,
-        bankName: bank,
-        branchName: branch,
-        accountType: type,
-        accountNumber: num,
-        accountName: name,
+        staffName: document.getElementById('staffName').value.trim(),
+        bankName: document.getElementById('bankName').value,
+        branchName: document.getElementById('branchName').value,
+        accountType: document.getElementById('accountType').value,
+        accountNumber: document.getElementById('accountNumber').value,
+        accountName: document.getElementById('accountName').value,
         licenseImageBase64: base64Data,
         licenseExpiry: document.getElementById('licenseExpiry').value
       };
 
       fetch(GAS_URL, {
-        method: "POST", headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action: "registerStaff", data: payload })
+        method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "registerStaff", data: payload })
       })
       .then(res => res.json())
       .then(data => {
         if (data.status === "success") {
-          document.getElementById('formScreen').style.display = 'none';
+          document.getElementById('confirmScreen').style.display = 'none';
           document.getElementById('successScreen').style.display = 'block';
           window.scrollTo(0, 0);
         } else {
           alert("エラー: " + data.message);
-          btn.innerText = "この内容で登録する"; btn.disabled = false;
+          btn.innerText = "間違いありません（登録）"; btn.disabled = false;
         }
       })
       .catch(e => {
         alert("通信エラーが発生しました。");
-        btn.innerText = "この内容で登録する"; btn.disabled = false;
+        btn.innerText = "間違いありません（登録）"; btn.disabled = false;
       });
     }
   </script>
