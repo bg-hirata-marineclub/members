@@ -275,14 +275,28 @@
     }
 
     function displayDigitalCard(result, isNewRegistration) {
-      document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('loginSection').style.display = 'none'; document.getElementById('registerSection').style.display = 'none'; document.getElementById('tabContainer').style.display = 'none'; document.getElementById('successScreen').style.display = 'block';
+      document.getElementById('confirmScreen').style.display = 'none'; 
+      document.getElementById('loginSection').style.display = 'none'; 
+      document.getElementById('registerSection').style.display = 'none'; 
+      document.getElementById('tabContainer').style.display = 'none'; 
+      document.getElementById('successScreen').style.display = 'block';
       
-      if (isNewRegistration) { document.getElementById('successTitle').style.display = 'block'; document.getElementById('successMessage').style.display = 'block'; document.getElementById('successTitle').innerText = isUpdateMode ? "更新完了" : "登録完了"; document.getElementById('successMessage').innerHTML = isUpdateMode ? "登録情報の更新が完了しました。" : "ご入会ありがとうございます。"; } 
-      else { document.getElementById('successTitle').style.display = 'none'; document.getElementById('successMessage').style.display = 'none'; }
+      if (isNewRegistration) { 
+        document.getElementById('successTitle').style.display = 'block'; 
+        document.getElementById('successMessage').style.display = 'block'; 
+        document.getElementById('successTitle').innerText = isUpdateMode ? "更新完了" : "登録完了"; 
+        document.getElementById('successMessage').innerHTML = isUpdateMode ? "登録情報の更新が完了しました。" : "ご入会ありがとうございます。"; 
+      } else { 
+        document.getElementById('successTitle').style.display = 'none'; 
+        document.getElementById('successMessage').style.display = 'none'; 
+      }
       
       const currentLine = document.getElementById('lineUid').value;
-      if (!isNewRegistration && currentUserData && currentUserData.dbLineUid && currentLine && currentUserData.dbLineUid !== currentLine) {
-        document.getElementById('linkLineBtn').style.display = 'block'; document.getElementById('editInfoBtn').style.display = 'none'; 
+      
+      // 💡修正：データベースのLINE IDが「空欄」の場合でもボタンを出現させるように条件を緩和しました
+      if (!isNewRegistration && currentUserData && currentLine && currentUserData.dbLineUid !== currentLine) {
+        document.getElementById('linkLineBtn').style.display = 'block'; 
+        document.getElementById('editInfoBtn').style.display = 'none'; 
       } else {
         document.getElementById('linkLineBtn').style.display = 'none';
         if (document.getElementById('editInfoBtn')) document.getElementById('editInfoBtn').style.display = (!isNewRegistration && currentUserData) ? 'block' : 'none';
@@ -290,7 +304,8 @@
 
       document.getElementById('resultYear').innerText = result.schoolYear; 
       document.getElementById('resultPhoto').src = result.imageUrl || "data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Ccircle cx=\"50\" cy=\"50\" r=\"50\" fill=\"%23ccc\"/%3E%3C/svg%3E";
-      document.getElementById('resultId').innerText = result.memberId; document.getElementById('resultName').innerText = result.memberName + ' 様'; 
+      document.getElementById('resultId').innerText = result.memberId; 
+      document.getElementById('resultName').innerText = result.memberName + ' 様'; 
       document.getElementById('resultQr').src = new QRious({ value: result.memberId, size: 150 }).toDataURL(); 
       window.scrollTo(0, 0);
     }
