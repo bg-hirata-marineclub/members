@@ -292,9 +292,10 @@
       }
       
       const currentLine = document.getElementById('lineUid').value;
+      const dbLine = currentUserData ? currentUserData.dbLineUid : "";
       
-      // 💡修正：データベースのLINE IDが「空欄」の場合でもボタンを出現させるように条件を緩和しました
-      if (!isNewRegistration && currentUserData && currentLine && currentUserData.dbLineUid !== currentLine) {
+      // 💡修正: 判定時に文字列の空白を完全に排除（trim）して、厳格に比較する
+      if (!isNewRegistration && currentUserData && currentLine && String(dbLine).trim() !== String(currentLine).trim()) {
         document.getElementById('linkLineBtn').style.display = 'block'; 
         document.getElementById('editInfoBtn').style.display = 'none'; 
       } else {
