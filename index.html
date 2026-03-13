@@ -22,7 +22,6 @@
     select:disabled { background-color: #e9ecef; color: #666; cursor: not-allowed; }
     .flex-row { display: flex; gap: 15px; } .flex-row > div { flex: 1; }
     
-    /* 💡修正: すべてのボタンに box-sizing: border-box; を適用して横幅崩れを防止 */
     button { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); box-sizing: border-box; }
     button.btn-secondary { background-color: #e4e6eb; color: #4b4f56; margin-bottom: 20px; font-size: 16px; padding: 15px; }
     button.btn-back { background-color: #95a5a6; margin-top: 10px; }
@@ -30,7 +29,6 @@
     .photo-upload-btn { display: block; width: 100%; max-width: 100%; padding: 15px 10px; background-color: #0056b3; color: white; text-align: center; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; white-space: normal; line-height: 1.4; }
     
     .tab-container { display: flex; margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #0056b3; box-sizing: border-box; }
-    /* 💡修正: タブボタンの margin, padding, box-sizing を厳格化 */
     .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; font-size: 14px; background-color: #fff; color: #0056b3; cursor: pointer; border: none; margin: 0; box-sizing: border-box; outline: none; }
     .tab-btn.active { background-color: #0056b3; color: white; }
     
@@ -60,16 +58,18 @@
 <body>
   <div class="container">
     <h2>B&G 平田海洋クラブ<br>会員システム</h2>
-    <div id="loadingScreen" style="text-align: center; padding: 50px 10px; display: none;">
+    
+    <div id="loadingScreen" style="text-align: center; padding: 50px 10px;">
       <p style="font-size: 18px; font-weight: bold; color: #0056b3; margin-bottom: 10px;">⏳ アカウントを確認中...</p>
+      <p style="font-size: 13px; color: #666;">（自動ログインしています）</p>
     </div>
     
-    <div class="tab-container" id="tabContainer">
+    <div class="tab-container" id="tabContainer" style="display: none;">
       <button class="tab-btn active" onclick="switchTab('register')">📝 新規入会</button>
       <button class="tab-btn" onclick="switchTab('login')">💳 会員証の再表示</button>
     </div>
 
-    <div id="registerSection">
+    <div id="registerSection" style="display: none;">
       <form id="myForm">
         <div class="form-group">
           <label>顔写真</label>
@@ -124,6 +124,7 @@
         <div class="conf-item"><div class="conf-label">氏名</div><div class="conf-value" id="conf-name"></div></div>
         <div class="conf-item"><div class="conf-label">生年月日</div><div class="conf-value" id="conf-birth"></div></div>
         <div class="conf-item"><div class="conf-label">電話番号</div><div class="conf-value" id="conf-phone"></div></div>
+        <div class="conf-item"><div class="conf-label">住所</div><div class="conf-value" id="conf-address"></div></div>
         <div class="conf-item"><div class="conf-label">会員種別</div><div class="conf-value" id="conf-type"></div></div>
       </div>
       <button type="button" id="submitBtn" onclick="executeSubmit()">この内容で送信する</button>
@@ -166,13 +167,86 @@
       document.getElementsByClassName('tab-btn')[1].className = (tabName === 'login') ? 'tab-btn active' : 'tab-btn';
     }
 
-    document.addEventListener("DOMContentLoaded", () => { liff.init({ liffId: "2009367368-y3QjH5y6" }).then(() => { if (liff.isLoggedIn()) liff.getProfile().then(p => { document.getElementById('lineUid').value = p.userId; executeAutoLogin(p.userId); }).catch(() => showRegisterScreen()); else liff.login(); }).catch(() => showRegisterScreen()); });
+    // 💡復活: ふりがなの自動入力機能
+    function bindFurigana(nameId, kanaId) {
+      const nameEl = document.getElementById(nameId);
+      const kanaEl = document.getElementById(kanaId);
+      if (!nameEl || !kanaEl) return;
+      let isComposing = false; let committedKana = '';
+      nameEl.addEventListener('compositionstart', () => { isComposing = true; committedKana = kanaEl.value; });
+      nameEl.addEventListener('compositionupdate', (e) => {
+        const text = e.data;
+        if (/^[ぁ-んーa-zA-Z]*$/.test(text)) {
+          const hiragana = text.match(/[ぁ-んー]/g);
+          kanaEl.value = committedKana + (hiragana ? hiragana.join('') : '');
+        }
+      });
+      nameEl.addEventListener('compositionend', () => { isComposing = false; });
+      nameEl.addEventListener('input', () => { if (!isComposing && nameEl.value === '') { kanaEl.value = ''; committedKana = ''; } });
+    }
+
+    // 💡復活: 起動時のローディング制御とLIFF初期化
+    function initializeLiff() {
+      // 起動直後は確実にフォームを隠してローディングを出す
+      document.getElementById('tabContainer').style.display = 'none';
+      document.getElementById('registerSection').style.display = 'none';
+      document.getElementById('loadingScreen').style.display = 'block';
+
+      liff.init({ liffId: "2009367368-y3QjH5y6" }).then(() => { 
+        if (liff.isLoggedIn()) {
+          liff.getProfile().then(p => { 
+            document.getElementById('lineUid').value = p.userId; 
+            executeAutoLogin(p.userId); 
+          }).catch(() => showRegisterScreen()); 
+        } else {
+          if (liff.isInClient()) liff.login();
+          else showRegisterScreen();
+        }
+      }).catch(() => showRegisterScreen());
+    }
+
+    document.addEventListener("DOMContentLoaded", () => { 
+      initializeLiff();
+      bindFurigana('rep-sei', 'rep-kana-sei'); 
+      bindFurigana('rep-mei', 'rep-kana-mei'); 
+    });
 
     function executeAutoLogin(uid) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "autoLogin", uid: uid }) })
-      .then(r => r.json()).then(res => { if (res.status === "success") { currentUserData = res.userData; savedProfileImage = res.imageUrl; document.getElementById('loadingScreen').style.display = 'none'; displayDigitalCard(res, false); } else showRegisterScreen(); }).catch(() => showRegisterScreen());
+      .then(r => r.json()).then(res => { 
+        if (res.status === "success") { 
+          currentUserData = res.userData; 
+          savedProfileImage = res.imageUrl; 
+          document.getElementById('loadingScreen').style.display = 'none'; 
+          displayDigitalCard(res, false); 
+        } else {
+          showRegisterScreen(); 
+        }
+      }).catch(() => showRegisterScreen());
     }
-    function showRegisterScreen() { document.getElementById('loadingScreen').style.display = 'none'; document.getElementById('tabContainer').style.display = 'flex'; document.getElementById('registerSection').style.display = 'block'; }
+
+    function showRegisterScreen() { 
+      document.getElementById('loadingScreen').style.display = 'none'; 
+      document.getElementById('tabContainer').style.display = 'flex'; 
+      document.getElementById('registerSection').style.display = 'block'; 
+    }
+
+    // 💡復活: 郵便番号からの住所自動入力機能
+    document.getElementById('postalCode').addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^0-9]/g, ''); 
+      let zip = this.value;
+      if (zip.length === 7) {
+        fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + zip)
+          .then(response => response.json())
+          .then(data => {
+            if (data.results) {
+              const address = data.results[0].address1 + data.results[0].address2 + data.results[0].address3;
+              document.getElementById('address').value = address;
+            }
+          })
+          .catch(error => console.log('住所検索エラー:', error));
+      }
+    });
 
     const pInput = document.getElementById('photoInput'); const imageToCrop = document.getElementById('imageToCrop'); const cropBtn = document.getElementById('cropBtn');
     pInput.addEventListener('change', e => {
@@ -291,6 +365,7 @@
       document.getElementById('conf-name').innerText = document.getElementById('rep-sei').value + ' ' + document.getElementById('rep-mei').value;
       document.getElementById('conf-birth').innerText = document.getElementById('birthDate').value;
       document.getElementById('conf-phone').innerText = document.getElementById('phone').value;
+      document.getElementById('conf-address').innerText = document.getElementById('postalCode').value + ' ' + document.getElementById('address').value;
       document.getElementById('conf-type').innerText = document.getElementById('memberType').value;
       
       document.getElementById('registerSection').style.display = 'none'; document.getElementById('confirmScreen').style.display = 'block'; window.scrollTo(0, 0);
