@@ -256,6 +256,7 @@
     // 💡フェーズ5用変数
     let currentUserData = null;
     let isUpdateMode = false;
+    let savedProfileImage = ""; // 💡【追加】ログイン時に取得した元の写真を保持する
     
     function switchTab(tabName) {
       document.getElementById('registerSection').style.display = (tabName === 'register') ? 'block' : 'none';
@@ -328,6 +329,7 @@
       .then(res => {
         if (res.status === "success") {
           currentUserData = res.userData; // 全データを保存
+          savedProfileImage = res.imageUrl; // 💡【追加】既存の画像を保存しておく
           document.getElementById('loadingScreen').style.display = 'none';
           displayDigitalCard(res, false);
         } else {
@@ -467,11 +469,15 @@
     function showConfirm() {
       if(!validateForm()) return;
       
-      // 画像のセット（更新モードで新しい画像がない場合は既存のものを表示）
+      // 💡【修正】保存しておいた安全な画像データを使い回す
       if (document.getElementById('imageBase64').value) {
         document.getElementById('conf-photo').src = document.getElementById('imageBase64').value;
-      } else if (isUpdateMode && currentUserData['顔写真URL']) {
-        document.getElementById('conf-photo').src = "https://bg-hirata-marineclub.github.io/members/profile-placeholder.png"; // Placeholder to avoid cross-origin issues
+        document.getElementById('conf-photo').style.display = 'block';
+      } else if (isUpdateMode && savedProfileImage) {
+        document.getElementById('conf-photo').src = savedProfileImage;
+        document.getElementById('conf-photo').style.display = 'block';
+      } else {
+        document.getElementById('conf-photo').style.display = 'none';
       }
       
       document.getElementById('conf-name').innerText = document.getElementById('rep-sei').value + ' ' + document.getElementById('rep-mei').value;
@@ -540,6 +546,7 @@
       .then(res => {
         if (res.status === "success") { 
           currentUserData = res.userData; // 💡手動ログインでもデータを保持
+          savedProfileImage = res.imageUrl; // 💡【追加】既存の画像を保存しておく
           displayDigitalCard(res, false); 
         } 
         else { alert(res.message); btn.innerText = "表示する"; btn.disabled = false; }
