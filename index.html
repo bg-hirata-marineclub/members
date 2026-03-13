@@ -167,7 +167,6 @@
       document.getElementsByClassName('tab-btn')[1].className = (tabName === 'login') ? 'tab-btn active' : 'tab-btn';
     }
 
-    // 💡復活: ふりがなの自動入力機能
     function bindFurigana(nameId, kanaId) {
       const nameEl = document.getElementById(nameId);
       const kanaEl = document.getElementById(kanaId);
@@ -185,9 +184,7 @@
       nameEl.addEventListener('input', () => { if (!isComposing && nameEl.value === '') { kanaEl.value = ''; committedKana = ''; } });
     }
 
-    // 💡復活: 起動時のローディング制御とLIFF初期化
     function initializeLiff() {
-      // 起動直後は確実にフォームを隠してローディングを出す
       document.getElementById('tabContainer').style.display = 'none';
       document.getElementById('registerSection').style.display = 'none';
       document.getElementById('loadingScreen').style.display = 'block';
@@ -211,11 +208,13 @@
       bindFurigana('rep-mei', 'rep-kana-mei'); 
     });
 
+    // 💡修正：自動ログイン時にも確実に dbLineUid をセットする
     function executeAutoLogin(uid) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "autoLogin", uid: uid }) })
       .then(r => r.json()).then(res => { 
         if (res.status === "success") { 
           currentUserData = res.userData; 
+          currentUserData.dbLineUid = res.dbLineUid; // 💡ここが抜けていたのが原因でした
           savedProfileImage = res.imageUrl; 
           document.getElementById('loadingScreen').style.display = 'none'; 
           displayDigitalCard(res, false); 
@@ -231,7 +230,6 @@
       document.getElementById('registerSection').style.display = 'block'; 
     }
 
-    // 💡復活: 郵便番号からの住所自動入力機能
     document.getElementById('postalCode').addEventListener('input', function(e) {
       this.value = this.value.replace(/[^0-9]/g, ''); 
       let zip = this.value;
@@ -266,20 +264,27 @@
       document.querySelector('.photo-upload-btn').innerText = '✅ 写真をセットしました'; document.querySelector('.photo-upload-btn').style.backgroundColor = '#05b34c';
     });
 
+    // 手動ログイン時
     function executeLogin() {
       const idNum = document.getElementById('loginIdNum').value.trim(); const birthDate = document.getElementById('loginBirthDate').value;
       if (!idNum || !birthDate) return alert("入力してください。");
       const btn = document.getElementById('loginBtn'); btn.innerText = "検索中..."; btn.disabled = true;
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "login", data: { loginId: "M" + String(idNum).padStart(4, '0'), birthDate: birthDate } }) })
-      .then(r => r.json()).then(res => { if (res.status === "success") { currentUserData = res.userData; currentUserData.dbLineUid = res.dbLineUid; savedProfileImage = res.imageUrl; displayDigitalCard(res, false); } else { alert(res.message); btn.innerText = "表示する"; btn.disabled = false; } }).catch(() => { alert("通信エラー"); btn.innerText = "表示する"; btn.disabled = false; });
+      .then(r => r.json()).then(res => { 
+        if (res.status === "success") { 
+          currentUserData = res.userData; 
+          currentUserData.dbLineUid = res.dbLineUid; 
+          savedProfileImage = res.imageUrl; 
+          displayDigitalCard(res, false); 
+        } else { 
+          alert(res.message); btn.innerText = "表示する"; btn.disabled = false; 
+        } 
+      }).catch(() => { alert("通信エラー"); btn.innerText = "表示する"; btn.disabled = false; });
     }
 
+    // 💡修正：ボタンの表示制御をより確実に行う
     function displayDigitalCard(result, isNewRegistration) {
-      document.getElementById('confirmScreen').style.display = 'none'; 
-      document.getElementById('loginSection').style.display = 'none'; 
-      document.getElementById('registerSection').style.display = 'none'; 
-      document.getElementById('tabContainer').style.display = 'none'; 
-      document.getElementById('successScreen').style.display = 'block';
+      document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('loginSection').style.display = 'none'; document.getElementById('registerSection').style.display = 'none'; document.getElementById('tabContainer').style.display = 'none'; document.getElementById('successScreen').style.display = 'block';
       
       if (isNewRegistration) { 
         document.getElementById('successTitle').style.display = 'block'; 
@@ -292,10 +297,11 @@
       }
       
       const currentLine = document.getElementById('lineUid').value;
-      const dbLine = currentUserData ? currentUserData.dbLineUid : "";
+      // result または currentUserData から確実にデータベースのLINE IDを取得
+      const dbLine = result.dbLineUid || (currentUserData ? currentUserData.dbLineUid : "");
       
-      // 💡修正: 判定時に文字列の空白を完全に排除（trim）して、厳格に比較する
-      if (!isNewRegistration && currentUserData && currentLine && String(dbLine).trim() !== String(currentLine).trim()) {
+      // 💡両方の文字の空白を完全に排除して比較
+      if (!isNewRegistration && currentLine && String(dbLine).trim() !== String(currentLine).trim()) {
         document.getElementById('linkLineBtn').style.display = 'block'; 
         document.getElementById('editInfoBtn').style.display = 'none'; 
       } else {
@@ -305,8 +311,7 @@
 
       document.getElementById('resultYear').innerText = result.schoolYear; 
       document.getElementById('resultPhoto').src = result.imageUrl || "data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Ccircle cx=\"50\" cy=\"50\" r=\"50\" fill=\"%23ccc\"/%3E%3C/svg%3E";
-      document.getElementById('resultId').innerText = result.memberId; 
-      document.getElementById('resultName').innerText = result.memberName + ' 様'; 
+      document.getElementById('resultId').innerText = result.memberId; document.getElementById('resultName').innerText = result.memberName + ' 様'; 
       document.getElementById('resultQr').src = new QRious({ value: result.memberId, size: 150 }).toDataURL(); 
       window.scrollTo(0, 0);
     }
@@ -315,7 +320,14 @@
       if (!confirm("このスマホを「あなた専用」として登録します。よろしいですか？")) return;
       const btn = document.getElementById('linkLineBtn'); btn.innerText = "処理中..."; btn.disabled = true;
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "linkLineId", data: { memberId: document.getElementById('resultId').innerText, newUid: document.getElementById('lineUid').value } }) })
-      .then(r => r.json()).then(res => { if (res.status === "success") { alert("✅ 紐付けが完了しました！\n次回から自動でログインできます。"); location.reload(); } else { alert(res.message); btn.innerText = "📱 このLINEアカウントと紐付ける"; btn.disabled = false; } });
+      .then(r => r.json()).then(res => { 
+        if (res.status === "success") { 
+          alert("✅ 紐付けが完了しました！\n次回から自動でログインできます。"); 
+          location.reload(); 
+        } else { 
+          alert(res.message); btn.innerText = "📱 このLINEアカウントと紐付ける"; btn.disabled = false; 
+        } 
+      });
     }
 
     function openEditForm() {
@@ -403,6 +415,11 @@
           const newImage = document.getElementById('imageBase64').value;
           if (newImage) savedProfileImage = newImage;
           res.imageUrl = savedProfileImage; 
+          
+          // 💡修正: データを更新した場合は、UI上の判定用にも最新のLINE IDをセットしておく
+          res.dbLineUid = document.getElementById('lineUid').value;
+          if (currentUserData) currentUserData.dbLineUid = res.dbLineUid;
+
           displayDigitalCard(res, true); 
         } else { 
           alert(res.message); btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755"; 
