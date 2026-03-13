@@ -18,8 +18,12 @@
     .member-id { font-size: 24px; font-weight: bold; color: #0056b3; margin: 5px 0; }
     .member-name { font-size: 22px; font-weight: bold; margin-bottom: 20px; color: #333; }
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-    .btn-equipment { padding: 15px 5px; background-color: #e8f4fd; color: #0056b3; border: 2px solid #b6d4fe; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-    .btn-cancel { width: 100%; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .btn-equipment { padding: 15px 5px; background-color: #e8f4fd; color: #0056b3; border: 2px solid #b6d4fe; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-sizing: border-box; }
+    .btn-cancel { width: 100%; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-sizing: border-box; }
+    
+    /* 💡修正: 連続操作時の入金完了アラート用スタイル */
+    .fee-alert-box { border: 2px solid #d9534f; background: #fff3f3; padding: 15px; border-radius: 8px; margin-bottom: 20px; transition: 0.3s; }
+    .fee-alert-success { border-color: #c3e6cb; background-color: #d4edda; }
   </style>
 </head>
 <body>
@@ -35,10 +39,12 @@
         <div class="member-id" id="displayId">M----</div>
         <div class="member-name" id="displayName">お名前</div>
         
-        <div id="feeAlertArea" style="display: none; background: #fff3f3; border: 2px solid #d9534f; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-          <div style="color: #d9534f; font-weight: bold; font-size: 16px; margin-bottom: 5px;">⚠️ 今年度の会費が未納です</div>
-          <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px;">請求額: <span id="feeAmountDisplay">0円</span></div>
-          <button style="width: 100%; padding: 15px; background-color: #06C755; font-size: 18px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;" onclick="executeFeeCollection()">💰 現金を受領して入金済みにする</button>
+        <div id="feeAlertArea" class="fee-alert-box" style="display: none;">
+          <div id="feeAlertContent">
+            <div style="color: #d9534f; font-weight: bold; font-size: 16px; margin-bottom: 5px;">⚠️ 今年度の会費が未納です</div>
+            <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px;">請求額: <span id="feeAmountDisplay">0円</span></div>
+            <button id="feeBtn" style="width: 100%; padding: 15px; background-color: #06C755; font-size: 18px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; box-sizing: border-box;" onclick="executeFeeCollection()">💰 現金を受領して入金済みにする</button>
+          </div>
         </div>
         
         <p style="font-size: 14px; font-weight: bold; color: #555; margin-bottom: 10px;">利用する舟艇をタップ</p>
@@ -52,7 +58,7 @@
       </div>
 
       <div id="successMessage">
-        <div id="successText" style="padding: 30px 10px; background: #d4edda; color: #155724; border-radius: 8px; font-size: 18px; font-weight: bold; margin-bottom: 20px;">✅ 記録しました！</div>
+        <div id="successText" style="padding: 30px 10px; background: #d4edda; color: #155724; border-radius: 8px; font-size: 18px; font-weight: bold; margin-bottom: 20px;">✅ 舟艇の受付を記録しました！</div>
         <button class="btn-cancel" style="background-color: #06C755; width: 80%;" onclick="resetScanner()">スキャナーに戻る</button>
       </div>
     </div>
@@ -80,6 +86,17 @@
 
     function startScanner() {
       document.getElementById('resultArea').style.display = 'none'; document.getElementById('successMessage').style.display = 'none'; document.getElementById('reader').style.display = 'block';
+      
+      // アラートの表示を元に戻しておく
+      const alertBox = document.getElementById('feeAlertArea');
+      alertBox.className = "fee-alert-box";
+      alertBox.innerHTML = `
+        <div id="feeAlertContent">
+          <div style="color: #d9534f; font-weight: bold; font-size: 16px; margin-bottom: 5px;">⚠️ 今年度の会費が未納です</div>
+          <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px;">請求額: <span id="feeAmountDisplay">0円</span></div>
+          <button id="feeBtn" style="width: 100%; padding: 15px; background-color: #06C755; font-size: 18px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; box-sizing: border-box;" onclick="executeFeeCollection()">💰 現金を受領して入金済みにする</button>
+        </div>`;
+      
       html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 250 } }, onScanSuccess, () => {}).catch(e => console.error(e));
     }
 
@@ -91,7 +108,6 @@
         document.getElementById('displayId').innerText = decodedText;
         document.getElementById('displayName').innerText = (memberCache[decodedText] || "未登録の会員").replace(' 様', '');
         
-        // 💡会費判定と自動計算
         if (feeCache[decodedText] === "未入金") {
           const mType = typeCache[decodedText];
           const price = priceMaster[mType] || 0;
@@ -107,22 +123,34 @@
     function resetScanner() { startScanner(); }
 
     function submitRecord(equipmentName) {
-      document.getElementById('resultArea').style.display = 'none'; document.getElementById('successMessage').style.display = 'block'; document.getElementById('successText').innerText = "✅ 受付を記録しました！";
+      document.getElementById('resultArea').style.display = 'none'; document.getElementById('successMessage').style.display = 'block';
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "recordAttendance", data: { memberId: document.getElementById('displayId').innerText, memberName: document.getElementById('displayName').innerText, equipment: equipmentName, staffName: currentStaffName } }) });
     }
 
-    // 💡自動計算された金額で集金実行
+    // 💡修正: 連続操作を可能にする（画面を切り替えずにアラート部分だけを完了メッセージに変える）
     function executeFeeCollection() {
       const price = document.getElementById('feeAlertArea').getAttribute('data-price');
       if (!confirm(`【${price}円】を受領し、システムを入金済みに更新しますか？`)) return;
 
       const memId = document.getElementById('displayId').innerText;
-      document.getElementById('resultArea').style.display = 'none'; document.getElementById('successMessage').style.display = 'block'; document.getElementById('successText').innerText = "⏳ 入金処理中...";
+      const btn = document.getElementById('feeBtn');
+      btn.innerText = "⏳ 入金処理中...";
+      btn.disabled = true;
 
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "processFeeCollection", data: { memberId: memId, memberName: document.getElementById('displayName').innerText, staffName: currentStaffName, amount: price } }) })
       .then(res => res.json()).then(data => {
-        if (data.status === "success") { document.getElementById('successText').innerText = "✅ 入金処理が完了しました！\n（続けて舟艇の受付を行ってください）"; feeCache[memId] = "入金済"; } 
-        else document.getElementById('successText').innerText = "⚠️ エラー: " + data.message;
+        if (data.status === "success") { 
+          feeCache[memId] = "入金済"; // ローカルキャッシュも更新
+          // アラート枠を緑色の完了メッセージに差し替える
+          const alertBox = document.getElementById('feeAlertArea');
+          alertBox.className = "fee-alert-box fee-alert-success";
+          alertBox.innerHTML = '<div style="color: #155724; font-weight: bold; font-size: 16px; text-align: center;">✅ 入金処理が完了しました！<br>続けて下のボタンから舟艇を選択してください。</div>';
+        } 
+        else {
+          alert("⚠️ エラー: " + data.message);
+          btn.innerText = "💰 現金を受領して入金済みにする";
+          btn.disabled = false;
+        }
       });
     }
   </script>
