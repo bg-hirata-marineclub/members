@@ -24,8 +24,15 @@
     button { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     button.btn-secondary { background-color: #e4e6eb; color: #4b4f56; margin-bottom: 20px; font-size: 16px; padding: 15px; }
     button.btn-back { background-color: #95a5a6; margin-top: 10px; }
-    /* 💡修正: box-sizing: border-box; を復活させて横幅崩れを解消 */
-    .photo-upload-btn { display: block; width: 100%; padding: 18px; background-color: #0056b3; color: white; text-align: center; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; }
+    
+    /* 💡修正: 写真ボタンの横幅崩れ防止（box-sizingとwhite-spaceの追加） */
+    .photo-upload-btn { 
+      display: block; width: 100%; max-width: 100%; padding: 15px 10px; 
+      background-color: #0056b3; color: white; text-align: center; border-radius: 8px; 
+      font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; 
+      box-sizing: border-box; white-space: normal; line-height: 1.4;
+    }
+    
     .tab-container { display: flex; margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #0056b3; }
     .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; font-size: 14px; background-color: #fff; color: #0056b3; cursor: pointer; border: none; }
     .tab-btn.active { background-color: #0056b3; color: white; }
@@ -226,7 +233,10 @@
     function openEditForm() {
       if (!currentUserData) return; isUpdateMode = true;
       document.getElementById('successScreen').style.display = 'none'; document.getElementById('registerSection').style.display = 'block';
-      document.querySelector('.photo-upload-btn').innerText = '📸 写真を変更する（変更しない場合はそのまま）'; document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
+      
+      // 💡修正: ボタン文言変更＆横幅崩れ対策
+      document.querySelector('.photo-upload-btn').innerText = '📸 写真を変更する(変更なしはそのまま)'; 
+      document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
       
       document.getElementById('rep-sei').value = currentUserData['姓'] || ''; document.getElementById('rep-mei').value = currentUserData['名'] || '';
       document.getElementById('rep-kana-sei').value = currentUserData['せい'] || ''; document.getElementById('rep-kana-mei').value = currentUserData['めい'] || '';
@@ -240,7 +250,7 @@
       window.scrollTo(0, 0);
     }
 
-    // 💡復活: こども会員の年齢制限チェック
+    // 💡修正: 子ども会員の年齢制限チェック
     function isValidChildGrade(birthDateString) {
       const today = new Date(); let currentSchoolYear = today.getFullYear(); if (today.getMonth() < 3) currentSchoolYear -= 1;
       const birthDate = new Date(birthDateString); let ageOnApril1st = currentSchoolYear - birthDate.getFullYear();
@@ -248,7 +258,21 @@
       return ageOnApril1st >= 9 && ageOnApril1st <= 14; 
     }
 
-    // 💡復活: フォームの入力チェック（バリデーション）
+    // 💡修正: 種別変更時に即座に年齢チェックを行い、大人なら強制リセット
+    document.getElementById('memberType').addEventListener('change', function(e) {
+      if (this.value === "個人会員（こども）") {
+        const bDate = document.getElementById('birthDate').value;
+        if (!bDate) {
+          alert("先に「生年月日」を入力してください。");
+          this.value = ""; return;
+        }
+        if (!isValidChildGrade(bDate)) {
+          alert("エラー：生年月日が「こども（小4〜中3）」の対象年齢ではありません。\n一般会員または家族会員を選択してください。");
+          this.value = ""; // 選択を強制キャンセル
+        }
+      }
+    });
+
     function validateForm() {
       let errors = [];
       if(!isUpdateMode && !document.getElementById('imageBase64').value) errors.push("顔写真");
@@ -258,12 +282,12 @@
       ];
       requireds.forEach(f => { if(!document.getElementById(f.id).value.trim()) errors.push(f.name); });
       if(errors.length > 0) { alert("以下の項目が未入力です：\n\n・" + errors.join("\n・")); return false; }
-      if (document.getElementById('memberType').value === "個人会員（こども）" && !isValidChildGrade(document.getElementById('birthDate').value)) { alert("エラー：生年月日が「こども（小4〜中3）」の対象外です。"); return false; }
+      if (document.getElementById('memberType').value === "個人会員（こども）" && !isValidChildGrade(document.getElementById('birthDate').value)) { alert("エラー：対象年齢ではありません。"); return false; }
       return true;
     }
 
     function showConfirm() {
-      if(!validateForm()) return; // 💡チェックに引っかかったら先に進ませない
+      if(!validateForm()) return; 
 
       if (document.getElementById('imageBase64').value) { document.getElementById('conf-photo').src = document.getElementById('imageBase64').value; document.getElementById('conf-photo').style.display = 'block'; } 
       else if (isUpdateMode && savedProfileImage) { document.getElementById('conf-photo').src = savedProfileImage; document.getElementById('conf-photo').style.display = 'block'; } 
@@ -290,12 +314,17 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: isUpdateMode ? "updateMember" : "register", data: data }) })
       .then(r => r.json()).then(res => { 
         if (res.status === "success") { 
-          // 💡修正: プレビューカードにフロントで保持している画像データをセットして確実に表示させる
-          res.imageUrl = document.getElementById('imageBase64').value || savedProfileImage;
+          // 💡修正: 撮影した新しい画像があればキャッシュに上書き保存し、それを確実に表示させる
+          const newImage = document.getElementById('imageBase64').value;
+          if (newImage) savedProfileImage = newImage;
+          res.imageUrl = savedProfileImage; 
+          
           displayDigitalCard(res, true); 
         } else { 
           alert(res.message); btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755"; 
         } 
+      }).catch(error => {
+        alert("通信エラーが発生しました。"); btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755";
       });
     }
   </script>
