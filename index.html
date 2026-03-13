@@ -21,21 +21,19 @@
     input:focus, select:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     select:disabled { background-color: #e9ecef; color: #666; cursor: not-allowed; }
     .flex-row { display: flex; gap: 15px; } .flex-row > div { flex: 1; }
-    button { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    
+    /* 💡修正: すべてのボタンに box-sizing: border-box; を適用して横幅崩れを防止 */
+    button { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); box-sizing: border-box; }
     button.btn-secondary { background-color: #e4e6eb; color: #4b4f56; margin-bottom: 20px; font-size: 16px; padding: 15px; }
     button.btn-back { background-color: #95a5a6; margin-top: 10px; }
     
-    /* 💡修正: 写真ボタンの横幅崩れ防止（box-sizingとwhite-spaceの追加） */
-    .photo-upload-btn { 
-      display: block; width: 100%; max-width: 100%; padding: 15px 10px; 
-      background-color: #0056b3; color: white; text-align: center; border-radius: 8px; 
-      font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; 
-      box-sizing: border-box; white-space: normal; line-height: 1.4;
-    }
+    .photo-upload-btn { display: block; width: 100%; max-width: 100%; padding: 15px 10px; background-color: #0056b3; color: white; text-align: center; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; white-space: normal; line-height: 1.4; }
     
-    .tab-container { display: flex; margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #0056b3; }
-    .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; font-size: 14px; background-color: #fff; color: #0056b3; cursor: pointer; border: none; }
+    .tab-container { display: flex; margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #0056b3; box-sizing: border-box; }
+    /* 💡修正: タブボタンの margin, padding, box-sizing を厳格化 */
+    .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; font-size: 14px; background-color: #fff; color: #0056b3; cursor: pointer; border: none; margin: 0; box-sizing: border-box; outline: none; }
     .tab-btn.active { background-color: #0056b3; color: white; }
+    
     .hidden-section { display: none; }
     #confirmScreen { display: none; }
     .conf-list { margin-bottom: 20px; text-align: left; }
@@ -112,7 +110,7 @@
         <label>会員ID</label>
         <div style="display: flex; align-items: center; border: 1px solid #ccc; border-radius: 8px; background-color: #fafafa; padding: 0 15px;">
           <span style="font-size: 18px; font-weight: bold; color: #555; margin-right: 5px;">M</span>
-          <input type="tel" id="loginIdNum" maxlength="4" style="border: none; background: transparent; padding: 15px 0;">
+          <input type="tel" id="loginIdNum" maxlength="4" style="border: none; background: transparent; padding: 15px 0; width: 100%;">
         </div>
       </div>
       <div class="form-group"><label>生年月日</label><input type="date" id="loginBirthDate"></div>
@@ -234,7 +232,6 @@
       if (!currentUserData) return; isUpdateMode = true;
       document.getElementById('successScreen').style.display = 'none'; document.getElementById('registerSection').style.display = 'block';
       
-      // 💡修正: ボタン文言変更＆横幅崩れ対策
       document.querySelector('.photo-upload-btn').innerText = '📸 写真を変更する(変更なしはそのまま)'; 
       document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
       
@@ -250,7 +247,6 @@
       window.scrollTo(0, 0);
     }
 
-    // 💡修正: 子ども会員の年齢制限チェック
     function isValidChildGrade(birthDateString) {
       const today = new Date(); let currentSchoolYear = today.getFullYear(); if (today.getMonth() < 3) currentSchoolYear -= 1;
       const birthDate = new Date(birthDateString); let ageOnApril1st = currentSchoolYear - birthDate.getFullYear();
@@ -258,7 +254,6 @@
       return ageOnApril1st >= 9 && ageOnApril1st <= 14; 
     }
 
-    // 💡修正: 種別変更時に即座に年齢チェックを行い、大人なら強制リセット
     document.getElementById('memberType').addEventListener('change', function(e) {
       if (this.value === "個人会員（こども）") {
         const bDate = document.getElementById('birthDate').value;
@@ -268,7 +263,7 @@
         }
         if (!isValidChildGrade(bDate)) {
           alert("エラー：生年月日が「こども（小4〜中3）」の対象年齢ではありません。\n一般会員または家族会員を選択してください。");
-          this.value = ""; // 選択を強制キャンセル
+          this.value = ""; 
         }
       }
     });
@@ -314,11 +309,9 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: isUpdateMode ? "updateMember" : "register", data: data }) })
       .then(r => r.json()).then(res => { 
         if (res.status === "success") { 
-          // 💡修正: 撮影した新しい画像があればキャッシュに上書き保存し、それを確実に表示させる
           const newImage = document.getElementById('imageBase64').value;
           if (newImage) savedProfileImage = newImage;
           res.imageUrl = savedProfileImage; 
-          
           displayDigitalCard(res, true); 
         } else { 
           alert(res.message); btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755"; 
