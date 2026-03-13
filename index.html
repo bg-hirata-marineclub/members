@@ -5,15 +5,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>B&G 平田海洋クラブ - 会員登録</title>
-  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-  
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  
   <style>
     body { font-family: sans-serif; background-color: #f0f2f5; padding: 10px; margin: 0; color: #333; font-size: 16px; }
     .container { max-width: 100%; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); box-sizing: border-box; }
@@ -22,100 +18,46 @@
     label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 16px; }
     .help-text { font-size: 13px; color: #666; margin-bottom: 10px; display: block; line-height: 1.4; }
     input[type="text"], input[type="tel"], input[type="email"], input[type="date"], select { width: 100%; max-width: 100%; margin: 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
-    input:focus { outline: none; border-color: #0056b3; background-color: #fff; }
+    input:focus, select:focus { outline: none; border-color: #0056b3; background-color: #fff; }
+    select:disabled { background-color: #e9ecef; color: #666; cursor: not-allowed; }
     .flex-row { display: flex; gap: 15px; } .flex-row > div { flex: 1; }
-    
     button { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    button:hover { background-color: #05b34c; }
     button.btn-secondary { background-color: #e4e6eb; color: #4b4f56; margin-bottom: 20px; font-size: 16px; padding: 15px; }
     button.btn-back { background-color: #95a5a6; margin-top: 10px; }
-    
     .family-member-card { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px dashed #bbb; margin-bottom: 20px; position: relative; }
-    .remove-btn { position: absolute; top: -10px; right: -10px; background: #ff4d4f; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 16px; padding: 0; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-    .photo-upload-btn { display: block; width: 100%; padding: 18px; background-color: #0056b3; color: white; text-align: center; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; box-sizing: border-box; margin-bottom: 10px; }
-    
+    .remove-btn { position: absolute; top: -10px; right: -10px; background: #ff4d4f; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; }
+    .photo-upload-btn { display: block; width: 100%; padding: 18px; background-color: #0056b3; color: white; text-align: center; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
     .tab-container { display: flex; margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #0056b3; }
-    .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; font-size: 14px; background-color: #fff; color: #0056b3; cursor: pointer; border: none; outline: none; margin: 0; box-shadow: none;}
+    .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; font-size: 14px; background-color: #fff; color: #0056b3; cursor: pointer; border: none; }
     .tab-btn.active { background-color: #0056b3; color: white; }
     .hidden-section { display: none; }
-    
     #confirmScreen { display: none; }
     .conf-list { margin-bottom: 20px; text-align: left; }
     .conf-item { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
     .conf-label { font-size: 13px; color: #666; font-weight: bold; margin-bottom: 4px; }
     .conf-value { font-size: 16px; color: #333; word-break: break-all; }
     #conf-photo { width: 100px; height: 100px; border-radius: 0; display: block; margin: 0 auto 15px; border: 3px solid #ddd; object-fit: cover;}
-    
     #successScreen { display: none; padding: 0; overflow: hidden; }
-    
-    /* スライド完全再現用の会員証デザイン */
-    .membership-card-visual { 
-      position: relative; 
-      width: 100%; 
-      aspect-ratio: 16 / 9; 
-      background-color: #fff; 
-      border-radius: 10px; 
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2); 
-      margin-top: 10px; 
-      overflow: hidden;
-      font-family: sans-serif;
-    }
-    .card-bg-image {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      object-fit: cover;
-      z-index: 1;
-    }
-    .card-year, .card-photo, .card-info, .card-qr {
-      position: absolute;
-      z-index: 2;
-    }
-    .card-year {
-      top: 25%;  
-      left: 58%; 
-      transform: translateX(-50%);
-      width: auto; 
-      text-align: center;
-      font-size: clamp(11px, 2.8vw, 15px);
-      font-weight: bold; color: #555;
-      white-space: nowrap; 
-    }
-    .card-photo {
-      top: 46%; left: 5%; width: 28%; aspect-ratio: 1 / 1;
-      background: #fff; border: 1px solid #ddd; box-sizing: border-box;
-    }
+    .membership-card-visual { position: relative; width: 100%; aspect-ratio: 16 / 9; background-color: #fff; border-radius: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); margin-top: 10px; overflow: hidden; font-family: sans-serif; }
+    .card-bg-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+    .card-year, .card-photo, .card-info, .card-qr { position: absolute; z-index: 2; }
+    .card-year { top: 25%; left: 58%; transform: translateX(-50%); text-align: center; font-size: clamp(11px, 2.8vw, 15px); font-weight: bold; color: #555; }
+    .card-photo { top: 46%; left: 5%; width: 28%; aspect-ratio: 1 / 1; background: #fff; border: 1px solid #ddd; box-sizing: border-box; }
     .card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    
-    .card-qr {
-      top: 46%; right: 5%; width: 25%; aspect-ratio: 1 / 1;
-      background: #fff; padding: 1.5%; border: 1px solid #ddd; box-sizing: border-box;
-    }
+    .card-qr { top: 46%; right: 5%; width: 25%; aspect-ratio: 1 / 1; background: #fff; padding: 1.5%; border: 1px solid #ddd; box-sizing: border-box; }
     .card-qr img { width: 100%; height: 100%; display: block; }
-    
-    .card-info {
-      top: 46%; left: 36%; width: 34%;
-    }
-    .card-info .info-label {
-      font-size: clamp(9px, 2.2vw, 11px); color: #666; font-weight: bold; margin-bottom: 2px;
-    }
-    .card-info .info-value {
-      font-size: clamp(14px, 4.5vw, 20px); color: #444; font-weight: bold; margin-bottom: 8px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    
-    .img-container {
-      width: 100%; max-height: 350px; margin: 0 auto; border: 2px solid #ccc; border-radius: 8px; overflow: hidden;
-    }
+    .card-info { top: 46%; left: 36%; width: 34%; }
+    .card-info .info-label { font-size: clamp(9px, 2.2vw, 11px); color: #666; font-weight: bold; margin-bottom: 2px; }
+    .card-info .info-value { font-size: clamp(14px, 4.5vw, 20px); color: #444; font-weight: bold; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .img-container { width: 100%; max-height: 350px; margin: 0 auto; border: 2px solid #ccc; border-radius: 8px; overflow: hidden; }
     .img-container img { display: block; max-width: 100%; }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>B&G 平田海洋クラブ<br>会員システム</h2>
-    
     <div id="loadingScreen" style="text-align: center; padding: 50px 10px; display: none;">
       <p style="font-size: 18px; font-weight: bold; color: #0056b3; margin-bottom: 10px;">⏳ アカウントを確認中...</p>
-      <p style="font-size: 13px; color: #666;">（自動ログインしています）</p>
     </div>
     
     <div class="tab-container" id="tabContainer">
@@ -127,65 +69,47 @@
       <form id="myForm">
         <div class="form-group">
           <label>顔写真</label>
-          <span class="help-text">会員証に使用します。自撮りするか、写真を選んでください。</span>
           <label for="photoInput" class="photo-upload-btn">📸 写真を撮影/選択</label>
           <input type="file" id="photoInput" accept="image/*" capture="user" style="display: none;">
-          
           <div id="previewContainer" style="display: none; margin-top: 15px; text-align: center;">
-            <p style="font-size: 13px; color: #d32f2f; font-weight: bold; margin-bottom: 10px;">👇 指で拡大・縮小・移動して顔を枠に合わせてください</p>
-            <div class="img-container">
-              <img id="imageToCrop" src="">
-            </div>
-            <button type="button" id="cropBtn" style="background-color: #0056b3; margin-top: 15px; padding: 12px; font-size: 16px; width: 100%; display: inline-block; color: white; font-weight: bold; border: none; border-radius: 8px;">この位置で決定</button>
+            <p style="font-size: 13px; color: #d32f2f; font-weight: bold; margin-bottom: 10px;">👇 顔を枠に合わせてください</p>
+            <div class="img-container"><img id="imageToCrop" src=""></div>
+            <button type="button" id="cropBtn" style="background-color: #0056b3; margin-top: 15px; padding: 12px; font-size: 16px;">この位置で決定</button>
           </div>
-          
           <div id="finalPreviewContainer" style="display: none; text-align: center; margin-top: 15px;">
             <p style="font-size: 13px; color: #05b34c; font-weight: bold; margin-bottom: 5px;">✅ トリミングが完了しました</p>
-            <img id="photoPreview" alt="プレビュー" style="width: 120px; height: 120px; object-fit: cover; border: 3px dashed #0056b3; border-radius: 4px;">
+            <img id="photoPreview" style="width: 120px; height: 120px; object-fit: cover; border: 3px dashed #0056b3;">
           </div>
-
-          <input type="hidden" id="imageBase64" name="profileImageBase64">
+          <input type="hidden" id="imageBase64">
         </div>
-        <div class="form-group flex-row">
-          <div><label>姓</label><input type="text" name="姓" id="rep-sei" placeholder="例: 平田"></div>
-          <div><label>名</label><input type="text" name="名" id="rep-mei" placeholder="例: 太郎"></div>
-        </div>
-        <div class="form-group flex-row">
-          <div><label>せい</label><input type="text" name="せい" id="rep-kana-sei" pattern="^[ぁ-んー\s]+$" placeholder="例: ひらた"></div>
-          <div><label>めい</label><input type="text" name="めい" id="rep-kana-mei" pattern="^[ぁ-んー\s]+$" placeholder="例: たろう"></div>
-        </div>
-        <div class="form-group"><label>生年月日</label><input type="date" name="生年月日" id="birthDate"></div>
-        <div class="form-group"><label>メールアドレス</label><input type="email" name="メールアドレス" id="email" placeholder="例: sample@example.com"></div>
-        <div class="form-group"><label>電話番号</label><input type="tel" name="電話番号" id="phone" pattern="[\d\-]{10,14}" placeholder="例: 090-1234-5678"></div>
-        <div class="form-group flex-row">
-          <div style="flex: 0 0 100px;"><label>郵便番号</label><input type="tel" name="郵便番号" id="postalCode" maxlength="7" pattern="\d*" placeholder="9980000"></div>
-          <div><label>住所</label><input type="text" name="住所" id="address" placeholder="例: 酒田市〇〇町1-2-3"></div>
-        </div>
+        <div class="form-group flex-row"><div><label>姓</label><input type="text" id="rep-sei"></div><div><label>名</label><input type="text" id="rep-mei"></div></div>
+        <div class="form-group flex-row"><div><label>せい</label><input type="text" id="rep-kana-sei" pattern="^[ぁ-んー\s]+$"></div><div><label>めい</label><input type="text" id="rep-kana-mei" pattern="^[ぁ-んー\s]+$"></div></div>
+        <div class="form-group"><label>生年月日</label><input type="date" id="birthDate"></div>
+        <div class="form-group"><label>メールアドレス</label><input type="email" id="email"></div>
+        <div class="form-group"><label>電話番号</label><input type="tel" id="phone"></div>
+        <div class="form-group flex-row"><div style="flex: 0 0 100px;"><label>郵便番号</label><input type="tel" id="postalCode" maxlength="7"></div><div><label>住所</label><input type="text" id="address"></div></div>
         <div class="form-group">
           <label>会員種別</label>
-          <select name="会員種別" id="memberType">
-            <option value="">選択してください</option>
-            <option value="個人会員（一般）">個人会員（一般）</option>
-            <option value="個人会員（こども）">個人会員（こども）※小4〜中3</option>
-            <option value="家族会員">家族会員（※代表者として登録）</option>
+          <select id="memberType">
+            <option value="">選択してください</option><option value="個人会員（一般）">個人会員（一般）</option><option value="個人会員（こども）">個人会員（こども）※小4〜中3</option><option value="家族会員">家族会員</option>
           </select>
+          <div id="memberTypeLockMsg" style="display:none; color:#d9534f; font-size:12px; font-weight:bold; margin-top:5px;">※今年度会費は入金済みのため変更できません。</div>
         </div>
         <div id="familySection"></div>
         <button type="button" class="btn-secondary" id="addFamilyBtn" onclick="addFamilyMember()">＋ 家族（同行者）を追加する</button>
-        <input type="hidden" name="LINE_UID" id="lineUid" value="">
+        <input type="hidden" id="lineUid">
         <button type="button" onclick="showConfirm()">確認画面へ進む</button>
       </form>
     </div>
 
     <div id="loginSection" class="hidden-section">
-      <p class="help-text" style="text-align: center; margin-bottom:20px;">登録済みの「会員ID」と「生年月日」を入力してください。</p>
+      <p class="help-text" style="text-align: center;">登録済みの「会員ID」と「生年月日」を入力</p>
       <div class="form-group">
         <label>会員ID</label>
-        <div class="id-input-wrapper" style="display: flex; align-items: center; border: 1px solid #ccc; border-radius: 8px; background-color: #fafafa; padding: 0 15px;">
+        <div style="display: flex; align-items: center; border: 1px solid #ccc; border-radius: 8px; background-color: #fafafa; padding: 0 15px;">
           <span style="font-size: 18px; font-weight: bold; color: #555; margin-right: 5px;">M</span>
-          <input type="tel" id="loginIdNum" maxlength="4" pattern="\d*" placeholder="例: 0001" style="border: none; background: transparent; padding: 15px 0;">
+          <input type="tel" id="loginIdNum" maxlength="4" style="border: none; background: transparent; padding: 15px 0;">
         </div>
-        <span class="help-text" style="margin-top: 5px;">※数字のみ入力してください（例: 14 と入力しても自動で 0014 として検索されます）</span>
       </div>
       <div class="form-group"><label>生年月日</label><input type="date" id="loginBirthDate"></div>
       <button type="button" id="loginBtn" onclick="executeLogin()">会員証を表示する</button>
@@ -193,17 +117,12 @@
 
     <div id="confirmScreen" class="hidden-section">
       <h2>入力内容の確認</h2>
-      <p class="help-text" style="text-align: center;">以下の内容で登録します。よろしいですか？</p>
       <img id="conf-photo" src="" alt="顔写真">
       <div class="conf-list">
         <div class="conf-item"><div class="conf-label">氏名</div><div class="conf-value" id="conf-name"></div></div>
-        <div class="conf-item"><div class="conf-label">ふりがな</div><div class="conf-value" id="conf-kana"></div></div>
         <div class="conf-item"><div class="conf-label">生年月日</div><div class="conf-value" id="conf-birth"></div></div>
-        <div class="conf-item"><div class="conf-label">メールアドレス</div><div class="conf-value" id="conf-email"></div></div>
         <div class="conf-item"><div class="conf-label">電話番号</div><div class="conf-value" id="conf-phone"></div></div>
-        <div class="conf-item"><div class="conf-label">住所</div><div class="conf-value" id="conf-address"></div></div>
         <div class="conf-item"><div class="conf-label">会員種別</div><div class="conf-value" id="conf-type"></div></div>
-        <div id="conf-family"></div>
       </div>
       <button type="button" id="submitBtn" onclick="executeSubmit()">この内容で送信する</button>
       <button type="button" class="btn-back" onclick="hideConfirm()">修正する</button>
@@ -211,490 +130,148 @@
 
     <div id="successScreen" class="hidden-section">
       <h2 id="successTitle">登録完了</h2>
-      <p id="successMessage" style="text-align: center; font-size: 15px; margin-bottom: 20px;">ご入会ありがとうございます。<br>以下の「デジタル会員証」が発行されました。</p>
-      
+      <p id="successMessage" style="text-align: center; font-size: 15px; margin-bottom: 20px;"></p>
       <div class="membership-card-visual" id="cardVisual">
-        <img src="https://bg-hirata-marineclub.github.io/members/card-bg.png" class="card-bg-image" alt="背景" onerror="this.style.display='none'">
-        
+        <img src="https://bg-hirata-marineclub.github.io/members/card-bg.png" class="card-bg-image" onerror="this.style.display='none'">
         <div class="card-year"><span id="resultYear"></span>   MEMBER CARD</div>
-        <div class="card-photo"><img id="resultPhoto" src="" alt="顔写真"></div>
-        
+        <div class="card-photo"><img id="resultPhoto" src=""></div>
         <div class="card-info">
-          <div class="info-label">会員ID</div>
-          <div class="info-value" id="resultId"></div>
-          <div class="info-label">氏名</div>
-          <div class="info-value" id="resultName"></div>
+          <div class="info-label">会員ID</div><div class="info-value" id="resultId"></div>
+          <div class="info-label">氏名</div><div class="info-value" id="resultName"></div>
         </div>
-        
-        <div class="card-qr"><img id="resultQr" src="" alt="QRコード"></div>
+        <div class="card-qr"><img id="resultQr" src=""></div>
       </div>
       
-      <div style="text-align: center; margin-top: 10px;">
-        <img id="finalCardImage" src="" alt="デジタル会員証" style="width: 100%; border-radius: 15px; box-shadow: 0 15px 30px rgba(0,0,0,0.3); display: none;">
-      </div>
-      
-      <div id="saveInstructionArea" style="display:none; text-align:center; margin-top: 20px;">
-        <p style="color:#333; font-weight:bold; font-size:14px; margin-bottom: 10px;">👇 以下のボタンから写真アプリに保存してください</p>
-        <button type="button" onclick="shareToPhotos()" style="background-color: #0056b3; color: white; border: none; padding: 15px; border-radius: 8px; width: 100%; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-          📤 スマホに保存する（共有メニュー）
-        </button>
-      </div>
+      <button type="button" id="linkLineBtn" onclick="executeLinkLine()" style="display:none; width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px;">
+        📱 このLINEアカウントと紐付ける
+      </button>
 
-      <button type="button" id="editInfoBtn" onclick="openEditForm()" style="display:none; width: 100%; padding: 15px; background-color: #ffc107; color: #333; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+      <button type="button" id="editInfoBtn" onclick="openEditForm()" style="display:none; width: 100%; padding: 15px; background-color: #ffc107; color: #333; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px;">
         ✏️ 登録情報の確認・変更
       </button>
-      
-      <button type="button" id="backToTopBtn" class="btn-back" onclick="location.reload()" style="display:none;">最初の画面に戻る</button>
     </div>
   </div>
 
   <script>
-    let familyCount = 0;
-    let currentCardBase64 = ""; 
-    let cropper; 
-    
-    // 💡フェーズ5用変数
-    let currentUserData = null;
-    let isUpdateMode = false;
-    let savedProfileImage = ""; // 💡【追加】ログイン時に取得した元の写真を保持する
-    
+    let familyCount = 0; let cropper; 
+    let currentUserData = null; let isUpdateMode = false; let savedProfileImage = "";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
+
     function switchTab(tabName) {
       document.getElementById('registerSection').style.display = (tabName === 'register') ? 'block' : 'none';
       document.getElementById('loginSection').style.display = (tabName === 'login') ? 'block' : 'none';
-      const tabs = document.getElementsByClassName('tab-btn');
-      tabs[0].className = (tabName === 'register') ? 'tab-btn active' : 'tab-btn';
-      tabs[1].className = (tabName === 'login') ? 'tab-btn active' : 'tab-btn';
+      document.getElementsByClassName('tab-btn')[0].className = (tabName === 'register') ? 'tab-btn active' : 'tab-btn';
+      document.getElementsByClassName('tab-btn')[1].className = (tabName === 'login') ? 'tab-btn active' : 'tab-btn';
     }
 
-    function bindFurigana(nameId, kanaId) {
-      const nameEl = document.getElementById(nameId);
-      const kanaEl = document.getElementById(kanaId);
-      if (!nameEl || !kanaEl) return;
-      let isComposing = false; let committedKana = '';
-      nameEl.addEventListener('compositionstart', () => { isComposing = true; committedKana = kanaEl.value; });
-      nameEl.addEventListener('compositionupdate', (e) => {
-        const text = e.data;
-        if (/^[ぁ-んーa-zA-Z]*$/.test(text)) {
-          const hiragana = text.match(/[ぁ-んー]/g);
-          kanaEl.value = committedKana + (hiragana ? hiragana.join('') : '');
-        }
-      });
-      nameEl.addEventListener('compositionend', () => { isComposing = false; });
-      nameEl.addEventListener('input', () => { if (!isComposing && nameEl.value === '') { kanaEl.value = ''; committedKana = ''; } });
-    }
-    
-    document.addEventListener("DOMContentLoaded", function() { 
-      bindFurigana('rep-sei', 'rep-kana-sei'); 
-      bindFurigana('rep-mei', 'rep-kana-mei'); 
-      initializeLiff(); 
-    });
+    document.addEventListener("DOMContentLoaded", () => { liff.init({ liffId: "2009367368-y3QjH5y6" }).then(() => { if (liff.isLoggedIn()) liff.getProfile().then(p => { document.getElementById('lineUid').value = p.userId; executeAutoLogin(p.userId); }).catch(() => showRegisterScreen()); else liff.login(); }).catch(() => showRegisterScreen()); });
 
-    function initializeLiff() {
-      document.getElementById('tabContainer').style.display = 'none';
-      document.getElementById('registerSection').style.display = 'none';
-      document.getElementById('loadingScreen').style.display = 'block';
-
-      liff.init({
-        liffId: "2009367368-y3QjH5y6" 
-      }).then(() => {
-        if (liff.isLoggedIn()) {
-          liff.getProfile().then(profile => {
-            document.getElementById('lineUid').value = profile.userId;
-            executeAutoLogin(profile.userId);
-          }).catch(err => {
-            showRegisterScreen(); 
-          });
-        } else {
-          if (liff.isInClient()) {
-            liff.login();
-          } else {
-            showRegisterScreen(); 
-          }
-        }
-      }).catch((err) => {
-        showRegisterScreen();
-      });
-    }
-
-    // 💡【修正】マイページのために userData を保存する
     function executeAutoLogin(uid) {
-      const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
-
-      fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action: "autoLogin", uid: uid })
-      })
-      .then(response => response.json())
-      .then(res => {
-        if (res.status === "success") {
-          currentUserData = res.userData; // 全データを保存
-          savedProfileImage = res.imageUrl; // 💡【追加】既存の画像を保存しておく
-          document.getElementById('loadingScreen').style.display = 'none';
-          displayDigitalCard(res, false);
-        } else {
-          showRegisterScreen();
-        }
-      })
-      .catch(error => {
-        showRegisterScreen();
-      });
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "autoLogin", uid: uid }) })
+      .then(r => r.json()).then(res => { if (res.status === "success") { currentUserData = res.userData; savedProfileImage = res.imageUrl; document.getElementById('loadingScreen').style.display = 'none'; displayDigitalCard(res, false); } else showRegisterScreen(); }).catch(() => showRegisterScreen());
     }
+    function showRegisterScreen() { document.getElementById('loadingScreen').style.display = 'none'; document.getElementById('tabContainer').style.display = 'flex'; document.getElementById('registerSection').style.display = 'block'; }
 
-    function showRegisterScreen() {
-      document.getElementById('loadingScreen').style.display = 'none';
-      document.getElementById('tabContainer').style.display = 'flex';
-      document.getElementById('registerSection').style.display = 'block';
-    }
-
-    document.getElementById('postalCode').addEventListener('input', function(e) {
-      this.value = this.value.replace(/[^0-9]/g, ''); 
-      let zip = this.value;
-      if (zip.length === 7) {
-        fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + zip)
-          .then(response => response.json())
-          .then(data => {
-            if (data.results) {
-              const address = data.results[0].address1 + data.results[0].address2 + data.results[0].address3;
-              document.getElementById('address').value = address;
-            }
-          })
-          .catch(error => console.log('住所検索エラー:', error));
-      }
+    // 画像処理（Cropper）
+    const pInput = document.getElementById('photoInput'); const imageToCrop = document.getElementById('imageToCrop'); const cropBtn = document.getElementById('cropBtn');
+    pInput.addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader(); reader.onload = ev => {
+        imageToCrop.src = ev.target.result; document.getElementById('previewContainer').style.display = 'block'; document.getElementById('finalPreviewContainer').style.display = 'none'; document.getElementById('imageBase64').value = '';
+        if (cropper) cropper.destroy();
+        cropper = new Cropper(imageToCrop, { aspectRatio: 1, viewMode: 1, dragMode: 'move', autoCropArea: 0.9, cropBoxMovable: false, cropBoxResizable: false, guides: true, center: true });
+        document.querySelector('.photo-upload-btn').innerText = '📸 写真を再選択'; document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
+      }; reader.readAsDataURL(file);
     });
-
-    const pInput = document.getElementById('photoInput');
-    const imageToCrop = document.getElementById('imageToCrop');
-    const cropBtn = document.getElementById('cropBtn');
-    const hImageBase64 = document.getElementById('imageBase64');
-    const pPreview = document.getElementById('photoPreview');
-    const pCont = document.getElementById('previewContainer');
-    const fPCont = document.getElementById('finalPreviewContainer');
-
-    pInput.addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      document.querySelector('.photo-upload-btn').innerText = '⏳ 写真を準備中...';
-
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        imageToCrop.src = event.target.result;
-        pCont.style.display = 'block';
-        fPCont.style.display = 'none';
-        hImageBase64.value = ''; 
-        
-        if (cropper) {
-          cropper.destroy();
-        }
-        
-        cropper = new Cropper(imageToCrop, {
-          aspectRatio: 1 / 1, 
-          viewMode: 1, 
-          dragMode: 'move', 
-          autoCropArea: 0.9,
-          cropBoxMovable: false, 
-          cropBoxResizable: false, 
-          toggleDragModeOnDblclick: false,
-          guides: true,
-          center: true,
-          highlight: false,
-        });
-
-        document.querySelector('.photo-upload-btn').innerText = '📸 写真を再選択';
-        document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
-      };
-      reader.readAsDataURL(file);
-    });
-
-    cropBtn.addEventListener('click', function() {
+    cropBtn.addEventListener('click', () => {
       if (!cropper) return;
-      const canvas = cropper.getCroppedCanvas({
-        width: 500,
-        height: 500,
-        fillColor: '#fff'
-      });
-      const dUrl = canvas.toDataURL('image/jpeg', 0.8);
-      
-      hImageBase64.value = dUrl; 
-      pPreview.src = dUrl; 
-      
-      pCont.style.display = 'none';
-      fPCont.style.display = 'block';
-      document.querySelector('.photo-upload-btn').innerText = '✅ 写真をセットしました';
-      document.querySelector('.photo-upload-btn').style.backgroundColor = '#05b34c';
+      const dUrl = cropper.getCroppedCanvas({ width: 500, height: 500, fillColor: '#fff' }).toDataURL('image/jpeg', 0.8);
+      document.getElementById('imageBase64').value = dUrl; document.getElementById('photoPreview').src = dUrl;
+      document.getElementById('previewContainer').style.display = 'none'; document.getElementById('finalPreviewContainer').style.display = 'block';
+      document.querySelector('.photo-upload-btn').innerText = '✅ 写真をセットしました'; document.querySelector('.photo-upload-btn').style.backgroundColor = '#05b34c';
     });
 
-    function addFamilyMember() {
-      familyCount++; document.getElementById('memberType').value = "家族会員"; 
-      const container = document.getElementById('familySection');
-      const html = `<div class="family-member-card" id="family_${familyCount}"><button type="button" class="remove-btn" onclick="removeFamilyMember(${familyCount})">×</button><label>同行者${familyCount} 氏名</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-sei-${familyCount}" class="fam-sei" placeholder="姓"></div><div><input type="text" id="fam-mei-${familyCount}" class="fam-mei" placeholder="名"></div></div><label>ふりがな</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-kana-sei-${familyCount}" class="fam-kana-sei" pattern="^[ぁ-んー\\s]+$" placeholder="せい"></div><div><input type="text" id="fam-kana-mei-${familyCount}" class="fam-kana-mei" pattern="^[ぁ-んー\\s]+$" placeholder="めい"></div></div><label>生年月日</label><input type="date" id="fam-date-${familyCount}" class="fam-date"></div>`;
-      container.insertAdjacentHTML('beforeend', html);
-      bindFurigana(`fam-sei-${familyCount}`, `fam-kana-sei-${familyCount}`);
-      bindFurigana(`fam-mei-${familyCount}`, `fam-kana-mei-${familyCount}`);
-    }
-    
-    function removeFamilyMember(id) { const el = document.getElementById(`family_${id}`); if(el) el.remove(); if (document.querySelectorAll('.family-member-card').length === 0) { document.getElementById('memberType').value = "個人会員（一般）"; } }
-
-    function isValidChildGrade(birthDateString) {
-      const today = new Date(); let currentSchoolYear = today.getFullYear(); if (today.getMonth() < 3) currentSchoolYear -= 1;
-      const birthDate = new Date(birthDateString); let ageOnApril1st = currentSchoolYear - birthDate.getFullYear();
-      if (birthDate.getMonth() > 3 || (birthDate.getMonth() === 3 && birthDate.getDate() > 1)) ageOnApril1st--;
-      return ageOnApril1st >= 9 && ageOnApril1st <= 14; 
+    function executeLogin() {
+      const idNum = document.getElementById('loginIdNum').value.trim(); const birthDate = document.getElementById('loginBirthDate').value;
+      if (!idNum || !birthDate) return alert("入力してください。");
+      const btn = document.getElementById('loginBtn'); btn.innerText = "検索中..."; btn.disabled = true;
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "login", data: { loginId: "M" + String(idNum).padStart(4, '0'), birthDate: birthDate } }) })
+      .then(r => r.json()).then(res => { if (res.status === "success") { currentUserData = res.userData; currentUserData.dbLineUid = res.dbLineUid; savedProfileImage = res.imageUrl; displayDigitalCard(res, false); } else { alert(res.message); btn.innerText = "表示する"; btn.disabled = false; } }).catch(() => { alert("通信エラー"); btn.innerText = "表示する"; btn.disabled = false; });
     }
 
-    function validateForm() {
-      let errors = [];
-      // 💡更新モードの場合、既存の写真があるならBase64が空でもOK
-      if(!isUpdateMode && !document.getElementById('imageBase64').value) errors.push("顔写真");
+    function displayDigitalCard(result, isNewRegistration) {
+      document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('loginSection').style.display = 'none'; document.getElementById('registerSection').style.display = 'none'; document.getElementById('tabContainer').style.display = 'none'; document.getElementById('successScreen').style.display = 'block';
       
-      const requireds = [
-        {id:'rep-sei', name:'姓'}, {id:'rep-mei', name:'名'}, {id:'rep-kana-sei', name:'せい'}, {id:'rep-kana-mei', name:'めい'},
-        {id:'birthDate', name:'生年月日'}, {id:'email', name:'メールアドレス'}, {id:'phone', name:'電話番号'}, {id:'address', name:'住所'}, {id:'memberType', name:'会員種別'}
-      ];
-      requireds.forEach(f => { if(!document.getElementById(f.id).value.trim()) errors.push(f.name); });
-      for(let i=1; i<=familyCount; i++) {
-        if(document.getElementById(`family_${i}`)) {
-          if(!document.getElementById(`fam-sei-${i}`).value.trim()) errors.push(`同行者${i}の姓`);
-          if(!document.getElementById(`fam-mei-${i}`).value.trim()) errors.push(`同行者${i}の名`);
-          if(!document.getElementById(`fam-kana-sei-${i}`).value.trim()) errors.push(`同行者${i}のせい`);
-          if(!document.getElementById(`fam-kana-mei-${i}`).value.trim()) errors.push(`同行者${i}のめい`);
-          if(!document.getElementById(`fam-date-${i}`).value.trim()) errors.push(`同行者${i}の生年月日`);
-        }
+      if (isNewRegistration) { document.getElementById('successTitle').style.display = 'block'; document.getElementById('successMessage').style.display = 'block'; document.getElementById('successTitle').innerText = isUpdateMode ? "更新完了" : "登録完了"; document.getElementById('successMessage').innerHTML = isUpdateMode ? "登録情報の更新が完了しました。" : "ご入会ありがとうございます。"; } 
+      else { document.getElementById('successTitle').style.display = 'none'; document.getElementById('successMessage').style.display = 'none'; }
+      
+      // LINE独立ボタンの判定
+      const currentLine = document.getElementById('lineUid').value;
+      if (!isNewRegistration && currentUserData && currentUserData.dbLineUid && currentLine && currentUserData.dbLineUid !== currentLine) {
+        document.getElementById('linkLineBtn').style.display = 'block'; document.getElementById('editInfoBtn').style.display = 'none'; // 紐付け前は編集させない
+      } else {
+        document.getElementById('linkLineBtn').style.display = 'none';
+        if (document.getElementById('editInfoBtn')) document.getElementById('editInfoBtn').style.display = (!isNewRegistration && currentUserData) ? 'block' : 'none';
       }
-      if(errors.length > 0) { alert("以下の項目が未入力です：\n\n・" + errors.join("\n・")); return false; }
-      if (document.getElementById('memberType').value === "個人会員（こども）" && !isValidChildGrade(document.getElementById('birthDate').value)) { alert("エラー：生年月日が対象外です。"); return false; }
-      return true;
+
+      document.getElementById('resultYear').innerText = result.schoolYear; 
+      document.getElementById('resultPhoto').src = result.imageUrl || "data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Ccircle cx=\"50\" cy=\"50\" r=\"50\" fill=\"%23ccc\"/%3E%3C/svg%3E";
+      document.getElementById('resultId').innerText = result.memberId; document.getElementById('resultName').innerText = result.memberName + ' 様'; 
+      document.getElementById('resultQr').src = new QRious({ value: result.memberId, size: 150 }).toDataURL(); 
+      window.scrollTo(0, 0);
+    }
+
+    function executeLinkLine() {
+      if (!confirm("このスマホを「あなた専用」として登録します。よろしいですか？")) return;
+      const btn = document.getElementById('linkLineBtn'); btn.innerText = "処理中..."; btn.disabled = true;
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "linkLineId", data: { memberId: document.getElementById('resultId').innerText, newUid: document.getElementById('lineUid').value } }) })
+      .then(r => r.json()).then(res => { if (res.status === "success") { alert("✅ 紐付けが完了しました！\n次回から自動でログインできます。"); location.reload(); } else { alert(res.message); btn.innerText = "📱 このLINEアカウントと紐付ける"; btn.disabled = false; } });
+    }
+
+    function openEditForm() {
+      if (!currentUserData) return; isUpdateMode = true;
+      document.getElementById('successScreen').style.display = 'none'; document.getElementById('registerSection').style.display = 'block';
+      document.querySelector('.photo-upload-btn').innerText = '📸 写真を変更する（変更しない場合はそのまま）'; document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
+      
+      document.getElementById('rep-sei').value = currentUserData['姓'] || ''; document.getElementById('rep-mei').value = currentUserData['名'] || '';
+      document.getElementById('rep-kana-sei').value = currentUserData['せい'] || ''; document.getElementById('rep-kana-mei').value = currentUserData['めい'] || '';
+      if(currentUserData['生年月日']) document.getElementById('birthDate').value = currentUserData['生年月日'].split('T')[0];
+      document.getElementById('email').value = currentUserData['メールアドレス'] || ''; document.getElementById('phone').value = currentUserData['電話番号'] || '';
+      document.getElementById('postalCode').value = currentUserData['郵便番号'] || ''; document.getElementById('address').value = currentUserData['住所'] || '';
+      
+      const typeSelect = document.getElementById('memberType');
+      typeSelect.value = currentUserData['会員種別'] || '';
+      if (currentUserData['会費状況'] === "入金済") { typeSelect.disabled = true; document.getElementById('memberTypeLockMsg').style.display = 'block'; }
+      
+      document.getElementById('addFamilyBtn').style.display = 'none';
+      window.scrollTo(0, 0);
     }
 
     function showConfirm() {
-      if(!validateForm()) return;
-      
-      // 💡【修正】保存しておいた安全な画像データを使い回す
-      if (document.getElementById('imageBase64').value) {
-        document.getElementById('conf-photo').src = document.getElementById('imageBase64').value;
-        document.getElementById('conf-photo').style.display = 'block';
-      } else if (isUpdateMode && savedProfileImage) {
-        document.getElementById('conf-photo').src = savedProfileImage;
-        document.getElementById('conf-photo').style.display = 'block';
-      } else {
-        document.getElementById('conf-photo').style.display = 'none';
-      }
+      if (document.getElementById('imageBase64').value) { document.getElementById('conf-photo').src = document.getElementById('imageBase64').value; document.getElementById('conf-photo').style.display = 'block'; } 
+      else if (isUpdateMode && savedProfileImage) { document.getElementById('conf-photo').src = savedProfileImage; document.getElementById('conf-photo').style.display = 'block'; } 
+      else { document.getElementById('conf-photo').style.display = 'none'; }
       
       document.getElementById('conf-name').innerText = document.getElementById('rep-sei').value + ' ' + document.getElementById('rep-mei').value;
-      document.getElementById('conf-kana').innerText = document.getElementById('rep-kana-sei').value + ' ' + document.getElementById('rep-kana-mei').value;
       document.getElementById('conf-birth').innerText = document.getElementById('birthDate').value;
-      document.getElementById('conf-email').innerText = document.getElementById('email').value;
       document.getElementById('conf-phone').innerText = document.getElementById('phone').value;
-      document.getElementById('conf-address').innerText = document.getElementById('postalCode').value + ' ' + document.getElementById('address').value;
       document.getElementById('conf-type').innerText = document.getElementById('memberType').value;
       
-      const famCon = document.getElementById('conf-family'); famCon.innerHTML = ''; let fIdx = 1;
-      for(let i=1; i<=familyCount; i++) { if(document.getElementById(`family_${i}`)) { famCon.innerHTML += `<div class="conf-item"><div class="conf-label">同行者${fIdx}</div><div class="conf-value">${document.getElementById(`fam-sei-${i}`).value} ${document.getElementById(`fam-mei-${i}`).value}</div></div>`; fIdx++; } }
-      
-      document.getElementById('registerSection').style.display = 'none'; document.getElementById('tabContainer').style.display = 'none'; document.getElementById('confirmScreen').style.display = 'block'; window.scrollTo(0, 0);
+      document.getElementById('registerSection').style.display = 'none'; document.getElementById('confirmScreen').style.display = 'block'; window.scrollTo(0, 0);
     }
-    
-    function hideConfirm() { document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('tabContainer').style.display = 'flex'; document.getElementById('registerSection').style.display = 'block'; window.scrollTo(0, 0); }
+    function hideConfirm() { document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('registerSection').style.display = 'block'; }
 
-    // 💡【修正】新規か更新かでGASへ送る action を切り替える
     function executeSubmit() {
-      const familyMembers = [];
-      document.querySelectorAll('.family-member-card').forEach(card => {
-        familyMembers.push({ "姓": card.querySelector('.fam-sei').value, "名": card.querySelector('.fam-mei').value, "せい": card.querySelector('.fam-kana-sei').value, "めい": card.querySelector('.fam-kana-mei').value, "生年月日": card.querySelector('.fam-date').value });
-      });
-      const data = { "姓": document.getElementById('rep-sei').value, "名": document.getElementById('rep-mei').value, "せい": document.getElementById('rep-kana-sei').value, "めい": document.getElementById('rep-kana-mei').value, "生年月日": document.getElementById('birthDate').value, "メールアドレス": document.getElementById('email').value, "電話番号": document.getElementById('phone').value, "郵便番号": document.getElementById('postalCode').value, "住所": document.getElementById('address').value, "会員種別": document.getElementById('memberType').value, "LINE_UID": document.getElementById('lineUid').value, "profileImageBase64": document.getElementById('imageBase64').value, "familyMembers": familyMembers };
-      
       const btn = document.getElementById('submitBtn'); btn.innerText = "処理中..."; btn.disabled = true; btn.style.backgroundColor = "#ccc";
-
-      const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
+      const data = { 
+        "姓": document.getElementById('rep-sei').value, "名": document.getElementById('rep-mei').value, "せい": document.getElementById('rep-kana-sei').value, "めい": document.getElementById('rep-kana-mei').value, 
+        "生年月日": document.getElementById('birthDate').value, "メールアドレス": document.getElementById('email').value, "電話番号": document.getElementById('phone').value, "郵便番号": document.getElementById('postalCode').value, "住所": document.getElementById('address').value, 
+        "会員種別": document.getElementById('memberType').value, "LINE_UID": document.getElementById('lineUid').value, "profileImageBase64": document.getElementById('imageBase64').value 
+      };
+      if (isUpdateMode) data.memberIdToUpdate = currentUserData['会員ID'];
       
-      const actionName = isUpdateMode ? "updateMember" : "register";
-
-      fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action: actionName, data: data })
-      })
-      .then(response => response.json())
-      .then(res => {
-        if (res.status === "success") { displayDigitalCard(res, true); } 
-        else { alert(res.message); resetButton(btn); }
-      })
-      .catch(error => {
-        alert("通信エラーが発生しました。"); resetButton(btn);
-      });
-    }
-    
-    function executeLogin() {
-      const idNum = document.getElementById('loginIdNum').value.trim(); 
-      const birthDate = document.getElementById('loginBirthDate').value;
-      if (!idNum || !birthDate) { alert("入力してください。"); return; }
-      
-      const paddedId = String(idNum).padStart(4, '0');
-      const fullLoginId = "M" + paddedId;
-      
-      const btn = document.getElementById('loginBtn'); btn.innerText = "検索中..."; btn.disabled = true;
-
-      const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
-
-      fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action: "login", data: { loginId: fullLoginId, birthDate: birthDate } })
-      })
-      .then(response => response.json())
-      .then(res => {
-        if (res.status === "success") { 
-          currentUserData = res.userData; // 💡手動ログインでもデータを保持
-          savedProfileImage = res.imageUrl; // 💡【追加】既存の画像を保存しておく
-          displayDigitalCard(res, false); 
-        } 
-        else { alert(res.message); btn.innerText = "表示する"; btn.disabled = false; }
-      })
-      .catch(error => {
-        alert("通信エラーが発生しました。"); btn.innerText = "表示する"; btn.disabled = false;
-      });
-    }
-    function resetButton(btn) { btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755"; }
-
-    // 💡【修正】更新ボタンの表示と文言の出し分け
-    function displayDigitalCard(result, isNewRegistration) {
-      document.getElementById('confirmScreen').style.display = 'none'; 
-      document.getElementById('loginSection').style.display = 'none'; 
-      document.getElementById('registerSection').style.display = 'none'; 
-      document.getElementById('tabContainer').style.display = 'none';
-      document.getElementById('successScreen').style.display = 'block'; 
-      
-      if (isNewRegistration) {
-        document.getElementById('successTitle').style.display = 'block';
-        document.getElementById('successMessage').style.display = 'block';
-        document.getElementById('successTitle').innerText = isUpdateMode ? "更新完了" : "登録完了";
-        document.getElementById('successMessage').innerHTML = isUpdateMode ? "登録情報の更新が完了しました。" : "ご入会ありがとうございます。<br>控えのメールを送信しました。";
-        document.getElementById('backToTopBtn').style.display = 'none';
-      } else {
-        document.getElementById('successTitle').style.display = 'none';
-        document.getElementById('successMessage').style.display = 'none';
-        document.getElementById('backToTopBtn').style.display = 'none'; 
-      }
-      
-      // 更新ボタンの表示コントロール
-      const editBtn = document.getElementById('editInfoBtn');
-      if (editBtn) {
-        editBtn.style.display = (!isNewRegistration && currentUserData) ? 'block' : 'none';
-      }
-      
-      document.getElementById('resultYear').innerText = result.schoolYear; 
-      
-      if (result.imageUrl) { 
-        document.getElementById('resultPhoto').src = result.imageUrl; 
-      } else {
-        document.getElementById('resultPhoto').src = "data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Ccircle cx=\"50\" cy=\"50\" r=\"50\" fill=\"%23ccc\"/%3E%3C/svg%3E";
-      }
-      
-      document.getElementById('resultId').innerText = result.memberId; 
-      document.getElementById('resultId').setAttribute("data-member-id", result.memberId);
-      document.getElementById('resultName').innerText = result.memberName + ' 様'; 
-      
-      const qr = new QRious({
-        value: result.memberId,
-        size: 150,
-        background: 'white',
-        foreground: 'black'
-      });
-      document.getElementById('resultQr').src = qr.toDataURL(); 
-      
-      document.getElementById('cardVisual').style.display = 'block'; 
-      document.getElementById('finalCardImage').style.display = 'none'; 
-      document.getElementById('saveInstructionArea').style.display = 'block';
-      
-      window.scrollTo(0, 0);
-    }
-
-    // 💡【新規】マイページ編集フォームの展開処理
-    function openEditForm() {
-      if (!currentUserData) return;
-      isUpdateMode = true;
-      
-      document.getElementById('successScreen').style.display = 'none';
-      document.getElementById('registerSection').style.display = 'block';
-      
-      document.querySelector('.photo-upload-btn').innerText = '📸 写真を変更する（変更しない場合はそのまま）';
-      document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
-      
-      // 既存データをフォームにセット
-      document.getElementById('rep-sei').value = currentUserData['姓'] || '';
-      document.getElementById('rep-mei').value = currentUserData['名'] || '';
-      document.getElementById('rep-kana-sei').value = currentUserData['せい'] || '';
-      document.getElementById('rep-kana-mei').value = currentUserData['めい'] || '';
-      if(currentUserData['生年月日']) document.getElementById('birthDate').value = currentUserData['生年月日'].split('T')[0];
-      document.getElementById('email').value = currentUserData['メールアドレス'] || '';
-      document.getElementById('phone').value = currentUserData['電話番号'] || '';
-      document.getElementById('postalCode').value = currentUserData['郵便番号'] || '';
-      document.getElementById('address').value = currentUserData['住所'] || '';
-      document.getElementById('memberType').value = currentUserData['会員種別'] || '';
-      
-      // 家族会員の追加ボタンは非表示（複雑化を避けるため代表者情報のみ編集可）
-      document.getElementById('addFamilyBtn').style.display = 'none';
-      
-      window.scrollTo(0, 0);
-    }
-
-    function createBlobUrl(base64) {
-      var bin = atob(base64.split(',')[1]);
-      var buffer = new Uint8Array(bin.length);
-      for (var i = 0; i < bin.length; i++) {
-        buffer[i] = bin.charCodeAt(i);
-      }
-      var blob = new Blob([buffer.buffer], {type: 'image/png'});
-      return window.URL.createObjectURL(blob);
-    }
-
-    async function shareToPhotos() {
-      const btn = document.querySelector('#saveInstructionArea button');
-      const originalText = btn.innerText;
-      btn.innerText = "⏳ 画像を生成中... (数秒かかります)";
-      btn.disabled = true;
-      btn.style.backgroundColor = "#ccc";
-
-      try {
-        const memberId = document.getElementById('resultId').getAttribute("data-member-id");
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
-
-        const response = await fetch(GAS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({ action: "generateImage", memberId: memberId })
-        });
-        const res = await response.json();
-
-        if (res.status === "success" && res.cardImageBase64) {
-          var bin = atob(res.cardImageBase64.split(',')[1]);
-          var buffer = new Uint8Array(bin.length);
-          for (var i = 0; i < bin.length; i++) {
-            buffer[i] = bin.charCodeAt(i);
-          }
-          var file = new File([buffer.buffer], 'member_card.png', {type: 'image/png'});
-
-          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: '会員証',
-              text: 'B&G 平田海洋クラブのデジタル会員証です。'
-            });
-          } else {
-            var blob = new Blob([buffer.buffer], {type: 'image/png'});
-            window.open(window.URL.createObjectURL(blob), '_blank');
-          }
-        } else {
-          alert("画像の生成に失敗しました: " + res.message);
-        }
-      } catch (err) {
-        console.log('通信エラーまたは共有キャンセル', err);
-      } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-        btn.style.backgroundColor = "#0056b3";
-      }
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: isUpdateMode ? "updateMember" : "register", data: data }) })
+      .then(r => r.json()).then(res => { if (res.status === "success") { displayDigitalCard(res, true); } else { alert(res.message); btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755"; } });
     }
   </script>
 </body>
