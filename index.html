@@ -24,9 +24,8 @@
     button { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     button.btn-secondary { background-color: #e4e6eb; color: #4b4f56; margin-bottom: 20px; font-size: 16px; padding: 15px; }
     button.btn-back { background-color: #95a5a6; margin-top: 10px; }
-    .family-member-card { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px dashed #bbb; margin-bottom: 20px; position: relative; }
-    .remove-btn { position: absolute; top: -10px; right: -10px; background: #ff4d4f; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; }
-    .photo-upload-btn { display: block; width: 100%; padding: 18px; background-color: #0056b3; color: white; text-align: center; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+    /* 💡修正: box-sizing: border-box; を復活させて横幅崩れを解消 */
+    .photo-upload-btn { display: block; width: 100%; padding: 18px; background-color: #0056b3; color: white; text-align: center; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; }
     .tab-container { display: flex; margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #0056b3; }
     .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; font-size: 14px; background-color: #fff; color: #0056b3; cursor: pointer; border: none; }
     .tab-btn.active { background-color: #0056b3; color: white; }
@@ -95,8 +94,6 @@
           </select>
           <div id="memberTypeLockMsg" style="display:none; color:#d9534f; font-size:12px; font-weight:bold; margin-top:5px;">※今年度会費は入金済みのため変更できません。</div>
         </div>
-        <div id="familySection"></div>
-        <button type="button" class="btn-secondary" id="addFamilyBtn" onclick="addFamilyMember()">＋ 家族（同行者）を追加する</button>
         <input type="hidden" id="lineUid">
         <button type="button" onclick="showConfirm()">確認画面へ進む</button>
       </form>
@@ -153,7 +150,7 @@
   </div>
 
   <script>
-    let familyCount = 0; let cropper; 
+    let cropper; 
     let currentUserData = null; let isUpdateMode = false; let savedProfileImage = "";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
 
@@ -172,7 +169,6 @@
     }
     function showRegisterScreen() { document.getElementById('loadingScreen').style.display = 'none'; document.getElementById('tabContainer').style.display = 'flex'; document.getElementById('registerSection').style.display = 'block'; }
 
-    // 画像処理（Cropper）
     const pInput = document.getElementById('photoInput'); const imageToCrop = document.getElementById('imageToCrop'); const cropBtn = document.getElementById('cropBtn');
     pInput.addEventListener('change', e => {
       const file = e.target.files[0]; if (!file) return;
@@ -205,10 +201,9 @@
       if (isNewRegistration) { document.getElementById('successTitle').style.display = 'block'; document.getElementById('successMessage').style.display = 'block'; document.getElementById('successTitle').innerText = isUpdateMode ? "更新完了" : "登録完了"; document.getElementById('successMessage').innerHTML = isUpdateMode ? "登録情報の更新が完了しました。" : "ご入会ありがとうございます。"; } 
       else { document.getElementById('successTitle').style.display = 'none'; document.getElementById('successMessage').style.display = 'none'; }
       
-      // LINE独立ボタンの判定
       const currentLine = document.getElementById('lineUid').value;
       if (!isNewRegistration && currentUserData && currentUserData.dbLineUid && currentLine && currentUserData.dbLineUid !== currentLine) {
-        document.getElementById('linkLineBtn').style.display = 'block'; document.getElementById('editInfoBtn').style.display = 'none'; // 紐付け前は編集させない
+        document.getElementById('linkLineBtn').style.display = 'block'; document.getElementById('editInfoBtn').style.display = 'none'; 
       } else {
         document.getElementById('linkLineBtn').style.display = 'none';
         if (document.getElementById('editInfoBtn')) document.getElementById('editInfoBtn').style.display = (!isNewRegistration && currentUserData) ? 'block' : 'none';
@@ -242,12 +237,34 @@
       const typeSelect = document.getElementById('memberType');
       typeSelect.value = currentUserData['会員種別'] || '';
       if (currentUserData['会費状況'] === "入金済") { typeSelect.disabled = true; document.getElementById('memberTypeLockMsg').style.display = 'block'; }
-      
-      document.getElementById('addFamilyBtn').style.display = 'none';
       window.scrollTo(0, 0);
     }
 
+    // 💡復活: こども会員の年齢制限チェック
+    function isValidChildGrade(birthDateString) {
+      const today = new Date(); let currentSchoolYear = today.getFullYear(); if (today.getMonth() < 3) currentSchoolYear -= 1;
+      const birthDate = new Date(birthDateString); let ageOnApril1st = currentSchoolYear - birthDate.getFullYear();
+      if (birthDate.getMonth() > 3 || (birthDate.getMonth() === 3 && birthDate.getDate() > 1)) ageOnApril1st--;
+      return ageOnApril1st >= 9 && ageOnApril1st <= 14; 
+    }
+
+    // 💡復活: フォームの入力チェック（バリデーション）
+    function validateForm() {
+      let errors = [];
+      if(!isUpdateMode && !document.getElementById('imageBase64').value) errors.push("顔写真");
+      const requireds = [
+        {id:'rep-sei', name:'姓'}, {id:'rep-mei', name:'名'}, {id:'rep-kana-sei', name:'せい'}, {id:'rep-kana-mei', name:'めい'},
+        {id:'birthDate', name:'生年月日'}, {id:'phone', name:'電話番号'}, {id:'address', name:'住所'}, {id:'memberType', name:'会員種別'}
+      ];
+      requireds.forEach(f => { if(!document.getElementById(f.id).value.trim()) errors.push(f.name); });
+      if(errors.length > 0) { alert("以下の項目が未入力です：\n\n・" + errors.join("\n・")); return false; }
+      if (document.getElementById('memberType').value === "個人会員（こども）" && !isValidChildGrade(document.getElementById('birthDate').value)) { alert("エラー：生年月日が「こども（小4〜中3）」の対象外です。"); return false; }
+      return true;
+    }
+
     function showConfirm() {
+      if(!validateForm()) return; // 💡チェックに引っかかったら先に進ませない
+
       if (document.getElementById('imageBase64').value) { document.getElementById('conf-photo').src = document.getElementById('imageBase64').value; document.getElementById('conf-photo').style.display = 'block'; } 
       else if (isUpdateMode && savedProfileImage) { document.getElementById('conf-photo').src = savedProfileImage; document.getElementById('conf-photo').style.display = 'block'; } 
       else { document.getElementById('conf-photo').style.display = 'none'; }
@@ -271,7 +288,15 @@
       if (isUpdateMode) data.memberIdToUpdate = currentUserData['会員ID'];
       
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: isUpdateMode ? "updateMember" : "register", data: data }) })
-      .then(r => r.json()).then(res => { if (res.status === "success") { displayDigitalCard(res, true); } else { alert(res.message); btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755"; } });
+      .then(r => r.json()).then(res => { 
+        if (res.status === "success") { 
+          // 💡修正: プレビューカードにフロントで保持している画像データをセットして確実に表示させる
+          res.imageUrl = document.getElementById('imageBase64').value || savedProfileImage;
+          displayDigitalCard(res, true); 
+        } else { 
+          alert(res.message); btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755"; 
+        } 
+      });
     }
   </script>
 </body>
