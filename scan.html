@@ -53,8 +53,25 @@
         <button class="btn-cancel" onclick="resetScanner()">キャンセルして戻る</button>
       </div>
 
+      <div id="timecardArea" style="display: none; background: #fff; border-radius: 8px; text-align: center; padding: 20px 10px;">
+        <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #333;" id="tcTitle">出勤を記録しますか？</div>
+        <div id="gpsLoading" style="color: #0056b3; font-weight: bold; margin: 15px 0;">📍 位置情報を取得中...</div>
+        
+        <div id="tcConfirmButtons">
+          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #06C755;" onclick="executeTimecard()">はい、打刻する</button>
+          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #6c757d;" onclick="resetScanner()">キャンセル</button>
+        </div>
+
+        <div id="shipAllowanceArea" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ccc;">
+          <p style="font-size: 16px; font-weight: bold; color: #d9534f; margin-bottom: 15px;">🛥️ 本日は小型船舶を操縦しましたか？</p>
+          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #06C755;" onclick="executeTimecardWithShip(1000)">はい（手当あり）</button>
+          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #6c757d;" onclick="executeTimecardWithShip(0)">いいえ</button>
+          <button style="width: 100%; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px;" onclick="resetScanner()">キャンセル</button>
+        </div>
+      </div>
+
       <div id="successMessage">
-        <div id="successText" style="padding: 30px 10px; background: #d4edda; color: #155724; border-radius: 8px; font-size: 18px; font-weight: bold; margin-bottom: 20px;">✅ 舟艇の受付を記録しました！</div>
+        <div id="successText" style="padding: 30px 10px; background: #d4edda; color: #155724; border-radius: 8px; font-size: 18px; font-weight: bold; margin-bottom: 20px;">✅ 記録しました！</div>
         <button class="btn-cancel" style="background-color: #06C755; width: 80%;" onclick="resetScanner()">スキャナーに戻る</button>
       </div>
     </div>
@@ -62,7 +79,10 @@
 
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
-    let html5QrCode; let memberCache = {}; let feeCache = {}; let typeCache = {}; let priceMaster = {}; let repCache = {}; let currentStaffName = "";
+    let html5QrCode; let memberCache = {}; let feeCache = {}; let typeCache = {}; let priceMaster = {}; let repCache = {}; 
+    let currentStaffName = ""; 
+    let currentCerts = ""; // 💡復元: 資格情報保持変数
+    let pendingTimecardType = ""; let currentLat = null; let currentLng = null;
 
     document.addEventListener("DOMContentLoaded", () => {
       liff.init({ liffId: "2009367368-GI5IPPSf" }).then(() => { if (!liff.isLoggedIn()) liff.login(); else liff.getProfile().then(p => verifyStaffAccess(p.userId)); });
@@ -71,7 +91,15 @@
     function verifyStaffAccess(uid) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "verifyStaff", uid: uid }) })
       .then(res => res.json()).then(data => {
-        if (data.status === "success") { currentStaffName = data.staffName; document.getElementById('loading').style.display = 'none'; document.getElementById('appContent').style.display = 'block'; loadCache(); html5QrCode = new Html5Qrcode("reader"); startScanner(); } else document.getElementById('errorScreen').style.display = 'block';
+        if (data.status === "success") { 
+          currentStaffName = data.staffName; 
+          currentCerts = data.certs || ""; // 💡復元: 小型船舶の判定用
+          document.getElementById('loading').style.display = 'none'; 
+          document.getElementById('appContent').style.display = 'block'; 
+          loadCache(); html5QrCode = new Html5Qrcode("reader"); startScanner(); 
+        } else {
+          document.getElementById('errorScreen').style.display = 'block';
+        }
       });
     }
 
@@ -86,7 +114,10 @@
     }
 
     function startScanner() {
-      document.getElementById('resultArea').style.display = 'none'; document.getElementById('successMessage').style.display = 'none'; document.getElementById('reader').style.display = 'block';
+      document.getElementById('resultArea').style.display = 'none'; 
+      document.getElementById('timecardArea').style.display = 'none'; 
+      document.getElementById('successMessage').style.display = 'none'; 
+      document.getElementById('reader').style.display = 'block';
       html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 250 } }, onScanSuccess, () => {}).catch(e => console.error(e));
     }
 
@@ -95,7 +126,13 @@
       html5QrCode.stop().then(() => {
         document.getElementById('reader').style.display = 'none';
         
-        // 💡修正: キャッシュにない場合は最新データを取り直す
+        // 💡復元: 出退勤QRコードの分岐処理を復活！
+        if (decodedText === "CLOCK_IN" || decodedText === "CLOCK_OUT") {
+          pendingTimecardType = (decodedText === "CLOCK_IN") ? "出勤" : "退勤";
+          processTimecardFlow();
+          return;
+        }
+
         if (!memberCache[decodedText] && decodedText.startsWith("M")) {
           document.getElementById('loading').style.display = 'block';
           document.getElementById('loading').innerText = "🔄 最新の会員データを取得中...";
@@ -110,7 +147,6 @@
       });
     }
 
-    // 💡修正: 読み取り後の処理（親ブロック機能を追加）
     function processScannedMember(decodedText) {
       document.getElementById('resultArea').style.display = 'block';
       document.getElementById('displayId').innerText = decodedText;
@@ -120,7 +156,6 @@
       const mFeeStatus = feeCache[decodedText];
       const repId = repCache[decodedText];
       
-      // 💡【追加】親ブロック機能: 家族メンバーで、かつ代表者が未入金の場合
       if (mType && mType.includes("家族メンバー") && repId) {
         if (feeCache[repId] === "未入金") {
           document.getElementById('feeAlertArea').style.display = 'block';
@@ -130,12 +165,11 @@
             <div style="font-size: 14px; color: #333; margin-bottom: 15px; line-height: 1.5;">家族メンバーの受付を行う前に、代表者の方のQRコードをスキャンして会費（2,000円）をお支払いください。</div>
             <button style="width: 100%; padding: 15px; background-color: #6c757d; font-size: 16px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;" onclick="resetScanner()">スキャナーに戻る</button>
           `;
-          document.getElementById('boatSelectionArea').style.display = 'none'; // 舟艇選択を隠して受付ブロック
+          document.getElementById('boatSelectionArea').style.display = 'none';
           return;
         }
       }
 
-      // 通常の未入金アラート（自身が未入金の場合）
       if (mFeeStatus === "未入金") {
         const price = priceMaster[mType] || 0;
         document.getElementById('feeAlertArea').style.display = 'block';
@@ -158,6 +192,7 @@
 
     function submitRecord(equipmentName) {
       document.getElementById('resultArea').style.display = 'none'; document.getElementById('successMessage').style.display = 'block';
+      document.getElementById('successText').innerText = "✅ 舟艇の受付を記録しました！";
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "recordAttendance", data: { memberId: document.getElementById('displayId').innerText, memberName: document.getElementById('displayName').innerText, equipment: equipmentName, staffName: currentStaffName } }) });
     }
 
@@ -179,6 +214,63 @@
         } 
         else { alert("⚠️ エラー: " + data.message); btn.innerText = "💰 現金を受領して入金済みにする"; btn.disabled = false; }
       });
+    }
+
+    // 💡復元: 勤怠処理フロー群
+    function processTimecardFlow() {
+      document.getElementById('timecardArea').style.display = 'block';
+      document.getElementById('tcTitle').innerText = `【${pendingTimecardType}】を記録します。`;
+      document.getElementById('gpsLoading').style.display = 'block';
+      document.getElementById('tcConfirmButtons').style.display = 'none';
+      document.getElementById('shipAllowanceArea').style.display = 'none';
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            currentLat = position.coords.latitude; currentLng = position.coords.longitude;
+            showTimecardConfirm();
+          },
+          (error) => {
+            currentLat = null; currentLng = null;
+            alert("位置情報の取得に失敗しました。記録は続行します。");
+            showTimecardConfirm();
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      } else {
+        currentLat = null; currentLng = null; showTimecardConfirm();
+      }
+    }
+
+    function showTimecardConfirm() {
+      document.getElementById('gpsLoading').style.display = 'none';
+      if (pendingTimecardType === "退勤" && currentCerts.includes("小型船舶")) {
+        document.getElementById('tcTitle').innerText = "退勤処理に進みます。";
+        document.getElementById('shipAllowanceArea').style.display = 'block';
+      } else {
+        document.getElementById('tcConfirmButtons').style.display = 'block';
+      }
+    }
+
+    function executeTimecard() { executeTimecardWithShip(0); }
+
+    function executeTimecardWithShip(allowanceAmount) {
+      document.getElementById('timecardArea').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'block';
+      document.getElementById('successText').innerText = "通信中...";
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ 
+          action: "processTimecard", 
+          data: { staffName: currentStaffName, type: pendingTimecardType, lat: currentLat, lng: currentLng, shipAllowance: allowanceAmount }
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") document.getElementById('successText').innerText = `✅ ${pendingTimecardType}を記録しました！`;
+        else document.getElementById('successText').innerText = "⚠️ エラー: " + data.message;
+      }).catch(e => document.getElementById('successText').innerText = "⚠️ 通信エラー");
     }
   </script>
 </body>
