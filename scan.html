@@ -81,7 +81,8 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
     let html5QrCode; let memberCache = {}; let feeCache = {}; let typeCache = {}; let priceMaster = {}; let repCache = {}; 
     let currentStaffName = ""; 
-    let currentCerts = ""; // 💡復元: 資格情報保持変数
+    let currentMemberId = ""; // 👈 これを追加
+    let currentCerts = ""; 
     let pendingTimecardType = ""; let currentLat = null; let currentLng = null;
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -93,7 +94,8 @@
       .then(res => res.json()).then(data => {
         if (data.status === "success") { 
           currentStaffName = data.staffName; 
-          currentCerts = data.certs || ""; // 💡復元: 小型船舶の判定用
+          currentMemberId = data.memberId; // 👈 これを追加
+          currentCerts = data.certs || ""; 
           document.getElementById('loading').style.display = 'none'; 
           document.getElementById('appContent').style.display = 'block'; 
           loadCache(); html5QrCode = new Html5Qrcode("reader"); startScanner(); 
@@ -263,7 +265,14 @@
         method: "POST", headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
           action: "processTimecard", 
-          data: { staffName: currentStaffName, type: pendingTimecardType, lat: currentLat, lng: currentLng, shipAllowance: allowanceAmount }
+          data: { 
+            memberId: currentMemberId, // 👈 これを追加
+            staffName: currentStaffName, 
+            type: pendingTimecardType, 
+            lat: currentLat, 
+            lng: currentLng, 
+            shipAllowance: allowanceAmount 
+          }
         })
       })
       .then(res => res.json())
