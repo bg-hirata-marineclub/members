@@ -23,7 +23,6 @@
     label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #555; }
     .badge { background: #d9534f; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 5px; }
     
-    /* 💡修正：カレンダー等の横幅はみ出し防止のための max-width:100% と margin:0 */
     input[type="text"], input[type="tel"], input[type="date"], select { 
       width: 100%; max-width: 100%; margin: 0; padding: 12px; border: 1px solid #ccc; 
       border-radius: 6px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; 
@@ -31,7 +30,6 @@
     input:focus, select:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     .help-text { font-size: 12px; color: #666; margin-top: 5px; line-height: 1.4; }
     
-    /* 💡追加：免許証撮影用のカスタムボタンUI */
     .btn-upload { display: block; width: 100%; padding: 15px; background-color: #fff; color: #0056b3; border: 2px dashed #0056b3; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; cursor: pointer; box-sizing: border-box; transition: 0.2s; }
     .btn-upload:active { background-color: #e8f4fd; }
     #fileNameDisplay { font-size: 13px; color: #28a745; font-weight: bold; margin-top: 8px; text-align: center; }
@@ -50,7 +48,6 @@
 
     #successScreen { display: none; text-align: center; padding: 40px 10px; }
     
-    /* 資格情報エリア（対象者のみ表示） */
     #licenseSection { display: none; background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 8px; margin-top: 20px; }
   </style>
 </head>
@@ -78,7 +75,7 @@
           </div>
           <div class="form-group">
             <label>支店名 <span class="badge">必須</span></label>
-            <input type="text" id="branchName" list="branch-list" placeholder="先に銀行名を選択" disabled autocomplete="off">
+            <input type="text" id="branchName" list="branch-list" placeholder="先に銀行名を選択" autocomplete="off">
             <datalist id="branch-list"></datalist>
           </div>
           <div class="form-group">
@@ -115,7 +112,7 @@
             </div>
           </div>
 
-          <button type="button" class="btn-primary" onclick="showConfirm()">入力内容を確認する</button>
+          <button type="button" id="confirmBtn" class="btn-primary" onclick="showConfirm()">入力内容を確認する</button>
         </form>
       </div>
 
@@ -135,32 +132,31 @@
           <div class="confirm-item"><div class="confirm-label">船舶免許</div><div class="confirm-value" id="c-license"></div></div>
         </div>
 
-        <button type="button" id="submitBtn" class="btn-submit" onclick="submitData()">間違いありません（登録）</button>
+        <button type="button" id="submitBtn" class="btn-submit" onclick="submitData()">間違いありません（登録・更新）</button>
         <button type="button" class="btn-back" onclick="hideConfirm()">修正する</button>
       </div>
 
       <div id="successScreen">
         <div style="font-size: 50px; margin-bottom: 10px;">✅</div>
         <h2 style="color: #28a745; border-bottom: none;">登録完了</h2>
-        <p style="font-size: 15px; color: #333; margin-top: 20px;">情報の登録が完了しました。<br>ご協力ありがとうございました。</p>
+        <p style="font-size: 15px; color: #333; margin-top: 20px;">情報の登録・更新が完了しました。<br>ご協力ありがとうございました。</p>
       </div>
     </div>
   </div>
 
   <script>
-    // LIFF IDとGAS URL
     const LIFF_ID = "2009367368-ZhOwtXwt";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
 
     let banksData = {}; let branchesData = {};
     let currentMemberId = ""; let currentStaffName = "";
     let isLicenseRequired = false;
+    let hasExistingLicenseImage = false; // 既存の画像があるかの判定用
 
     document.addEventListener("DOMContentLoaded", () => {
       fetchBanks(); initializeApp();
     });
 
-    // LIFFの初期化
     function initializeApp() {
       liff.init({ liffId: LIFF_ID })
         .then(() => {
@@ -169,7 +165,6 @@
         }).catch(e => showError("LIFF初期化エラー"));
     }
 
-    // 権限チェックとマスター情報の取得
     function verifyStaffAccess(uid) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "verifyStaff", uid: uid }) })
       .then(res => res.json()).then(data => {
@@ -178,11 +173,27 @@
           document.getElementById('displayMemberId').innerText = currentMemberId; 
           document.getElementById('displayStaffName').innerText = currentStaffName;
           
-          // 小型船舶の資格があるかチェック
           if (data.certs && data.certs.includes("小型船舶")) {
             isLicenseRequired = true;
             document.getElementById('licenseSection').style.display = 'block'; 
             document.getElementById('c-licenseBox').style.display = 'block';
+          }
+          
+          // 💡プレフィル（既存データがあればセットする）
+          if (data.staffData) {
+            document.getElementById('bankName').value = data.staffData['銀行名'] || "";
+            document.getElementById('branchName').value = data.staffData['支店名'] || "";
+            document.getElementById('accountType').value = data.staffData['口座種別'] || "普通";
+            document.getElementById('accountNumber').value = data.staffData['口座番号'] || "";
+            document.getElementById('accountName').value = data.staffData['口座名義(カナ)'] || "";
+            if (data.staffData['有効期限']) {
+              document.getElementById('licenseExpiry').value = data.staffData['有効期限'].split('T')[0];
+            }
+            if (data.staffData['免許画像URL']) {
+              hasExistingLicenseImage = true;
+              document.getElementById('fileNameDisplay').innerText = "✅ 登録済みの画像あり（変更する場合のみ再選択）";
+            }
+            document.getElementById('confirmBtn').innerText = "登録内容を更新する";
           }
           
           document.getElementById('loading').style.display = 'none'; 
@@ -197,17 +208,15 @@
       document.getElementById('errorText').innerText = msg;
     }
 
-    // 画像が選択されたらファイル名を表示
     document.getElementById('licenseImage').addEventListener('change', function(e) {
       const fileNameDisplay = document.getElementById('fileNameDisplay');
       if (this.files && this.files.length > 0) {
-        fileNameDisplay.innerText = "✅ 画像をセットしました（" + this.files[0].name + "）";
+        fileNameDisplay.innerText = "✅ 新しい画像をセットしました（" + this.files[0].name + "）";
       } else {
-        fileNameDisplay.innerText = "";
+        fileNameDisplay.innerText = hasExistingLicenseImage ? "✅ 登録済みの画像あり" : "";
       }
     });
 
-    // 全銀API: 銀行リスト取得
     async function fetchBanks() {
       try {
         const res = await fetch('https://zengin-code.github.io/api/banks.json'); banksData = await res.json();
@@ -216,18 +225,16 @@
       } catch (e) {}
     }
 
-    // 全銀API: 支店リスト取得
     document.getElementById('bankName').addEventListener('change', async (e) => {
       const bank = Object.values(banksData).find(b => b.name === e.target.value);
       const branchInput = document.getElementById('branchName'); const branchList = document.getElementById('branch-list');
       if (bank) {
-        branchInput.disabled = false; branchInput.placeholder = "例: 本店、新宿"; branchInput.value = ""; branchList.innerHTML = "";
+        branchInput.placeholder = "例: 本店、新宿"; branchInput.value = ""; branchList.innerHTML = "";
         const res = await fetch(`https://zengin-code.github.io/api/branches/${bank.code}.json`); branchesData = await res.json();
         for (const c in branchesData) { const o = document.createElement('option'); o.value = branchesData[c].name; branchList.appendChild(o); }
-      } else { branchInput.disabled = true; branchInput.value = ""; }
+      } else { branchInput.value = ""; }
     });
 
-    // カナ変換処理
     document.getElementById('accountName').addEventListener('blur', function(e) {
       let val = e.target.value.replace(/[\u3041-\u3096]/g, m => String.fromCharCode(m.charCodeAt(0) + 0x60));
       const s="ァィゥェォッャュョヮヵヶ", l="アイウエオツヤユヨワカケ"; for(let i=0; i<s.length; i++) val = val.split(s[i]).join(l[i]);
@@ -237,7 +244,6 @@
 
     document.getElementById('accountNumber').addEventListener('input', function(e) { this.value = this.value.replace(/[^0-9]/g, ''); });
 
-    // 確認画面へ
     function showConfirm() {
       const bank = document.getElementById('bankName').value; const branch = document.getElementById('branchName').value;
       const type = document.getElementById('accountType').value; const num = document.getElementById('accountNumber').value;
@@ -249,13 +255,16 @@
       const fileInput = document.getElementById('licenseImage'); 
       const expiry = document.getElementById('licenseExpiry').value;
       
-      // 資格必須者のチェック
       if (isLicenseRequired) {
-        if (fileInput.files.length === 0 || !expiry) {
-          alert("マスターデータに小型船舶資格が登録されています。船舶免許の画像と有効期限を必ず入力してください。");
+        if (!hasExistingLicenseImage && fileInput.files.length === 0) {
+          alert("船舶免許の画像を撮影または選択してください。");
           return;
         }
-        document.getElementById('c-license').innerText = `画像添付あり (有効期限: ${expiry})`;
+        if (!expiry) {
+          alert("免許の有効期限を入力してください。");
+          return;
+        }
+        document.getElementById('c-license').innerText = `画像あり (有効期限: ${expiry})`;
       }
 
       document.getElementById('c-staffName').innerText = `${currentStaffName} (${currentMemberId})`;
@@ -274,7 +283,6 @@
       return new Promise((res, rej) => { const r = new FileReader(); r.readAsDataURL(file); r.onload = () => res(r.result); r.onerror = e => rej(e); });
     }
 
-    // データ送信
     async function submitData() {
       const btn = document.getElementById('submitBtn'); btn.innerText = "送信中..."; btn.disabled = true;
 
@@ -298,8 +306,8 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "registerStaff", data: payload }) })
       .then(res => res.json()).then(data => {
         if (data.status === "success") { document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('successScreen').style.display = 'block'; window.scrollTo(0, 0); }
-        else { alert("エラー: " + data.message); btn.innerText = "間違いありません（登録）"; btn.disabled = false; }
-      }).catch(e => { alert("通信エラー"); btn.innerText = "間違いありません（登録）"; btn.disabled = false; });
+        else { alert("エラー: " + data.message); btn.innerText = "間違いありません（登録・更新）"; btn.disabled = false; }
+      }).catch(e => { alert("通信エラー"); btn.innerText = "間違いありません（登録・更新）"; btn.disabled = false; });
     }
   </script>
 </body>
