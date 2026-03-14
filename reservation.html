@@ -21,7 +21,7 @@
     .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: #e4e6eb; font-size: 18px; font-weight: bold; cursor: pointer; }
     .qty-input { width: 30px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
     
-    .search-btn { padding: 12px 15px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    .search-btn { padding: 12px 15px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap; height: 100%; box-sizing: border-box;}
     button.submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     
     #infantAlert { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 10px; }
@@ -59,7 +59,11 @@
           <label>利用日時・団体情報</label>
           <div class="flex-row">
             <div><input type="date" id="resDate"></div>
-            <div><input type="text" id="resTime" placeholder="例: 9:00〜12:00"></div>
+          </div>
+          <div class="flex-row" style="margin-bottom: 15px;">
+            <div><input type="time" id="startTime"></div>
+            <div style="flex: 0 0 20px; text-align: center; font-weight: bold; color: #666;">〜</div>
+            <div><input type="time" id="endTime"></div>
           </div>
           <input type="text" id="groupName" placeholder="団体名 (例: 〇〇小学校, 〇〇スポ少)">
           <select id="groupType">
@@ -73,8 +77,12 @@
 
         <div class="form-group">
           <label>代表者情報</label>
-          <div class="flex-row">
-            <input type="text" id="memberId" placeholder="会員ID (M0000) ※メンバーの場合">
+          <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">※メンバーの場合はID番号を入力して検索</p>
+          <div class="flex-row" style="align-items: stretch;">
+            <div style="display: flex; align-items: center; border: 1px solid #ccc; border-radius: 8px; background-color: #fafafa; padding: 0 15px; width: 100%;">
+              <span style="font-size: 18px; font-weight: bold; color: #555; margin-right: 5px;">M</span>
+              <input type="tel" id="memberIdNum" maxlength="4" style="border: none; background: transparent; padding: 12px 0; width: 100%; margin: 0; outline: none;" placeholder="番号(例: 1)">
+            </div>
             <button type="button" class="search-btn" onclick="searchMember()">検索</button>
           </div>
           <input type="text" id="repName" placeholder="代表者 氏名">
@@ -99,7 +107,11 @@
             <div class="eq-item"><div class="eq-name">🛶 カヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe', -1)">-</button><input type="number" id="b-canoe" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-canoe', 1)">+</button></div></div>
             <div class="eq-item"><div class="eq-name">🛶 ペアカヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair', -1)">-</button><input type="number" id="b-pair" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-pair', 1)">+</button></div></div>
             <div class="eq-item"><div class="eq-name">🚣 ローボート</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row', -1)">-</button><input type="number" id="b-row" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-row', 1)">+</button></div></div>
-            <div class="eq-item"><div class="eq-name">🏄 SUP</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-sup', -1)">-</button><input type="number" id="b-sup" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-sup', 1)">+</button></div></div>
+            
+            <div class="eq-item" style="background-color: #fff3f3;">
+              <div class="eq-name" style="color: #666; font-size: 14px;">🏄 SUP<br><span style="font-size: 11px; color: #d9534f;">※メンバー限定の利用となります</span></div>
+              <div class="qty-controls"><span style="font-size: 12px; color: #d9534f; font-weight: bold;">予約不可</span></div>
+            </div>
           </div>
         </div>
 
@@ -128,15 +140,17 @@
       let next = (parseInt(input.value) || 0) + delta;
       input.value = next < 0 ? 0 : next;
       
-      // 幼児が1人でもいればアラート表示
       if (id === 'q-inf') {
         document.getElementById('infantAlert').style.display = next > 0 ? 'block' : 'none';
       }
     }
 
+    // 💡 修正：会員検索時に「M」を付与してゼロ埋め検索する処理
     function searchMember() {
-      const memId = document.getElementById('memberId').value.trim();
-      if (!memId) return alert("会員IDを入力してください。");
+      const idNum = document.getElementById('memberIdNum').value.trim();
+      if (!idNum) return alert("会員番号を入力してください。");
+      
+      const memId = "M" + String(idNum).padStart(4, '0');
       
       fetch(GAS_URL, {
         method: "POST", headers: { "Content-Type": "text/plain" },
@@ -159,26 +173,33 @@
       const btn = document.getElementById('submitBtn');
       btn.innerText = "送信中..."; btn.disabled = true;
 
-      // 舟艇の集計
       const orderData = {
         "カヌー": parseInt(document.getElementById('b-canoe').value) || 0,
         "ペアカヌー": parseInt(document.getElementById('b-pair').value) || 0,
-        "ローボート": parseInt(document.getElementById('b-row').value) || 0,
-        "SUP": parseInt(document.getElementById('b-sup').value) || 0
+        "ローボート": parseInt(document.getElementById('b-row').value) || 0
       };
       let eqList = [];
       for (const [key, val] of Object.entries(orderData)) {
         if (val > 0) eqList.push(`${key}×${val}`);
       }
 
+      // 時間データの結合
+      const sTime = document.getElementById('startTime').value;
+      const eTime = document.getElementById('endTime').value;
+      const resTime = (sTime && eTime) ? (sTime + "〜" + eTime) : "";
+      
+      // IDのフォーマット（入力されていればゼロ埋め）
+      const memIdNum = document.getElementById('memberIdNum').value.trim();
+      const memIdToSave = memIdNum ? "M" + String(memIdNum).padStart(4, '0') : "";
+
       const data = {
         status: document.getElementById('status').value,
         route: document.getElementById('route').value,
         date: document.getElementById('resDate').value,
-        time: document.getElementById('resTime').value,
+        time: resTime,
         groupName: document.getElementById('groupName').value,
         groupType: document.getElementById('groupType').value,
-        memberId: document.getElementById('memberId').value,
+        memberId: memIdToSave,
         repName: document.getElementById('repName').value,
         phone: document.getElementById('repPhone').value,
         adults: document.getElementById('q-adult').value,
