@@ -121,11 +121,6 @@
   </div>
 
   <script>
-    // =========================================================
-    // 💡【重要・本番環境への移行時注意】
-    // 別のGoogleアカウントで本番用のGASを立ち上げた際は、
-    // 必ず以下のURLを「新しい本番用のURL」に書き換えてください。
-    // =========================================================
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
 
     function changeQty(id, delta, min) {
@@ -160,15 +155,23 @@
       }
     });
 
+    // 💡修正：エラーダイアログを親切に表示する
     function submitVisitor() {
-      const fields = ['lastName', 'firstName', 'kanaLast', 'kanaFirst', 'phone'];
-      for (let id of fields) {
-        if (!document.getElementById(id).value.trim()) { alert("未入力の項目があります。"); return; }
-      }
+      let errors = [];
+      const requireds = [
+        {id: 'lastName', name: '代表者情報: 姓'},
+        {id: 'firstName', name: '代表者情報: 名'},
+        {id: 'kanaLast', name: '代表者情報: せい'},
+        {id: 'kanaFirst', name: '代表者情報: めい'},
+        {id: 'phone', name: '代表者情報: 電話番号'}
+      ];
+      requireds.forEach(f => {
+        if (!document.getElementById(f.id).value.trim()) errors.push(f.name);
+      });
 
       const adults = parseInt(document.getElementById('qty-adults').value) || 0;
       const kids = parseInt(document.getElementById('qty-kids').value) || 0;
-      if (adults + kids === 0) { alert("利用人数（大人または子ども）を入力してください。"); return; }
+      if (adults + kids === 0) errors.push("利用人数（大人または子ども）");
 
       const orderData = {};
       const boats = [
@@ -192,7 +195,12 @@
         orderData['その他'] = other;
       }
 
-      if (eqList.length === 0) { alert("利用する舟艇の数量を入力してください。"); return; }
+      if (eqList.length === 0) errors.push("利用する舟艇の数");
+
+      if (errors.length > 0) { 
+        alert("以下の項目が未入力、または正しくありません：\n\n・" + errors.join("\n・")); 
+        return; 
+      }
 
       const btn = document.getElementById('submitBtn');
       btn.innerText = "送信中..."; btn.disabled = true;
