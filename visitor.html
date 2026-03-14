@@ -60,7 +60,7 @@
               <div class="eq-name">👨👩 大人（高校生以上）</div>
               <div class="qty-controls">
                 <button type="button" class="qty-btn" onclick="changeQty('qty-adults', -1, 0)">-</button>
-                <input type="number" id="qty-adults" class="qty-input" value="0" readonly>
+                <input type="number" id="qty-adults" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)">
                 <button type="button" class="qty-btn" onclick="changeQty('qty-adults', 1, 0)">+</button>
               </div>
             </div>
@@ -68,7 +68,7 @@
               <div class="eq-name">👦👧 子ども（中学生以下）</div>
               <div class="qty-controls">
                 <button type="button" class="qty-btn" onclick="changeQty('qty-kids', -1, 0)">-</button>
-                <input type="number" id="qty-kids" class="qty-input" value="0" readonly>
+                <input type="number" id="qty-kids" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)">
                 <button type="button" class="qty-btn" onclick="changeQty('qty-kids', 1, 0)">+</button>
               </div>
             </div>
@@ -80,22 +80,22 @@
           <p style="font-size: 12px; color: #666; margin: 0 0 10px 0;">※子ども同士でシェアする場合は「子ども」の数量を増やしてください。</p>
           <div class="eq-list">
             <div class="eq-item"><div class="eq-name">🛶 カヌー（大人）</div>
-              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('canoe-adult', -1, 0)">-</button><input type="number" id="canoe-adult" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('canoe-adult', 1, 0)">+</button></div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('canoe-adult', -1, 0)">-</button><input type="number" id="canoe-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('canoe-adult', 1, 0)">+</button></div>
             </div>
             <div class="eq-item"><div class="eq-name">🛶 カヌー（子ども）</div>
-              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('canoe-kid', -1, 0)">-</button><input type="number" id="canoe-kid" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('canoe-kid', 1, 0)">+</button></div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('canoe-kid', -1, 0)">-</button><input type="number" id="canoe-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('canoe-kid', 1, 0)">+</button></div>
             </div>
             <div class="eq-item"><div class="eq-name">🛶 ペアカヌー（大人）</div>
-              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('pair-adult', -1, 0)">-</button><input type="number" id="pair-adult" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('pair-adult', 1, 0)">+</button></div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('pair-adult', -1, 0)">-</button><input type="number" id="pair-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('pair-adult', 1, 0)">+</button></div>
             </div>
             <div class="eq-item"><div class="eq-name">🛶 ペアカヌー（子ども）</div>
-              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('pair-kid', -1, 0)">-</button><input type="number" id="pair-kid" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('pair-kid', 1, 0)">+</button></div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('pair-kid', -1, 0)">-</button><input type="number" id="pair-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('pair-kid', 1, 0)">+</button></div>
             </div>
             <div class="eq-item"><div class="eq-name">🚣 ローボート（大人）</div>
-              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('row-adult', -1, 0)">-</button><input type="number" id="row-adult" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('row-adult', 1, 0)">+</button></div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('row-adult', -1, 0)">-</button><input type="number" id="row-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('row-adult', 1, 0)">+</button></div>
             </div>
             <div class="eq-item"><div class="eq-name">🚣 ローボート（子ども）</div>
-              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('row-kid', -1, 0)">-</button><input type="number" id="row-kid" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('row-kid', 1, 0)">+</button></div>
+              <div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('row-kid', -1, 0)">-</button><input type="number" id="row-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('row-kid', 1, 0)">+</button></div>
             </div>
             
             <div class="eq-item" style="background-color: #fff3f3;">
@@ -127,6 +127,15 @@
       const input = document.getElementById(id);
       let next = (parseInt(input.value) || 0) + delta;
       input.value = next < min ? min : next;
+    }
+
+    function validateQty(input) {
+      let val = parseInt(input.value);
+      if (isNaN(val) || val < 0) {
+        input.value = 0;
+      } else {
+        input.value = val;
+      }
     }
 
     function bindFurigana(nameId, kanaId) {
