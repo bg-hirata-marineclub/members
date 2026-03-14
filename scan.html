@@ -22,9 +22,8 @@
     .btn-cancel { width: 100%; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-sizing: border-box; }
     .fee-alert-box { border: 2px solid #d9534f; background: #fff3f3; padding: 15px; border-radius: 8px; margin-bottom: 20px; transition: 0.3s; }
     .fee-alert-success { border-color: #c3e6cb; background-color: #d4edda; }
-    
-    /* 💡新規追加: 日報用テキストエリア */
-    textarea.report-box { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 15px; resize: vertical; }
+    textarea.report-box { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 15px; resize: vertical; background-color: #fafafa;}
+    textarea.report-box:focus { outline: none; border-color: #0056b3; background-color: #fff; }
   </style>
 </head>
 <body>
@@ -39,9 +38,7 @@
       <div id="resultArea">
         <div class="member-id" id="displayId">M----</div>
         <div class="member-name" id="displayName">お名前</div>
-        
         <div id="feeAlertArea" class="fee-alert-box" style="display: none;"></div>
-        
         <div id="boatSelectionArea">
           <p style="font-size: 14px; font-weight: bold; color: #555; margin-bottom: 10px;">利用する舟艇をタップ</p>
           <div class="btn-grid">
@@ -54,10 +51,17 @@
         <button class="btn-cancel" onclick="resetScanner()">キャンセルして戻る</button>
       </div>
 
-      <div id="timecardSelectArea" style="display: none; text-align: center; padding: 10px;">
-        <h3 style="color: #333; margin-bottom: 20px;">勤怠の打刻</h3>
+      <div id="timecardSelectArea" style="display: none; text-align: left; padding: 10px;">
+        <h3 style="color: #333; margin-top: 0; margin-bottom: 15px; text-align: center; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px;">勤怠の打刻</h3>
+        
+        <div style="margin-bottom: 20px;">
+          <p style="font-size: 14px; font-weight: bold; color: #333; margin: 0 0 5px 0;">📝 業務日報・連絡事項</p>
+          <textarea id="reportComment" class="report-box" placeholder="今日の出来事、天候による変更、備品の破損など、特記事項があれば箇条書きで入力してください。"></textarea>
+          <p style="font-size: 11px; color: #666; margin-top: -10px;">※出勤・退勤どちらのタイミングで書いても記録されます。</p>
+        </div>
+
         <button style="width: 100%; padding: 20px; background-color: #0056b3; color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; margin-bottom: 15px;" onclick="startGpsFlow('出勤')">☀️ 出勤する</button>
-        <button style="width: 100%; padding: 20px; background-color: #ff9800; color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; margin-bottom: 20px;" onclick="startGpsFlow('退勤')">🌙 退勤する（日報）</button>
+        <button style="width: 100%; padding: 20px; background-color: #ff9800; color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; margin-bottom: 20px;" onclick="startGpsFlow('退勤')">🌙 退勤する</button>
         <button class="btn-cancel" onclick="resetScanner()">キャンセル</button>
       </div>
 
@@ -66,11 +70,11 @@
         <div id="gpsLoading" style="color: #0056b3; font-weight: bold; margin: 15px 0;">📍 位置情報を取得中...</div>
         
         <div id="tcConfirmButtons" style="display: none;">
-          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #06C755;" onclick="executeTimecard()">はい、出勤する</button>
+          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #06C755;" onclick="executeTimecardWithShip(0)">送信する</button>
           <button class="btn-cancel" onclick="resetScanner()">キャンセル</button>
         </div>
 
-        <div id="shipAllowanceArea" style="display: none; margin-top: 10px; text-align: left;">
+        <div id="shipAllowanceArea" style="display: none; text-align: left;">
           <div style="background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
             <p style="font-size: 14px; font-weight: bold; color: #d9534f; margin: 0 0 10px 0;">🛥️ 本日は小型船舶を操縦しましたか？</p>
             <select id="shipSelect" style="width: 100%; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc;">
@@ -78,13 +82,7 @@
               <option value="1000">はい（手当あり）</option>
             </select>
           </div>
-          
-          <div style="margin-bottom: 15px;">
-            <p style="font-size: 14px; font-weight: bold; color: #333; margin: 0 0 5px 0;">📝 本日の業務日報（任意）</p>
-            <textarea id="reportComment" class="report-box" placeholder="今日の出来事、天候による変更、備品の破損など、特記事項があれば箇条書きで入力してください。"></textarea>
-          </div>
-
-          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #06C755;" onclick="executeTimecardWithShip()">退勤して日報を送信する</button>
+          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #06C755;" onclick="executeTimecardWithShip()">退勤して送信する</button>
           <button class="btn-cancel" onclick="resetScanner()">キャンセル</button>
         </div>
       </div>
@@ -138,7 +136,6 @@
       html5QrCode.stop().then(() => {
         document.getElementById('reader').style.display = 'none';
         
-        // 💡修正: TIMECARD という1つのQRで受ける
         if (decodedText === "TIMECARD") {
           document.getElementById('timecardSelectArea').style.display = 'block';
           return;
@@ -191,12 +188,11 @@
       });
     }
 
-    // 💡修正: 出退勤フローをUIベースに変更
     function startGpsFlow(type) {
       pendingTimecardType = type;
       document.getElementById('timecardSelectArea').style.display = 'none';
       document.getElementById('timecardArea').style.display = 'block';
-      document.getElementById('tcTitle').innerText = `【${type}】の打刻`;
+      document.getElementById('tcTitle').innerText = `【${type}】の確認`;
       document.getElementById('gpsLoading').style.display = 'block';
       document.getElementById('tcConfirmButtons').style.display = 'none';
       document.getElementById('shipAllowanceArea').style.display = 'none';
@@ -212,22 +208,18 @@
 
     function showTimecardConfirm() {
       document.getElementById('gpsLoading').style.display = 'none';
-      if (pendingTimecardType === "退勤") {
+      if (pendingTimecardType === "退勤" && currentCerts.includes("小型船舶")) {
         document.getElementById('shipAllowanceArea').style.display = 'block';
-        // 免許を持っていないスタッフは手当の選択肢を隠す（常に0円）
-        if (!currentCerts.includes("小型船舶")) {
-          document.getElementById('shipSelect').parentElement.style.display = 'none';
-        }
       } else {
         document.getElementById('tcConfirmButtons').style.display = 'block';
       }
     }
 
-    function executeTimecard() { executeTimecardWithShip(); }
-
-    function executeTimecardWithShip() {
+    function executeTimecardWithShip(allowanceOverride) {
       let allowanceAmount = 0;
-      if (pendingTimecardType === "退勤" && currentCerts.includes("小型船舶")) {
+      if (allowanceOverride !== undefined) {
+        allowanceAmount = allowanceOverride;
+      } else if (pendingTimecardType === "退勤" && currentCerts.includes("小型船舶")) {
         allowanceAmount = parseInt(document.getElementById('shipSelect').value) || 0;
       }
       
