@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>B&G 平田海洋クラブ - 団体予約・問合せ受付</title>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; padding: 10px; margin: 0; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); box-sizing: border-box; }
+    h2 { text-align: center; font-size: 22px; margin-bottom: 20px; color: #0056b3; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; background: #e8f4fd; padding: 5px 10px; border-left: 4px solid #0056b3; }
+    input[type="text"], input[type="tel"], input[type="date"], input[type="time"], select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; margin-bottom: 10px; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #0056b3; background-color: #fff; }
+    .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px;} .flex-row > div { flex: 1; }
+    
+    .eq-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+    .eq-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; background: #fafafa; }
+    .eq-name { font-size: 14px; font-weight: bold; color: #444; }
+    .qty-controls { display: flex; align-items: center; gap: 10px; }
+    .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: #e4e6eb; font-size: 18px; font-weight: bold; cursor: pointer; }
+    .qty-input { width: 30px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
+    
+    .search-btn { padding: 12px 15px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    button.submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    
+    #infantAlert { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 10px; }
+    #successScreen { display: none; text-align: center; padding: 30px 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="formScreen">
+      <h2>📞 団体予約・問合せ 受付</h2>
+      
+      <form id="resForm">
+        <div class="form-group">
+          <label>ステータス・申込経路</label>
+          <div class="flex-row">
+            <div>
+              <select id="status">
+                <option value="問合せ">問合せ</option>
+                <option value="仮予約">仮予約</option>
+                <option value="予約確定" selected>予約確定</option>
+                <option value="キャンセル">キャンセル</option>
+              </select>
+            </div>
+            <div>
+              <select id="route">
+                <option value="電話">電話</option>
+                <option value="窓口">窓口</option>
+                <option value="WEB">WEB（将来用）</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>利用日時・団体情報</label>
+          <div class="flex-row">
+            <div><input type="date" id="resDate"></div>
+            <div><input type="text" id="resTime" placeholder="例: 9:00〜12:00"></div>
+          </div>
+          <input type="text" id="groupName" placeholder="団体名 (例: 〇〇小学校, 〇〇スポ少)">
+          <select id="groupType">
+            <option value="">利用区分を選択...</option>
+            <option value="学校行事">学校行事</option>
+            <option value="スポ少・部活">スポ少・部活</option>
+            <option value="子供会">子供会</option>
+            <option value="その他団体">その他団体</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>代表者情報</label>
+          <div class="flex-row">
+            <input type="text" id="memberId" placeholder="会員ID (M0000) ※メンバーの場合">
+            <button type="button" class="search-btn" onclick="searchMember()">検索</button>
+          </div>
+          <input type="text" id="repName" placeholder="代表者 氏名">
+          <input type="tel" id="repPhone" placeholder="連絡先 電話番号">
+        </div>
+
+        <div class="form-group">
+          <label>人数内訳（学年分布）</label>
+          <div id="infantAlert">⚠️ 幼児が含まれています。安全のため、ローボート等の配備を検討してください。</div>
+          <div class="eq-list">
+            <div class="eq-item"><div class="eq-name">👨👩 大人（高校生〜）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-adult', -1)">-</button><input type="number" id="q-adult" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('q-adult', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">👦 中学生</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-jh', -1)">-</button><input type="number" id="q-jh" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('q-jh', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🎒 小学高学年（4〜6年）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-eh', -1)">-</button><input type="number" id="q-eh" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('q-eh', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🎒 小学低学年（1〜3年）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-el', -1)">-</button><input type="number" id="q-el" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('q-el', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">👶 幼児（未就学児）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-inf', -1)">-</button><input type="number" id="q-inf" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('q-inf', 1)">+</button></div></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>利用予定の舟艇</label>
+          <div class="eq-list">
+            <div class="eq-item"><div class="eq-name">🛶 カヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe', -1)">-</button><input type="number" id="b-canoe" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-canoe', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🛶 ペアカヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair', -1)">-</button><input type="number" id="b-pair" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-pair', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🚣 ローボート</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row', -1)">-</button><input type="number" id="b-row" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-row', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🏄 SUP</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-sup', -1)">-</button><input type="number" id="b-sup" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-sup', 1)">+</button></div></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>備考・連絡事項</label>
+          <textarea id="notes" rows="3" placeholder="質問事項、特別な配慮事項など"></textarea>
+        </div>
+
+        <button type="button" id="submitBtn" class="submit-btn" onclick="submitReservation()">予約・問合せを登録する</button>
+      </form>
+    </div>
+
+    <div id="successScreen">
+      <div style="font-size: 50px; margin-bottom: 10px;">✅</div>
+      <h2 style="border: none; color: #28a745;">登録完了</h2>
+      <p>システムに記録しました。<br>AI日報の集計にも自動反映されます。</p>
+      <button class="submit-btn" style="background-color: #6c757d; margin-top: 20px;" onclick="location.reload()">続けて入力する</button>
+    </div>
+  </div>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
+
+    function changeQty(id, delta) {
+      const input = document.getElementById(id);
+      let next = (parseInt(input.value) || 0) + delta;
+      input.value = next < 0 ? 0 : next;
+      
+      // 幼児が1人でもいればアラート表示
+      if (id === 'q-inf') {
+        document.getElementById('infantAlert').style.display = next > 0 ? 'block' : 'none';
+      }
+    }
+
+    function searchMember() {
+      const memId = document.getElementById('memberId').value.trim();
+      if (!memId) return alert("会員IDを入力してください。");
+      
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "getMemberInfoForReservation", memberId: memId })
+      }).then(r => r.json()).then(res => {
+        if (res.status === "success") {
+          document.getElementById('repName').value = res.name;
+          document.getElementById('repPhone').value = res.phone;
+        } else {
+          alert(res.message);
+        }
+      }).catch(e => alert("通信エラー"));
+    }
+
+    function submitReservation() {
+      if (!document.getElementById('resDate').value) return alert("利用予定日を入力してください。");
+      if (!document.getElementById('groupName').value) return alert("団体名を入力してください。");
+      if (!document.getElementById('repName').value) return alert("代表者氏名を入力してください。");
+
+      const btn = document.getElementById('submitBtn');
+      btn.innerText = "送信中..."; btn.disabled = true;
+
+      // 舟艇の集計
+      const orderData = {
+        "カヌー": parseInt(document.getElementById('b-canoe').value) || 0,
+        "ペアカヌー": parseInt(document.getElementById('b-pair').value) || 0,
+        "ローボート": parseInt(document.getElementById('b-row').value) || 0,
+        "SUP": parseInt(document.getElementById('b-sup').value) || 0
+      };
+      let eqList = [];
+      for (const [key, val] of Object.entries(orderData)) {
+        if (val > 0) eqList.push(`${key}×${val}`);
+      }
+
+      const data = {
+        status: document.getElementById('status').value,
+        route: document.getElementById('route').value,
+        date: document.getElementById('resDate').value,
+        time: document.getElementById('resTime').value,
+        groupName: document.getElementById('groupName').value,
+        groupType: document.getElementById('groupType').value,
+        memberId: document.getElementById('memberId').value,
+        repName: document.getElementById('repName').value,
+        phone: document.getElementById('repPhone').value,
+        adults: document.getElementById('q-adult').value,
+        juniorHigh: document.getElementById('q-jh').value,
+        elemHigh: document.getElementById('q-eh').value,
+        elemLow: document.getElementById('q-el').value,
+        infant: document.getElementById('q-inf').value,
+        equipment: eqList.join("、 "),
+        notes: document.getElementById('notes').value,
+        orderData: orderData
+      };
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "registerReservation", data: data })
+      }).then(r => r.json()).then(res => {
+        if (res.status === "success") {
+          document.getElementById('formScreen').style.display = 'none';
+          document.getElementById('successScreen').style.display = 'block';
+          window.scrollTo(0, 0);
+        } else {
+          alert("エラー: " + res.message);
+          btn.innerText = "予約・問合せを登録する"; btn.disabled = false;
+        }
+      }).catch(e => {
+        alert("通信エラー");
+        btn.innerText = "予約・問合せを登録する"; btn.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
