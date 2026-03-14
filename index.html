@@ -53,6 +53,8 @@
     .card-info .info-value { font-size: clamp(14px, 4.5vw, 20px); color: #444; font-weight: bold; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .img-container { width: 100%; max-height: 350px; margin: 0 auto; border: 2px solid #ccc; border-radius: 8px; overflow: hidden; }
     .img-container img { display: block; max-width: 100%; }
+    .family-member-card { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px dashed #bbb; margin-bottom: 20px; position: relative; }
+    .remove-btn { position: absolute; top: -10px; right: -10px; background: #ff4d4f; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer;}
   </style>
 </head>
 <body>
@@ -61,7 +63,6 @@
     
     <div id="loadingScreen" style="text-align: center; padding: 50px 10px;">
       <p style="font-size: 18px; font-weight: bold; color: #0056b3; margin-bottom: 10px;">⏳ アカウントを確認中...</p>
-      <p style="font-size: 13px; color: #666;">（自動ログインしています）</p>
     </div>
     
     <div class="tab-container" id="tabContainer" style="display: none;">
@@ -95,10 +96,15 @@
         <div class="form-group">
           <label>会員種別</label>
           <select id="memberType">
-            <option value="">選択してください</option><option value="個人会員（一般）">個人会員（一般）</option><option value="個人会員（こども）">個人会員（こども）※小4〜中3</option><option value="家族会員">家族会員</option>
+            <option value="">選択してください</option>
+            <option value="個人会員（一般）">個人会員（一般）</option>
+            <option value="個人会員（こども）">個人会員（こども）※小4〜中3</option>
+            <option value="家族会員（代表者）">家族会員（代表者）</option>
           </select>
-          <div id="memberTypeLockMsg" style="display:none; color:#d9534f; font-size:12px; font-weight:bold; margin-top:5px;">※今年度会費は入金済みのため変更できません。</div>
+          <div id="memberTypeLockMsg" style="display:none; color:#d9534f; font-size:12px; font-weight:bold; margin-top:5px;"></div>
         </div>
+        <div id="familySection"></div>
+        <button type="button" class="btn-secondary" id="addFamilyBtn" onclick="addFamilyMember()">＋ 家族メンバーを追加する</button>
         <input type="hidden" id="lineUid">
         <button type="button" onclick="showConfirm()">確認画面へ進む</button>
       </form>
@@ -126,6 +132,7 @@
         <div class="conf-item"><div class="conf-label">電話番号</div><div class="conf-value" id="conf-phone"></div></div>
         <div class="conf-item"><div class="conf-label">住所</div><div class="conf-value" id="conf-address"></div></div>
         <div class="conf-item"><div class="conf-label">会員種別</div><div class="conf-value" id="conf-type"></div></div>
+        <div id="conf-family"></div>
       </div>
       <button type="button" id="submitBtn" onclick="executeSubmit()">この内容で送信する</button>
       <button type="button" class="btn-back" onclick="hideConfirm()">修正する</button>
@@ -156,7 +163,7 @@
   </div>
 
   <script>
-    let cropper; 
+    let familyCount = 0; let cropper; 
     let currentUserData = null; let isUpdateMode = false; let savedProfileImage = "";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
 
@@ -208,13 +215,12 @@
       bindFurigana('rep-mei', 'rep-kana-mei'); 
     });
 
-    // 💡修正：自動ログイン時にも確実に dbLineUid をセットする
     function executeAutoLogin(uid) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "autoLogin", uid: uid }) })
       .then(r => r.json()).then(res => { 
         if (res.status === "success") { 
           currentUserData = res.userData; 
-          currentUserData.dbLineUid = res.dbLineUid; // 💡ここが抜けていたのが原因でした
+          currentUserData.dbLineUid = res.dbLineUid; 
           savedProfileImage = res.imageUrl; 
           document.getElementById('loadingScreen').style.display = 'none'; 
           displayDigitalCard(res, false); 
@@ -264,7 +270,18 @@
       document.querySelector('.photo-upload-btn').innerText = '✅ 写真をセットしました'; document.querySelector('.photo-upload-btn').style.backgroundColor = '#05b34c';
     });
 
-    // 手動ログイン時
+    // 💡修正: UIの「同行者」を「家族メンバー」に変更
+    function addFamilyMember() {
+      familyCount++; document.getElementById('memberType').value = "家族会員（代表者）"; 
+      const container = document.getElementById('familySection');
+      const html = `<div class="family-member-card" id="family_${familyCount}"><button type="button" class="remove-btn" onclick="removeFamilyMember(${familyCount})">×</button><label>家族メンバー${familyCount} 氏名</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-sei-${familyCount}" class="fam-sei" placeholder="姓"></div><div><input type="text" id="fam-mei-${familyCount}" class="fam-mei" placeholder="名"></div></div><label>ふりがな</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-kana-sei-${familyCount}" class="fam-kana-sei" pattern="^[ぁ-んー\\s]+$" placeholder="せい"></div><div><input type="text" id="fam-kana-mei-${familyCount}" class="fam-kana-mei" pattern="^[ぁ-んー\\s]+$" placeholder="めい"></div></div><label>生年月日</label><input type="date" id="fam-date-${familyCount}" class="fam-date"></div>`;
+      container.insertAdjacentHTML('beforeend', html);
+      bindFurigana(`fam-sei-${familyCount}`, `fam-kana-sei-${familyCount}`);
+      bindFurigana(`fam-mei-${familyCount}`, `fam-kana-mei-${familyCount}`);
+    }
+    
+    function removeFamilyMember(id) { const el = document.getElementById(`family_${id}`); if(el) el.remove(); if (document.querySelectorAll('.family-member-card').length === 0) { document.getElementById('memberType').value = "個人会員（一般）"; } }
+
     function executeLogin() {
       const idNum = document.getElementById('loginIdNum').value.trim(); const birthDate = document.getElementById('loginBirthDate').value;
       if (!idNum || !birthDate) return alert("入力してください。");
@@ -282,7 +299,6 @@
       }).catch(() => { alert("通信エラー"); btn.innerText = "表示する"; btn.disabled = false; });
     }
 
-    // 💡修正：ボタンの表示制御をより確実に行う
     function displayDigitalCard(result, isNewRegistration) {
       document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('loginSection').style.display = 'none'; document.getElementById('registerSection').style.display = 'none'; document.getElementById('tabContainer').style.display = 'none'; document.getElementById('successScreen').style.display = 'block';
       
@@ -297,10 +313,8 @@
       }
       
       const currentLine = document.getElementById('lineUid').value;
-      // result または currentUserData から確実にデータベースのLINE IDを取得
       const dbLine = result.dbLineUid || (currentUserData ? currentUserData.dbLineUid : "");
       
-      // 💡両方の文字の空白を完全に排除して比較
       if (!isNewRegistration && currentLine && String(dbLine).trim() !== String(currentLine).trim()) {
         document.getElementById('linkLineBtn').style.display = 'block'; 
         document.getElementById('editInfoBtn').style.display = 'none'; 
@@ -344,8 +358,42 @@
       document.getElementById('postalCode').value = currentUserData['郵便番号'] || ''; document.getElementById('address').value = currentUserData['住所'] || '';
       
       const typeSelect = document.getElementById('memberType');
-      typeSelect.value = currentUserData['会員種別'] || '';
-      if (currentUserData['会費状況'] === "入金済") { typeSelect.disabled = true; document.getElementById('memberTypeLockMsg').style.display = 'block'; }
+      let currentType = currentUserData['会員種別'] || '';
+      let repId = currentUserData['代表者ID'] || '';
+      
+      // 💡過去データの補正（古い表記を最新に合わせる）
+      if (currentType.includes("家族") || currentType.includes("同行者")) {
+        currentType = repId ? "家族会員（家族メンバー）" : "家族会員（代表者）";
+      }
+      
+      // optionにない値を入れるための保険
+      if (!Array.from(typeSelect.options).some(opt => opt.value === currentType)) {
+        typeSelect.add(new Option(currentType, currentType));
+      }
+      typeSelect.value = currentType;
+      
+      let isLocked = false;
+      let lockMsg = "";
+      
+      // 💡ロック条件の判定（子ID判定 ＆ 入金済判定）
+      if (repId) { 
+        isLocked = true; 
+        lockMsg = "※家族メンバーのため会員種別は変更できません。"; 
+      } else if (currentUserData['会費状況'] === "入金済") { 
+        isLocked = true; 
+        lockMsg = "※今年度会費は入金済みのため変更できません。"; 
+      }
+      
+      if (isLocked) {
+        typeSelect.disabled = true;
+        document.getElementById('memberTypeLockMsg').innerText = lockMsg;
+        document.getElementById('memberTypeLockMsg').style.display = 'block';
+      } else {
+        typeSelect.disabled = false;
+        document.getElementById('memberTypeLockMsg').style.display = 'none';
+      }
+      
+      document.getElementById('addFamilyBtn').style.display = 'none';
       window.scrollTo(0, 0);
     }
 
@@ -359,14 +407,8 @@
     document.getElementById('memberType').addEventListener('change', function(e) {
       if (this.value === "個人会員（こども）") {
         const bDate = document.getElementById('birthDate').value;
-        if (!bDate) {
-          alert("先に「生年月日」を入力してください。");
-          this.value = ""; return;
-        }
-        if (!isValidChildGrade(bDate)) {
-          alert("エラー：生年月日が「こども（小4〜中3）」の対象年齢ではありません。\n一般会員または家族会員を選択してください。");
-          this.value = ""; 
-        }
+        if (!bDate) { alert("先に「生年月日」を入力してください。"); this.value = ""; return; }
+        if (!isValidChildGrade(bDate)) { alert("エラー：生年月日が「こども（小4〜中3）」の対象年齢ではありません。\n一般会員または家族会員を選択してください。"); this.value = ""; }
       }
     });
 
@@ -378,6 +420,17 @@
         {id:'birthDate', name:'生年月日'}, {id:'phone', name:'電話番号'}, {id:'address', name:'住所'}, {id:'memberType', name:'会員種別'}
       ];
       requireds.forEach(f => { if(!document.getElementById(f.id).value.trim()) errors.push(f.name); });
+      
+      for(let i=1; i<=familyCount; i++) {
+        if(document.getElementById(`family_${i}`)) {
+          if(!document.getElementById(`fam-sei-${i}`).value.trim()) errors.push(`家族メンバー${i}の姓`);
+          if(!document.getElementById(`fam-mei-${i}`).value.trim()) errors.push(`家族メンバー${i}の名`);
+          if(!document.getElementById(`fam-kana-sei-${i}`).value.trim()) errors.push(`家族メンバー${i}のせい`);
+          if(!document.getElementById(`fam-kana-mei-${i}`).value.trim()) errors.push(`家族メンバー${i}のめい`);
+          if(!document.getElementById(`fam-date-${i}`).value.trim()) errors.push(`家族メンバー${i}の生年月日`);
+        }
+      }
+      
       if(errors.length > 0) { alert("以下の項目が未入力です：\n\n・" + errors.join("\n・")); return false; }
       if (document.getElementById('memberType').value === "個人会員（こども）" && !isValidChildGrade(document.getElementById('birthDate').value)) { alert("エラー：対象年齢ではありません。"); return false; }
       return true;
@@ -396,16 +449,25 @@
       document.getElementById('conf-address').innerText = document.getElementById('postalCode').value + ' ' + document.getElementById('address').value;
       document.getElementById('conf-type').innerText = document.getElementById('memberType').value;
       
+      const famCon = document.getElementById('conf-family'); famCon.innerHTML = ''; let fIdx = 1;
+      for(let i=1; i<=familyCount; i++) { if(document.getElementById(`family_${i}`)) { famCon.innerHTML += `<div class="conf-item"><div class="conf-label">家族メンバー${fIdx}</div><div class="conf-value">${document.getElementById(`fam-sei-${i}`).value} ${document.getElementById(`fam-mei-${i}`).value}</div></div>`; fIdx++; } }
+      
       document.getElementById('registerSection').style.display = 'none'; document.getElementById('confirmScreen').style.display = 'block'; window.scrollTo(0, 0);
     }
     function hideConfirm() { document.getElementById('confirmScreen').style.display = 'none'; document.getElementById('registerSection').style.display = 'block'; }
 
     function executeSubmit() {
       const btn = document.getElementById('submitBtn'); btn.innerText = "処理中..."; btn.disabled = true; btn.style.backgroundColor = "#ccc";
+      
+      const familyMembers = [];
+      document.querySelectorAll('.family-member-card').forEach(card => {
+        familyMembers.push({ "姓": card.querySelector('.fam-sei').value, "名": card.querySelector('.fam-mei').value, "せい": card.querySelector('.fam-kana-sei').value, "めい": card.querySelector('.fam-kana-mei').value, "生年月日": card.querySelector('.fam-date').value });
+      });
+      
       const data = { 
         "姓": document.getElementById('rep-sei').value, "名": document.getElementById('rep-mei').value, "せい": document.getElementById('rep-kana-sei').value, "めい": document.getElementById('rep-kana-mei').value, 
         "生年月日": document.getElementById('birthDate').value, "メールアドレス": document.getElementById('email').value, "電話番号": document.getElementById('phone').value, "郵便番号": document.getElementById('postalCode').value, "住所": document.getElementById('address').value, 
-        "会員種別": document.getElementById('memberType').value, "LINE_UID": document.getElementById('lineUid').value, "profileImageBase64": document.getElementById('imageBase64').value 
+        "会員種別": document.getElementById('memberType').value, "LINE_UID": document.getElementById('lineUid').value, "profileImageBase64": document.getElementById('imageBase64').value, "familyMembers": familyMembers 
       };
       if (isUpdateMode) data.memberIdToUpdate = currentUserData['会員ID'];
       
@@ -416,7 +478,6 @@
           if (newImage) savedProfileImage = newImage;
           res.imageUrl = savedProfileImage; 
           
-          // 💡修正: データを更新した場合は、UI上の判定用にも最新のLINE IDをセットしておく
           res.dbLineUid = document.getElementById('lineUid').value;
           if (currentUserData) currentUserData.dbLineUid = res.dbLineUid;
 
