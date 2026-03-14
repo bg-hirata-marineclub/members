@@ -19,10 +19,10 @@
     .member-name { font-size: 22px; font-weight: bold; margin-bottom: 20px; color: #333; }
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
     .btn-equipment { padding: 15px 5px; background-color: #e8f4fd; color: #0056b3; border: 2px solid #b6d4fe; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-sizing: border-box; }
-    .btn-cancel { width: 100%; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-sizing: border-box; }
+    .btn-cancel { width: 100%; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-sizing: border-box; margin-top: 10px;}
     .fee-alert-box { border: 2px solid #d9534f; background: #fff3f3; padding: 15px; border-radius: 8px; margin-bottom: 20px; transition: 0.3s; }
     .fee-alert-success { border-color: #c3e6cb; background-color: #d4edda; }
-    textarea.report-box { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 15px; resize: vertical; background-color: #fafafa;}
+    textarea.report-box { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 5px; resize: vertical; background-color: #fff;}
     textarea.report-box:focus { outline: none; border-color: #0056b3; background-color: #fff; }
   </style>
 </head>
@@ -51,18 +51,19 @@
         <button class="btn-cancel" onclick="resetScanner()">キャンセルして戻る</button>
       </div>
 
-      <div id="timecardSelectArea" style="display: none; text-align: left; padding: 10px;">
+      <div id="timecardSelectArea" style="display: none; text-align: left; padding: 5px;">
         <h3 style="color: #333; margin-top: 0; margin-bottom: 15px; text-align: center; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px;">勤怠の打刻</h3>
         
-        <div style="margin-bottom: 20px;">
-          <p style="font-size: 14px; font-weight: bold; color: #333; margin: 0 0 5px 0;">📝 業務日報・連絡事項</p>
-          <textarea id="reportComment" class="report-box" placeholder="今日の出来事、天候による変更、備品の破損など、特記事項があれば箇条書きで入力してください。"></textarea>
-          <p style="font-size: 11px; color: #666; margin-top: -10px;">※出勤・退勤どちらのタイミングで書いても記録されます。</p>
-        </div>
-
         <button style="width: 100%; padding: 20px; background-color: #0056b3; color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; margin-bottom: 15px;" onclick="startGpsFlow('出勤')">☀️ 出勤する</button>
         <button style="width: 100%; padding: 20px; background-color: #ff9800; color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; margin-bottom: 20px;" onclick="startGpsFlow('退勤')">🌙 退勤する</button>
-        <button class="btn-cancel" onclick="resetScanner()">キャンセル</button>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
+          <p style="font-size: 14px; font-weight: bold; color: #333; margin: 0 0 10px 0;">📝 業務日報・連絡事項</p>
+          <textarea id="reportComment" class="report-box" placeholder="今日の出来事、天候による変更、備品についてなど、特記事項があれば入力してください。"></textarea>
+          <p style="font-size: 12px; color: #d9534f; margin: 0; font-weight: bold;">※入力後、上の「出勤」または「退勤」ボタンを押すと一緒に記録されます。</p>
+        </div>
+
+        <button class="btn-cancel" onclick="resetScanner()">キャンセルして戻る</button>
       </div>
 
       <div id="timecardArea" style="display: none; background: #fff; border-radius: 8px; text-align: center; padding: 10px;">
