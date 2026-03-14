@@ -93,20 +93,20 @@
           <label>人数内訳（学年分布）</label>
           <div id="infantAlert">⚠️ 幼児が含まれています。安全のため、ローボート等の配備を検討してください。</div>
           <div class="eq-list">
-            <div class="eq-item"><div class="eq-name">👨👩 大人（高校生〜）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-adult', -1)">-</button><input type="number" id="q-adult" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('q-adult', 1)">+</button></div></div>
-            <div class="eq-item"><div class="eq-name">👦 中学生</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-jh', -1)">-</button><input type="number" id="q-jh" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('q-jh', 1)">+</button></div></div>
-            <div class="eq-item"><div class="eq-name">🎒 小学高学年（4〜6年）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-eh', -1)">-</button><input type="number" id="q-eh" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('q-eh', 1)">+</button></div></div>
-            <div class="eq-item"><div class="eq-name">🎒 小学低学年（1〜3年）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-el', -1)">-</button><input type="number" id="q-el" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('q-el', 1)">+</button></div></div>
-            <div class="eq-item"><div class="eq-name">👶 幼児（未就学児）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-inf', -1)">-</button><input type="number" id="q-inf" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('q-inf', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">👨👩 大人（高校生〜）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-adult', -1)">-</button><input type="number" id="q-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('q-adult', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">👦 中学生</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-jh', -1)">-</button><input type="number" id="q-jh" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('q-jh', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🎒 小学高学年（4〜6年）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-eh', -1)">-</button><input type="number" id="q-eh" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('q-eh', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🎒 小学低学年（1〜3年）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-el', -1)">-</button><input type="number" id="q-el" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('q-el', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">👶 幼児（未就学児）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-inf', -1)">-</button><input type="number" id="q-inf" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('q-inf', 1)">+</button></div></div>
           </div>
         </div>
 
         <div class="form-group">
           <label>利用予定の舟艇</label>
           <div class="eq-list">
-            <div class="eq-item"><div class="eq-name">🛶 カヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe', -1)">-</button><input type="number" id="b-canoe" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-canoe', 1)">+</button></div></div>
-            <div class="eq-item"><div class="eq-name">🛶 ペアカヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair', -1)">-</button><input type="number" id="b-pair" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-pair', 1)">+</button></div></div>
-            <div class="eq-item"><div class="eq-name">🚣 ローボート</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row', -1)">-</button><input type="number" id="b-row" class="qty-input" value="0" readonly><button type="button" class="qty-btn" onclick="changeQty('b-row', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🛶 カヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe', -1)">-</button><input type="number" id="b-canoe" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-canoe', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🛶 ペアカヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair', -1)">-</button><input type="number" id="b-pair" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-pair', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🚣 ローボート</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row', -1)">-</button><input type="number" id="b-row" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row', 1)">+</button></div></div>
             
             <div class="eq-item" style="background-color: #fff3f3;">
               <div class="eq-name" style="color: #666; font-size: 14px;">🏄 SUP<br><span style="font-size: 11px; color: #d9534f;">※メンバー限定の利用となります</span></div>
@@ -141,6 +141,20 @@
       
       if (id === 'q-inf') {
         document.getElementById('infantAlert').style.display = next > 0 ? 'block' : 'none';
+      }
+    }
+
+    // 💡 手入力された値が正しいか（マイナス等でないか）チェックする関数
+    function validateQty(input) {
+      let val = parseInt(input.value);
+      if (isNaN(val) || val < 0) {
+        input.value = 0; // 不正な値は0に戻す
+      } else {
+        input.value = val;
+      }
+      // 幼児のアラート判定
+      if (input.id === 'q-inf') {
+        document.getElementById('infantAlert').style.display = input.value > 0 ? 'block' : 'none';
       }
     }
 
