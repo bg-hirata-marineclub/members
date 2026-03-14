@@ -20,9 +20,11 @@
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
     .btn-equipment { padding: 15px 5px; background-color: #e8f4fd; color: #0056b3; border: 2px solid #b6d4fe; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-sizing: border-box; }
     .btn-cancel { width: 100%; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-sizing: border-box; }
-    
     .fee-alert-box { border: 2px solid #d9534f; background: #fff3f3; padding: 15px; border-radius: 8px; margin-bottom: 20px; transition: 0.3s; }
     .fee-alert-success { border-color: #c3e6cb; background-color: #d4edda; }
+    
+    /* 💡新規追加: 日報用テキストエリア */
+    textarea.report-box { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 15px; resize: vertical; }
   </style>
 </head>
 <body>
@@ -49,24 +51,41 @@
             <button class="btn-equipment" onclick="submitRecord('SUP')">🏄 SUP</button>
           </div>
         </div>
-        
         <button class="btn-cancel" onclick="resetScanner()">キャンセルして戻る</button>
       </div>
 
-      <div id="timecardArea" style="display: none; background: #fff; border-radius: 8px; text-align: center; padding: 20px 10px;">
-        <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #333;" id="tcTitle">出勤を記録しますか？</div>
+      <div id="timecardSelectArea" style="display: none; text-align: center; padding: 10px;">
+        <h3 style="color: #333; margin-bottom: 20px;">勤怠の打刻</h3>
+        <button style="width: 100%; padding: 20px; background-color: #0056b3; color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; margin-bottom: 15px;" onclick="startGpsFlow('出勤')">☀️ 出勤する</button>
+        <button style="width: 100%; padding: 20px; background-color: #ff9800; color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; margin-bottom: 20px;" onclick="startGpsFlow('退勤')">🌙 退勤する（日報）</button>
+        <button class="btn-cancel" onclick="resetScanner()">キャンセル</button>
+      </div>
+
+      <div id="timecardArea" style="display: none; background: #fff; border-radius: 8px; text-align: center; padding: 10px;">
+        <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #333;" id="tcTitle"></div>
         <div id="gpsLoading" style="color: #0056b3; font-weight: bold; margin: 15px 0;">📍 位置情報を取得中...</div>
         
-        <div id="tcConfirmButtons">
-          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #06C755;" onclick="executeTimecard()">はい、打刻する</button>
-          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #6c757d;" onclick="resetScanner()">キャンセル</button>
+        <div id="tcConfirmButtons" style="display: none;">
+          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #06C755;" onclick="executeTimecard()">はい、出勤する</button>
+          <button class="btn-cancel" onclick="resetScanner()">キャンセル</button>
         </div>
 
-        <div id="shipAllowanceArea" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ccc;">
-          <p style="font-size: 16px; font-weight: bold; color: #d9534f; margin-bottom: 15px;">🛥️ 本日は小型船舶を操縦しましたか？</p>
-          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #06C755;" onclick="executeTimecardWithShip(1000)">はい（手当あり）</button>
-          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #6c757d;" onclick="executeTimecardWithShip(0)">いいえ</button>
-          <button style="width: 100%; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px;" onclick="resetScanner()">キャンセル</button>
+        <div id="shipAllowanceArea" style="display: none; margin-top: 10px; text-align: left;">
+          <div style="background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="font-size: 14px; font-weight: bold; color: #d9534f; margin: 0 0 10px 0;">🛥️ 本日は小型船舶を操縦しましたか？</p>
+            <select id="shipSelect" style="width: 100%; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc;">
+              <option value="0">いいえ（操縦していない）</option>
+              <option value="1000">はい（手当あり）</option>
+            </select>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <p style="font-size: 14px; font-weight: bold; color: #333; margin: 0 0 5px 0;">📝 本日の業務日報（任意）</p>
+            <textarea id="reportComment" class="report-box" placeholder="今日の出来事、天候による変更、備品の破損など、特記事項があれば箇条書きで入力してください。"></textarea>
+          </div>
+
+          <button style="width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; background-color: #06C755;" onclick="executeTimecardWithShip()">退勤して日報を送信する</button>
+          <button class="btn-cancel" onclick="resetScanner()">キャンセル</button>
         </div>
       </div>
 
@@ -80,9 +99,7 @@
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
     let html5QrCode; let memberCache = {}; let feeCache = {}; let typeCache = {}; let priceMaster = {}; let repCache = {}; 
-    let currentStaffName = ""; 
-    let currentMemberId = ""; // 👈 これを追加
-    let currentCerts = ""; 
+    let currentStaffName = ""; let currentMemberId = ""; let currentCerts = ""; 
     let pendingTimecardType = ""; let currentLat = null; let currentLng = null;
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -93,30 +110,23 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "verifyStaff", uid: uid }) })
       .then(res => res.json()).then(data => {
         if (data.status === "success") { 
-          currentStaffName = data.staffName; 
-          currentMemberId = data.memberId; // 👈 これを追加
-          currentCerts = data.certs || ""; 
-          document.getElementById('loading').style.display = 'none'; 
-          document.getElementById('appContent').style.display = 'block'; 
+          currentStaffName = data.staffName; currentMemberId = data.memberId; currentCerts = data.certs || ""; 
+          document.getElementById('loading').style.display = 'none'; document.getElementById('appContent').style.display = 'block'; 
           loadCache(); html5QrCode = new Html5Qrcode("reader"); startScanner(); 
-        } else {
-          document.getElementById('errorScreen').style.display = 'block';
-        }
+        } else { document.getElementById('errorScreen').style.display = 'block'; }
       });
     }
 
     function loadCache(callback) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getMembers" }) })
       .then(res => res.json()).then(data => { 
-        if (data.status === "success") { 
-          memberCache = data.members; feeCache = data.feeStatuses; typeCache = data.memberTypes; priceMaster = data.feeMaster; repCache = data.repIds;
-          if (callback) callback();
-        } 
+        if (data.status === "success") { memberCache = data.members; feeCache = data.feeStatuses; typeCache = data.memberTypes; priceMaster = data.feeMaster; repCache = data.repIds; if (callback) callback(); } 
       });
     }
 
     function startScanner() {
       document.getElementById('resultArea').style.display = 'none'; 
+      document.getElementById('timecardSelectArea').style.display = 'none'; 
       document.getElementById('timecardArea').style.display = 'none'; 
       document.getElementById('successMessage').style.display = 'none'; 
       document.getElementById('reader').style.display = 'block';
@@ -128,135 +138,101 @@
       html5QrCode.stop().then(() => {
         document.getElementById('reader').style.display = 'none';
         
-        // 💡復元: 出退勤QRコードの分岐処理を復活！
-        if (decodedText === "CLOCK_IN" || decodedText === "CLOCK_OUT") {
-          pendingTimecardType = (decodedText === "CLOCK_IN") ? "出勤" : "退勤";
-          processTimecardFlow();
+        // 💡修正: TIMECARD という1つのQRで受ける
+        if (decodedText === "TIMECARD") {
+          document.getElementById('timecardSelectArea').style.display = 'block';
           return;
         }
 
         if (!memberCache[decodedText] && decodedText.startsWith("M")) {
-          document.getElementById('loading').style.display = 'block';
-          document.getElementById('loading').innerText = "🔄 最新の会員データを取得中...";
-          
-          loadCache(() => {
-            document.getElementById('loading').style.display = 'none';
-            processScannedMember(decodedText);
-          });
-        } else {
-          processScannedMember(decodedText);
-        }
+          document.getElementById('loading').style.display = 'block'; document.getElementById('loading').innerText = "🔄 最新の会員データを取得中...";
+          loadCache(() => { document.getElementById('loading').style.display = 'none'; processScannedMember(decodedText); });
+        } else { processScannedMember(decodedText); }
       });
     }
 
     function processScannedMember(decodedText) {
-      document.getElementById('resultArea').style.display = 'block';
-      document.getElementById('displayId').innerText = decodedText;
+      document.getElementById('resultArea').style.display = 'block'; document.getElementById('displayId').innerText = decodedText;
       document.getElementById('displayName').innerText = (memberCache[decodedText] || "未登録の会員").replace(' 様', '');
       
-      const mType = typeCache[decodedText];
-      const mFeeStatus = feeCache[decodedText];
-      const repId = repCache[decodedText];
+      const mType = typeCache[decodedText]; const mFeeStatus = feeCache[decodedText]; const repId = repCache[decodedText];
       
       if (mType && mType.includes("家族メンバー") && repId) {
         if (feeCache[repId] === "未入金") {
-          document.getElementById('feeAlertArea').style.display = 'block';
-          document.getElementById('feeAlertArea').className = "fee-alert-box";
-          document.getElementById('feeAlertArea').innerHTML = `
-            <div style="color: #d9534f; font-weight: bold; font-size: 16px; margin-bottom: 10px;">⚠️ 代表者の会費が未納です</div>
-            <div style="font-size: 14px; color: #333; margin-bottom: 15px; line-height: 1.5;">家族メンバーの受付を行う前に、代表者の方のQRコードをスキャンして会費（2,000円）をお支払いください。</div>
-            <button style="width: 100%; padding: 15px; background-color: #6c757d; font-size: 16px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;" onclick="resetScanner()">スキャナーに戻る</button>
-          `;
-          document.getElementById('boatSelectionArea').style.display = 'none';
-          return;
+          document.getElementById('feeAlertArea').style.display = 'block'; document.getElementById('feeAlertArea').className = "fee-alert-box";
+          document.getElementById('feeAlertArea').innerHTML = `<div style="color: #d9534f; font-weight: bold; font-size: 16px; margin-bottom: 10px;">⚠️ 代表者の会費が未納です</div><div style="font-size: 14px; color: #333; margin-bottom: 15px; line-height: 1.5;">家族メンバーの受付を行う前に、代表者の方のQRコードをスキャンして会費（2,000円）をお支払いください。</div><button style="width: 100%; padding: 15px; background-color: #6c757d; font-size: 16px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;" onclick="resetScanner()">スキャナーに戻る</button>`;
+          document.getElementById('boatSelectionArea').style.display = 'none'; return;
         }
       }
 
       if (mFeeStatus === "未入金") {
         const price = priceMaster[mType] || 0;
-        document.getElementById('feeAlertArea').style.display = 'block';
-        document.getElementById('feeAlertArea').className = "fee-alert-box";
-        document.getElementById('feeAlertArea').innerHTML = `
-          <div id="feeAlertContent">
-            <div style="color: #d9534f; font-weight: bold; font-size: 16px; margin-bottom: 5px;">⚠️ 今年度の会費が未納です</div>
-            <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px;">請求額: <span id="feeAmountDisplay">${price.toLocaleString()}円</span></div>
-            <button id="feeBtn" style="width: 100%; padding: 15px; background-color: #06C755; font-size: 18px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; box-sizing: border-box;" onclick="executeFeeCollection()">💰 現金を受領して入金済みにする</button>
-          </div>`;
-        document.getElementById('feeAlertArea').setAttribute('data-price', price);
-        document.getElementById('boatSelectionArea').style.display = 'block'; 
-      } else {
-        document.getElementById('feeAlertArea').style.display = 'none';
-        document.getElementById('boatSelectionArea').style.display = 'block';
-      }
+        document.getElementById('feeAlertArea').style.display = 'block'; document.getElementById('feeAlertArea').className = "fee-alert-box";
+        document.getElementById('feeAlertArea').innerHTML = `<div id="feeAlertContent"><div style="color: #d9534f; font-weight: bold; font-size: 16px; margin-bottom: 5px;">⚠️ 今年度の会費が未納です</div><div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px;">請求額: <span id="feeAmountDisplay">${price.toLocaleString()}円</span></div><button id="feeBtn" style="width: 100%; padding: 15px; background-color: #06C755; font-size: 18px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; box-sizing: border-box;" onclick="executeFeeCollection()">💰 現金を受領して入金済みにする</button></div>`;
+        document.getElementById('feeAlertArea').setAttribute('data-price', price); document.getElementById('boatSelectionArea').style.display = 'block'; 
+      } else { document.getElementById('feeAlertArea').style.display = 'none'; document.getElementById('boatSelectionArea').style.display = 'block'; }
     }
 
     function resetScanner() { startScanner(); }
 
     function submitRecord(equipmentName) {
-      document.getElementById('resultArea').style.display = 'none'; document.getElementById('successMessage').style.display = 'block';
-      document.getElementById('successText').innerText = "✅ 舟艇の受付を記録しました！";
+      document.getElementById('resultArea').style.display = 'none'; document.getElementById('successMessage').style.display = 'block'; document.getElementById('successText').innerText = "✅ 舟艇の受付を記録しました！";
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "recordAttendance", data: { memberId: document.getElementById('displayId').innerText, memberName: document.getElementById('displayName').innerText, equipment: equipmentName, staffName: currentStaffName } }) });
     }
 
     function executeFeeCollection() {
       const price = document.getElementById('feeAlertArea').getAttribute('data-price');
       if (!confirm(`【${price}円】を受領し、システムを入金済みに更新しますか？`)) return;
-
-      const memId = document.getElementById('displayId').innerText;
-      const btn = document.getElementById('feeBtn');
-      btn.innerText = "⏳ 入金処理中..."; btn.disabled = true;
-
+      const memId = document.getElementById('displayId').innerText; const btn = document.getElementById('feeBtn'); btn.innerText = "⏳ 入金処理中..."; btn.disabled = true;
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "processFeeCollection", data: { memberId: memId, memberName: document.getElementById('displayName').innerText, staffName: currentStaffName, amount: price } }) })
       .then(res => res.json()).then(data => {
-        if (data.status === "success") { 
-          feeCache[memId] = "入金済"; 
-          const alertBox = document.getElementById('feeAlertArea');
-          alertBox.className = "fee-alert-box fee-alert-success";
-          alertBox.innerHTML = '<div style="color: #155724; font-weight: bold; font-size: 16px; text-align: center;">✅ 入金処理が完了しました！<br>続けて下のボタンから舟艇を選択してください。</div>';
-        } 
+        if (data.status === "success") { feeCache[memId] = "入金済"; const alertBox = document.getElementById('feeAlertArea'); alertBox.className = "fee-alert-box fee-alert-success"; alertBox.innerHTML = '<div style="color: #155724; font-weight: bold; font-size: 16px; text-align: center;">✅ 入金処理が完了しました！<br>続けて下のボタンから舟艇を選択してください。</div>'; } 
         else { alert("⚠️ エラー: " + data.message); btn.innerText = "💰 現金を受領して入金済みにする"; btn.disabled = false; }
       });
     }
 
-    // 💡復元: 勤怠処理フロー群
-    function processTimecardFlow() {
+    // 💡修正: 出退勤フローをUIベースに変更
+    function startGpsFlow(type) {
+      pendingTimecardType = type;
+      document.getElementById('timecardSelectArea').style.display = 'none';
       document.getElementById('timecardArea').style.display = 'block';
-      document.getElementById('tcTitle').innerText = `【${pendingTimecardType}】を記録します。`;
+      document.getElementById('tcTitle').innerText = `【${type}】の打刻`;
       document.getElementById('gpsLoading').style.display = 'block';
       document.getElementById('tcConfirmButtons').style.display = 'none';
       document.getElementById('shipAllowanceArea').style.display = 'none';
 
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
-            currentLat = position.coords.latitude; currentLng = position.coords.longitude;
-            showTimecardConfirm();
-          },
-          (error) => {
-            currentLat = null; currentLng = null;
-            alert("位置情報の取得に失敗しました。記録は続行します。");
-            showTimecardConfirm();
-          },
+          (position) => { currentLat = position.coords.latitude; currentLng = position.coords.longitude; showTimecardConfirm(); },
+          (error) => { currentLat = null; currentLng = null; alert("位置情報の取得に失敗しました。記録は続行します。"); showTimecardConfirm(); },
           { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
         );
-      } else {
-        currentLat = null; currentLng = null; showTimecardConfirm();
-      }
+      } else { currentLat = null; currentLng = null; showTimecardConfirm(); }
     }
 
     function showTimecardConfirm() {
       document.getElementById('gpsLoading').style.display = 'none';
-      if (pendingTimecardType === "退勤" && currentCerts.includes("小型船舶")) {
-        document.getElementById('tcTitle').innerText = "退勤処理に進みます。";
+      if (pendingTimecardType === "退勤") {
         document.getElementById('shipAllowanceArea').style.display = 'block';
+        // 免許を持っていないスタッフは手当の選択肢を隠す（常に0円）
+        if (!currentCerts.includes("小型船舶")) {
+          document.getElementById('shipSelect').parentElement.style.display = 'none';
+        }
       } else {
         document.getElementById('tcConfirmButtons').style.display = 'block';
       }
     }
 
-    function executeTimecard() { executeTimecardWithShip(0); }
+    function executeTimecard() { executeTimecardWithShip(); }
 
-    function executeTimecardWithShip(allowanceAmount) {
+    function executeTimecardWithShip() {
+      let allowanceAmount = 0;
+      if (pendingTimecardType === "退勤" && currentCerts.includes("小型船舶")) {
+        allowanceAmount = parseInt(document.getElementById('shipSelect').value) || 0;
+      }
+      
+      const commentText = document.getElementById('reportComment') ? document.getElementById('reportComment').value : "";
+
       document.getElementById('timecardArea').style.display = 'none';
       document.getElementById('successMessage').style.display = 'block';
       document.getElementById('successText').innerText = "通信中...";
@@ -265,19 +241,12 @@
         method: "POST", headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
           action: "processTimecard", 
-          data: { 
-            memberId: currentMemberId, // 👈 これを追加
-            staffName: currentStaffName, 
-            type: pendingTimecardType, 
-            lat: currentLat, 
-            lng: currentLng, 
-            shipAllowance: allowanceAmount 
-          }
+          data: { memberId: currentMemberId, staffName: currentStaffName, type: pendingTimecardType, lat: currentLat, lng: currentLng, shipAllowance: allowanceAmount, comment: commentText }
         })
       })
       .then(res => res.json())
       .then(data => {
-        if (data.status === "success") document.getElementById('successText').innerText = `✅ ${pendingTimecardType}を記録しました！`;
+        if (data.status === "success") document.getElementById('successText').innerText = `✅ ${pendingTimecardType}を記録しました！\nお疲れ様でした。`;
         else document.getElementById('successText').innerText = "⚠️ エラー: " + data.message;
       }).catch(e => document.getElementById('successText').innerText = "⚠️ 通信エラー");
     }
