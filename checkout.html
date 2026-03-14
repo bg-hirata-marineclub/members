@@ -161,9 +161,21 @@
       BOAT_TYPES.forEach(boatName => {
         const price = priceMaster[boatName] || 0; const currentQty = currentVisitor.orderData[boatName] || 0; 
         const div = document.createElement('div'); div.className = 'eq-item';
-        div.innerHTML = `<div><div class="eq-name">${boatName}</div><div class="eq-price">@${price}円</div></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('${boatName}', -1)">-</button><input type="number" id="qty-${boatName}" class="qty-input" value="${currentQty}" readonly><button class="qty-btn" onclick="changeQty('${boatName}', 1)">+</button></div>`;
+        // 💡 修正：readonly を外し、inputmode と onchange を付与
+        div.innerHTML = `<div><div class="eq-name">${boatName}</div><div class="eq-price">@${price}円</div></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('${boatName}', -1)">-</button><input type="number" id="qty-${boatName}" class="qty-input" value="${currentQty}" inputmode="numeric" onchange="validateQty(this)"><button class="qty-btn" onclick="changeQty('${boatName}', 1)">+</button></div>`;
         container.appendChild(div);
       });
+    }
+
+    // 💡 追加：手入力された値の検証と、合計金額の再計算
+    function validateQty(input) {
+      let val = parseInt(input.value);
+      if (isNaN(val) || val < 0) {
+        input.value = 0;
+      } else {
+        input.value = val;
+      }
+      calcTotal(); // 精算画面なので合計金額を瞬時に再計算させる
     }
 
     function changeQty(boatName, delta) {
