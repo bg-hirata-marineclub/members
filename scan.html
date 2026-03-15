@@ -24,6 +24,9 @@
     .fee-alert-success { border-color: #c3e6cb; background-color: #d4edda; }
     textarea.report-box { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 5px; resize: vertical; background-color: #fff;}
     textarea.report-box:focus { outline: none; border-color: #0056b3; background-color: #fff; }
+    
+    /* 💡 業務区分セレクトボックス用 */
+    select.work-type-select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; font-weight: bold; background-color: #fafafa; margin-bottom: 20px; }
   </style>
 </head>
 <body>
@@ -52,13 +55,21 @@
       </div>
 
       <div id="timecardSelectArea" style="display: none; text-align: left; padding: 5px;">
-        <h3 style="color: #333; margin-top: 0; margin-bottom: 15px; text-align: center; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px;">勤怠の打刻</h3>
+        <h3 style="color: #333; margin-top: 0; margin-bottom: 15px; text-align: center; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px;">⏱ 勤怠の打刻</h3>
+        
+        <div style="background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+          <p style="font-size: 14px; font-weight: bold; color: #555; margin: 0 0 10px 0;">💻 業務区分を選択</p>
+          <select id="workType" class="work-type-select">
+            <option value="現場実務">🛶 現場実務（カヌー場等）</option>
+            <option value="事務仕事">💻 事務仕事（リモート可）</option>
+          </select>
+        </div>
         
         <button style="width: 100%; padding: 20px; background-color: #0056b3; color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="startGpsFlow('出勤')">☀️ 出勤する</button>
 
         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
           <p style="font-size: 14px; font-weight: bold; color: #333; margin: 0 0 10px 0;">📝 業務日報・連絡事項</p>
-          <textarea id="reportComment" class="report-box" placeholder="今日の出来事、天候による変更、備品についてなど、特記事項があれば入力してください。"></textarea>
+          <textarea id="reportComment" class="report-box" placeholder="今日の出来事、リモート作業の内容など、特記事項があれば入力してください。"></textarea>
           <button style="width: 100%; padding: 15px; background-color: #ff9800; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="startGpsFlow('退勤')">🌙 日報を記録して退勤する</button>
         </div>
 
@@ -177,19 +188,17 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "recordAttendance", data: { memberId: document.getElementById('displayId').innerText, memberName: document.getElementById('displayName').innerText, equipment: equipmentName, staffName: currentStaffName } }) });
     }
 
-    function executeFeeCollection() {
-      const price = document.getElementById('feeAlertArea').getAttribute('data-price');
-      if (!confirm(`【${price}円】を受領し、システムを入金済みに更新しますか？`)) return;
-      const memId = document.getElementById('displayId').innerText; const btn = document.getElementById('feeBtn'); btn.innerText = "⏳ 入金処理中..."; btn.disabled = true;
-      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "processFeeCollection", data: { memberId: memId, memberName: document.getElementById('displayName').innerText, staffName: currentStaffName, amount: price } }) })
-      .then(res => res.json()).then(data => {
-        if (data.status === "success") { feeCache[memId] = "入金済"; const alertBox = document.getElementById('feeAlertArea'); alertBox.className = "fee-alert-box fee-alert-success"; alertBox.innerHTML = '<div style="color: #155724; font-weight: bold; font-size: 16px; text-align: center;">✅ 入金処理が完了しました！<br>続けて下のボタンから舟艇を選択してください。</div>'; } 
-        else { alert("⚠️ エラー: " + data.message); btn.innerText = "💰 現金を受領して入金済みにする"; btn.disabled = false; }
-      });
-    }
-
     function startGpsFlow(type) {
       pendingTimecardType = type;
+      
+      // 💡 事務仕事の場合はGPSと船舶手当の確認をスキップして直接送信
+      const workType = document.getElementById('workType').value;
+      if (workType === "事務仕事") {
+        currentLat = null; currentLng = null;
+        executeTimecardWithShip(0); 
+        return;
+      }
+
       document.getElementById('timecardSelectArea').style.display = 'none';
       document.getElementById('timecardArea').style.display = 'block';
       document.getElementById('tcTitle').innerText = `【${type}】の確認`;
@@ -224,8 +233,10 @@
       }
       
       const commentText = document.getElementById('reportComment') ? document.getElementById('reportComment').value : "";
+      const workType = document.getElementById('workType').value;
 
       document.getElementById('timecardArea').style.display = 'none';
+      document.getElementById('timecardSelectArea').style.display = 'none'; // 事務仕事スキップ用
       document.getElementById('successMessage').style.display = 'block';
       document.getElementById('successText').innerText = "通信中...";
 
@@ -233,7 +244,11 @@
         method: "POST", headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
           action: "processTimecard", 
-          data: { memberId: currentMemberId, staffName: currentStaffName, type: pendingTimecardType, lat: currentLat, lng: currentLng, shipAllowance: allowanceAmount, comment: commentText }
+          data: { 
+            memberId: currentMemberId, staffName: currentStaffName, type: pendingTimecardType, 
+            lat: currentLat, lng: currentLng, shipAllowance: allowanceAmount, comment: commentText,
+            workType: workType // 💡 業務区分を追加
+          }
         })
       })
       .then(res => res.json())
