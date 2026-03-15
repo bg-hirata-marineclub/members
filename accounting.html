@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>B&G 平田海洋クラブ - AI経理・領収書読取</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; color: #333; }
+    .header { text-align: center; margin-bottom: 20px; color: #0056b3; font-size: 22px; font-weight: bold; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px; }
+    
+    /* レスポンシブ設計: PCは左右、スマホは上下 */
+    .app-container { display: flex; flex-direction: column; gap: 20px; max-width: 1000px; margin: 0 auto; }
+    @media (min-width: 768px) {
+      .app-container { flex-direction: row; align-items: flex-start; }
+      .image-panel, .form-panel { flex: 1; position: sticky; top: 20px; }
+    }
+    
+    /* 左パネル（画像エリア） */
+    .image-panel { background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+    .upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+    .upload-btn { border: 2px dashed #007bff; color: #007bff; background-color: white; padding: 20px 20px; border-radius: 8px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; box-sizing: border-box; }
+    .upload-btn-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; }
+    
+    #previewImg { max-width: 100%; max-height: 50vh; margin-top: 15px; border-radius: 8px; display: none; object-fit: contain; background: #f8f9fa; }
+    
+    #aiLoading { display: none; margin-top: 15px; font-weight: bold; color: #ff9800; background: #fff3e0; padding: 10px; border-radius: 8px; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+    /* 右パネル（フォームエリア） */
+    .form-panel { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; background: #e8f4fd; padding: 5px 10px; border-left: 4px solid #0056b3; }
+    input[type="text"], input[type="number"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #0056b3; background-color: #fff; }
+    
+    .submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .submit-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+    #successScreen { display: none; text-align: center; padding: 50px 20px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">📸 AI経理・領収書読取</div>
+  
+  <div id="mainScreen" class="app-container">
+    
+    <div class="image-panel">
+      <div class="upload-btn-wrapper">
+        <button class="upload-btn">📷 領収書を撮影 / 選択</button>
+        <input type="file" accept="image/*" id="fileInput" onchange="handleFileSelect(event)">
+      </div>
+      <div id="aiLoading">✨ Gemini AIが領収書を解析中...<br><span style="font-size:12px; font-weight:normal;">(約5〜10秒かかります)</span></div>
+      <img id="previewImg" src="">
+    </div>
+
+    <div class="form-panel">
+      <div class="form-group">
+        <label>日付</label>
+        <input type="date" id="t-date">
+      </div>
+      <div class="form-group">
+        <label>支払先</label>
+        <input type="text" id="t-payee" placeholder="例: ホームセンター〇〇">
+      </div>
+      <div class="form-group">
+        <label>金額（円）</label>
+        <input type="number" id="t-amount" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>勘定科目（AI推測）</label>
+        <select id="t-category">
+          <option value="">読込中...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>摘要（購入品目・目的）</label>
+        <textarea id="t-memo" rows="3" placeholder="例: 舟艇修理用の木材、テープなど"></textarea>
+      </div>
+      <button type="button" id="saveBtn" class="submit-btn" onclick="saveTransaction()">💾 会計帳簿に記録する</button>
+    </div>
+
+  </div>
+
+  <div id="successScreen">
+    <div style="font-size: 60px; margin-bottom: 10px;">✅</div>
+    <h2 style="color: #28a745; margin-bottom: 10px;">記録完了</h2>
+    <p>会計データと画像URLを<br>スプレッドシートに保存しました。</p>
+    <button class="submit-btn" style="background-color: #6c757d; margin-top: 20px; width: 80%;" onclick="location.reload()">続けて入力する</button>
+  </div>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
+    
+    let currentStaffName = "スタッフ(テスト)";
+    let currentBase64 = null;
+    let currentMimeType = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // 1. スプレッドシートから勘定科目のリストを取得してセット
+      fetchAccountCategories();
+      
+      // PCテスト用にURLパラメータ ?staff=名前 でスタッフ名を設定できるようにする
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('staff')) {
+        currentStaffName = urlParams.get('staff');
+      }
+    });
+
+    // 💡 勘定科目のリストをGASから取得
+    function fetchAccountCategories() {
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "getAccountCategories" })
+      }).then(r => r.json()).then(res => {
+        if (res.status === "success" && res.categories) {
+          const select = document.getElementById('t-category');
+          select.innerHTML = '<option value="">科目を選択してください</option>';
+          res.categories.forEach(cat => {
+            select.innerHTML += `<option value="${cat}">${cat}</option>`;
+          });
+        }
+      }).catch(e => console.error("科目リスト取得エラー"));
+    }
+
+    // 💡 画像が選択された時の処理（プレビュー表示 ＆ AIへ送信）
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // 画像を画面に表示
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        document.getElementById('previewImg').src = dataUrl;
+        document.getElementById('previewImg').style.display = 'block';
+        
+        currentBase64 = dataUrl; // "data:image/jpeg;base64,..."
+        currentMimeType = file.type;
+        
+        // AI解析をスタート
+        startAIAnalysis(dataUrl, file.type);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 💡 Gemini APIに画像を投げて結果を受け取る
+    function startAIAnalysis(base64Str, mimeType) {
+      document.getElementById('aiLoading').style.display = 'block';
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "analyzeReceipt", base64Str: base64Str, mimeType: mimeType })
+      }).then(r => r.json()).then(res => {
+        document.getElementById('aiLoading').style.display = 'none';
+        btn.disabled = false;
+        
+        if (res.status === "success" && res.data) {
+          // AIが返してきたJSONデータをフォームに自動入力！
+          const ai = res.data;
+          if(ai.date) document.getElementById('t-date').value = ai.date.replace(/\//g, "-");
+          if(ai.payee) document.getElementById('t-payee').value = ai.payee;
+          if(ai.amount) document.getElementById('t-amount').value = ai.amount;
+          if(ai.memo) document.getElementById('t-memo').value = ai.memo;
+          
+          // AIが推測した科目をセレクトボックスで選択状態にする
+          if(ai.category) {
+            const options = document.getElementById('t-category').options;
+            for(let i=0; i<options.length; i++) {
+              // AIの回答が科目に部分一致すれば選択
+              if(options[i].value.includes(ai.category) || ai.category.includes(options[i].value)) {
+                options[i].selected = true;
+                break;
+              }
+            }
+          }
+        } else {
+          alert("⚠️ AIの読み取りに失敗しました。手動で入力してください。\n" + (res.message || ""));
+        }
+      }).catch(e => {
+        document.getElementById('aiLoading').style.display = 'none';
+        btn.disabled = false;
+        alert("通信エラーが発生しました。手動で入力してください。");
+      });
+    }
+
+    // 💡 確定ボタン：Googleドライブに画像を保存し、スプレッドシートに記録する
+    function saveTransaction() {
+      if (!document.getElementById('t-date').value) return alert("日付を入力してください。");
+      if (!document.getElementById('t-amount').value) return alert("金額を入力してください。");
+      if (!document.getElementById('t-category').value) return alert("勘定科目を選択してください。");
+
+      const btn = document.getElementById('saveBtn');
+      btn.innerText = "⏳ 保存中...（画像アップロード中）"; 
+      btn.disabled = true;
+
+      const data = {
+        date: document.getElementById('t-date').value,
+        payee: document.getElementById('t-payee').value,
+        amount: document.getElementById('t-amount').value,
+        category: document.getElementById('t-category').value,
+        memo: document.getElementById('t-memo').value,
+        staffName: currentStaffName,
+        imageBase64: currentBase64,
+        mimeType: currentMimeType
+      };
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "saveTransaction", data: data })
+      }).then(r => r.json()).then(res => {
+        if (res.status === "success") {
+          document.getElementById('mainScreen').style.display = 'none';
+          document.getElementById('successScreen').style.display = 'block';
+          window.scrollTo(0, 0);
+        } else {
+          alert("エラー: " + res.message);
+          btn.innerText = "💾 会計帳簿に記録する"; btn.disabled = false;
+        }
+      }).catch(e => {
+        alert("通信エラー");
+        btn.innerText = "💾 会計帳簿に記録する"; btn.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
