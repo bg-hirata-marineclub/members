@@ -91,24 +91,42 @@
   </div>
 
   <script>
+    const LIFF_ID = "YOUR_LIFF_ID_HERE"; // 💡 スタッフ用のLIFF IDに変更してください
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
     
-    let currentStaffName = "スタッフ(テスト)";
+    let currentStaffName = "不明(WEB経由)";
     let currentBase64 = null;
     let currentMimeType = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-      // 1. スプレッドシートから勘定科目のリストを取得してセット
       fetchAccountCategories();
-      
-      // PCテスト用にURLパラメータ ?staff=名前 でスタッフ名を設定できるようにする
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('staff')) {
-        currentStaffName = urlParams.get('staff');
-      }
+      initializeApp(); // 💡 LIFFの初期化を呼び出す
     });
 
-    // 💡 勘定科目のリストをGASから取得
+    // 💡 LIFFの初期化とスタッフ名の自動取得
+    function initializeApp() {
+      liff.init({ liffId: LIFF_ID }).then(() => {
+        if (!liff.isLoggedIn()) {
+          // PC等の場合はURLパラメータでテスト可能にする
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('staff')) currentStaffName = urlParams.get('staff');
+        } else {
+          liff.getProfile().then(p => {
+            // GASのスタッフ認証機能を呼び出して名前を取得
+            fetch(GAS_URL, { 
+              method: "POST", headers: { "Content-Type": "text/plain" }, 
+              body: JSON.stringify({ action: "verifyStaff", uid: p.userId }) 
+            })
+            .then(res => res.json()).then(data => {
+              if (data.status === "success") {
+                currentStaffName = data.staffName; // 💡 スタッフ名をセット！
+              }
+            });
+          }).catch(err => console.error("プロフィール取得エラー"));
+        }
+      }).catch(err => console.error("LIFF初期化エラー"));
+    }
+
     function fetchAccountCategories() {
       fetch(GAS_URL, {
         method: "POST", headers: { "Content-Type": "text/plain" },
@@ -117,85 +135,67 @@
         if (res.status === "success" && res.categories) {
           const select = document.getElementById('t-category');
           select.innerHTML = '<option value="">科目を選択してください</option>';
-          res.categories.forEach(cat => {
-            select.innerHTML += `<option value="${cat}">${cat}</option>`;
-          });
+          res.categories.forEach(cat => { select.innerHTML += `<option value="${cat}">${cat}</option>`; });
         }
-      }).catch(e => console.error("科目リスト取得エラー"));
+      });
     }
 
-    // 💡 画像が選択された時の処理（プレビュー表示 ＆ AIへ送信）
     function handleFileSelect(event) {
       const file = event.target.files[0];
       if (!file) return;
 
-      // 画像を画面に表示
       const reader = new FileReader();
       reader.onload = function(e) {
         const dataUrl = e.target.result;
         document.getElementById('previewImg').src = dataUrl;
         document.getElementById('previewImg').style.display = 'block';
-        
-        currentBase64 = dataUrl; // "data:image/jpeg;base64,..."
-        currentMimeType = file.type;
-        
-        // AI解析をスタート
+        currentBase64 = dataUrl; currentMimeType = file.type;
         startAIAnalysis(dataUrl, file.type);
       };
       reader.readAsDataURL(file);
     }
 
-    // 💡 Gemini APIに画像を投げて結果を受け取る
     function startAIAnalysis(base64Str, mimeType) {
       document.getElementById('aiLoading').style.display = 'block';
-      const btn = document.getElementById('saveBtn');
-      btn.disabled = true;
+      const btn = document.getElementById('saveBtn'); btn.disabled = true;
 
       fetch(GAS_URL, {
         method: "POST", headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ action: "analyzeReceipt", base64Str: base64Str, mimeType: mimeType })
       }).then(r => r.json()).then(res => {
-        document.getElementById('aiLoading').style.display = 'none';
-        btn.disabled = false;
+        document.getElementById('aiLoading').style.display = 'none'; btn.disabled = false;
         
         if (res.status === "success" && res.data) {
-          // AIが返してきたJSONデータをフォームに自動入力！
           const ai = res.data;
           if(ai.date) document.getElementById('t-date').value = ai.date.replace(/\//g, "-");
           if(ai.payee) document.getElementById('t-payee').value = ai.payee;
           if(ai.amount) document.getElementById('t-amount').value = ai.amount;
           if(ai.memo) document.getElementById('t-memo').value = ai.memo;
           
-          // AIが推測した科目をセレクトボックスで選択状態にする
           if(ai.category) {
             const options = document.getElementById('t-category').options;
             for(let i=0; i<options.length; i++) {
-              // AIの回答が科目に部分一致すれば選択
               if(options[i].value.includes(ai.category) || ai.category.includes(options[i].value)) {
-                options[i].selected = true;
-                break;
+                options[i].selected = true; break;
               }
             }
           }
         } else {
-          alert("⚠️ AIの読み取りに失敗しました。手動で入力してください。\n" + (res.message || ""));
+          alert("⚠️ AIの読み取りに失敗しました。手動で入力してください。");
         }
       }).catch(e => {
-        document.getElementById('aiLoading').style.display = 'none';
-        btn.disabled = false;
-        alert("通信エラーが発生しました。手動で入力してください。");
+        document.getElementById('aiLoading').style.display = 'none'; btn.disabled = false;
+        alert("通信エラーが発生しました。");
       });
     }
 
-    // 💡 確定ボタン：Googleドライブに画像を保存し、スプレッドシートに記録する
     function saveTransaction() {
       if (!document.getElementById('t-date').value) return alert("日付を入力してください。");
       if (!document.getElementById('t-amount').value) return alert("金額を入力してください。");
       if (!document.getElementById('t-category').value) return alert("勘定科目を選択してください。");
 
       const btn = document.getElementById('saveBtn');
-      btn.innerText = "⏳ 保存中...（画像アップロード中）"; 
-      btn.disabled = true;
+      btn.innerText = "⏳ 保存中...（画像アップロード中）"; btn.disabled = true;
 
       const data = {
         date: document.getElementById('t-date').value,
@@ -203,7 +203,7 @@
         amount: document.getElementById('t-amount').value,
         category: document.getElementById('t-category').value,
         memo: document.getElementById('t-memo').value,
-        staffName: currentStaffName,
+        staffName: currentStaffName, // 💡 LIFFで取得した名前が送信される
         imageBase64: currentBase64,
         mimeType: currentMimeType
       };
