@@ -21,27 +21,30 @@
     .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: #e4e6eb; font-size: 18px; font-weight: bold; cursor: pointer; }
     .qty-input { width: 30px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
     
-    .search-btn { padding: 12px 15px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap; height: 100%; box-sizing: border-box;}
-    button.submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    button.submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
     
     #infantAlert { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 10px; }
     #successScreen { display: none; text-align: center; padding: 30px 10px; }
+    
+    /* スタッフ専用項目のデザイン */
+    #adminSection { display: none; background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .admin-title { font-weight: bold; color: #d9534f; margin-bottom: 10px; font-size: 14px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div id="formScreen">
-      <h2>📞 団体予約・問合せ 受付</h2>
+      <h2>📅 団体予約・問合せ</h2>
       
       <form id="resForm">
-        <div class="form-group">
-          <label>ステータス・申込経路</label>
+        <div id="adminSection">
+          <div class="admin-title">🔒 スタッフ専用入力欄</div>
           <div class="flex-row">
             <div>
               <select id="status">
                 <option value="問合せ">問合せ</option>
                 <option value="仮予約">仮予約</option>
-                <option value="予約確定" selected>予約確定</option>
+                <option value="予約確定">予約確定</option>
                 <option value="キャンセル">キャンセル</option>
               </select>
             </div>
@@ -49,7 +52,7 @@
               <select id="route">
                 <option value="電話">電話</option>
                 <option value="窓口">窓口</option>
-                <option value="WEB">WEB（将来用）</option>
+                <option value="WEB">WEB</option>
               </select>
             </div>
           </div>
@@ -77,14 +80,6 @@
 
         <div class="form-group">
           <label>代表者情報</label>
-          <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">※メンバーの場合はID番号を入力して検索</p>
-          <div class="flex-row" style="align-items: stretch;">
-            <div style="display: flex; align-items: center; border: 1px solid #ccc; border-radius: 8px; background-color: #fafafa; padding: 0 15px; width: 100%;">
-              <span style="font-size: 18px; font-weight: bold; color: #555; margin-right: 5px;">M</span>
-              <input type="tel" id="memberIdNum" maxlength="4" style="border: none; background: transparent; padding: 12px 0; width: 100%; margin: 0; outline: none;" placeholder="番号(例: 1)">
-            </div>
-            <button type="button" class="search-btn" onclick="searchMember()">検索</button>
-          </div>
           <input type="text" id="repName" placeholder="代表者 氏名">
           <input type="tel" id="repPhone" placeholder="連絡先 電話番号">
         </div>
@@ -119,63 +114,55 @@
           <label>備考・連絡事項</label>
           <textarea id="notes" rows="3" placeholder="質問事項、特別な配慮事項など"></textarea>
         </div>
+        
+        <div class="form-group">
+          <label style="background: #f8f9fa; border-left: 4px solid #6c757d;">クラブ会員の方へ</label>
+          <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">代表者が当クラブの会員である場合は、会員番号を入力してください。</p>
+          <div style="display: flex; align-items: center; border: 1px solid #ccc; border-radius: 8px; background-color: #fafafa; padding: 0 15px;">
+            <span style="font-size: 18px; font-weight: bold; color: #555; margin-right: 5px;">M</span>
+            <input type="tel" id="memberIdNum" maxlength="4" style="border: none; background: transparent; padding: 12px 0; width: 100%; margin: 0; outline: none;" placeholder="番号(例: 1)">
+          </div>
+        </div>
 
-        <button type="button" id="submitBtn" class="submit-btn" onclick="submitReservation()">予約・問合せを登録する</button>
+        <button type="button" id="submitBtn" class="submit-btn" onclick="submitReservation()">内容を送信する</button>
       </form>
     </div>
 
     <div id="successScreen">
       <div style="font-size: 50px; margin-bottom: 10px;">✅</div>
-      <h2 style="border: none; color: #28a745;">登録完了</h2>
-      <button class="submit-btn" style="background-color: #6c757d; margin-top: 20px;" onclick="location.reload()">続けて入力する</button>
+      <h2 style="border: none; color: #28a745;">送信完了</h2>
+      <p style="line-height: 1.6;">内容を受け付けました。<br>確認後、担当者よりご連絡いたします。</p>
+      <button class="submit-btn" style="background-color: #6c757d; margin-top: 20px;" onclick="location.reload()">戻る</button>
     </div>
   </div>
 
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
 
+    // 💡 画面ロード時にURLをチェックし、スタッフモードかどうか判定
+    document.addEventListener("DOMContentLoaded", () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('staff') === '1') {
+        document.getElementById('adminSection').style.display = 'block';
+      }
+    });
+
     function changeQty(id, delta) {
       const input = document.getElementById(id);
       let next = (parseInt(input.value) || 0) + delta;
       input.value = next < 0 ? 0 : next;
-      
       if (id === 'q-inf') {
         document.getElementById('infantAlert').style.display = next > 0 ? 'block' : 'none';
       }
     }
 
-    // 💡 手入力された値が正しいか（マイナス等でないか）チェックする関数
     function validateQty(input) {
       let val = parseInt(input.value);
-      if (isNaN(val) || val < 0) {
-        input.value = 0; // 不正な値は0に戻す
-      } else {
-        input.value = val;
-      }
-      // 幼児のアラート判定
+      if (isNaN(val) || val < 0) input.value = 0;
+      else input.value = val;
       if (input.id === 'q-inf') {
         document.getElementById('infantAlert').style.display = input.value > 0 ? 'block' : 'none';
       }
-    }
-
-    // 💡 修正：会員検索時に「M」を付与してゼロ埋め検索する処理
-    function searchMember() {
-      const idNum = document.getElementById('memberIdNum').value.trim();
-      if (!idNum) return alert("会員番号を入力してください。");
-      
-      const memId = "M" + String(idNum).padStart(4, '0');
-      
-      fetch(GAS_URL, {
-        method: "POST", headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action: "getMemberInfoForReservation", memberId: memId })
-      }).then(r => r.json()).then(res => {
-        if (res.status === "success") {
-          document.getElementById('repName').value = res.name;
-          document.getElementById('repPhone').value = res.phone;
-        } else {
-          alert(res.message);
-        }
-      }).catch(e => alert("通信エラー"));
     }
 
     function submitReservation() {
@@ -196,18 +183,21 @@
         if (val > 0) eqList.push(`${key}×${val}`);
       }
 
-      // 時間データの結合
       const sTime = document.getElementById('startTime').value;
       const eTime = document.getElementById('endTime').value;
       const resTime = (sTime && eTime) ? (sTime + "〜" + eTime) : "";
       
-      // IDのフォーマット（入力されていればゼロ埋め）
       const memIdNum = document.getElementById('memberIdNum').value.trim();
       const memIdToSave = memIdNum ? "M" + String(memIdNum).padStart(4, '0') : "";
 
+      // スタッフモード判定（表示されていればその値を、隠れていれば固定値を使う）
+      const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
+      const statusVal = isAdminVisible ? document.getElementById('status').value : "問合せ";
+      const routeVal  = isAdminVisible ? document.getElementById('route').value : "WEB";
+
       const data = {
-        status: document.getElementById('status').value,
-        route: document.getElementById('route').value,
+        status: statusVal,
+        route: routeVal,
         date: document.getElementById('resDate').value,
         time: resTime,
         groupName: document.getElementById('groupName').value,
@@ -235,11 +225,11 @@
           window.scrollTo(0, 0);
         } else {
           alert("エラー: " + res.message);
-          btn.innerText = "予約・問合せを登録する"; btn.disabled = false;
+          btn.innerText = "内容を送信する"; btn.disabled = false;
         }
       }).catch(e => {
         alert("通信エラー");
-        btn.innerText = "予約・問合せを登録する"; btn.disabled = false;
+        btn.innerText = "内容を送信する"; btn.disabled = false;
       });
     }
   </script>
