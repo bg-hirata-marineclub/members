@@ -10,7 +10,6 @@
     
     #loading { text-align: center; padding: 50px 20px; color: #666; font-weight: bold; }
     
-    /* 一覧画面 */
     #listScreen { max-width: 800px; margin: 0 auto; display: none; }
     .trans-card { background: #fff; padding: 15px; margin-bottom: 12px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border-left: 5px solid #0056b3; display: flex; justify-content: space-between; align-items: center;}
     .t-date { font-size: 13px; color: #666; font-weight: bold; margin-bottom: 4px; }
@@ -18,13 +17,12 @@
     .t-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: bold; background: #e8f4fd; color: #0056b3; margin-left: 5px;}
     .t-amount { font-size: 18px; font-weight: bold; color: #d9534f; }
 
-    /* 詳細・編集画面 */
     #detailScreen { display: none; max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
     .back-btn { background: none; border: none; color: #007bff; font-size: 16px; font-weight: bold; padding: 0; margin-bottom: 20px; cursor: pointer; }
     
     .form-group { margin-bottom: 15px; }
     label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; background: #e8f4fd; padding: 5px 10px; border-left: 4px solid #0056b3; }
-    input[type="text"], input[type="number"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
+    input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
     
     .img-link { display: block; text-align: center; padding: 12px; background: #f8f9fa; border: 1px dashed #ccc; border-radius: 8px; color: #007bff; text-decoration: none; font-weight: bold; margin-bottom: 20px; }
     
@@ -54,7 +52,7 @@
       </div>
       <div class="form-group">
         <label>金額（円）</label>
-        <input type="number" id="t-amount" inputmode="numeric">
+        <input type="text" id="t-amount" inputmode="numeric" style="text-align: right; font-weight: bold; font-size: 20px;" oninput="formatCurrency(this)">
       </div>
       <div class="form-group">
         <label>勘定科目</label>
@@ -83,6 +81,12 @@
       loadData();
     });
 
+    // 💡 入力された数字に3桁カンマを付ける関数
+    function formatCurrency(input) {
+      let val = input.value.replace(/[^0-9]/g, ''); // 数字以外を削除
+      input.value = val ? Number(val).toLocaleString() : '';
+    }
+
     function fetchAccountCategories() {
       fetch(GAS_URL, {
         method: "POST", headers: { "Content-Type": "text/plain" },
@@ -108,11 +112,10 @@
           transData = data.transactions; 
           renderList(); 
         } else {
-          // 💡 エラー内容を画面に赤文字で表示する
-          document.getElementById('loading').innerHTML = "<span style='color:red;'>エラー: " + data.message + "</span><br>スプレッドシートの1行目の項目名（日付、支払先など）が間違っていないか確認してください。";
+          document.getElementById('loading').innerHTML = "<span style='color:red;'>エラー: " + data.message + "</span>";
         }
       }).catch(e => {
-        document.getElementById('loading').innerHTML = "<span style='color:red;'>通信エラーが発生しました。デプロイの更新忘れがないか確認してください。</span>";
+        document.getElementById('loading').innerHTML = "<span style='color:red;'>通信エラーが発生しました。</span>";
       });
     }
 
@@ -152,11 +155,11 @@
 
       document.getElementById('t-date').value = t.date.replace(/\//g, "-");
       document.getElementById('t-payee').value = t.payee;
-      document.getElementById('t-amount').value = t.amount;
+      // 💡 修正：読み込み時にカンマをつけて表示
+      document.getElementById('t-amount').value = t.amount ? Number(t.amount).toLocaleString() : "";
       document.getElementById('t-memo').value = t.memo;
       document.getElementById('t-staffName').innerText = t.staffName || "不明";
       
-      // 科目の選択（非同期で読み込んでいるため、少し待ってセットする）
       setTimeout(() => { document.getElementById('t-category').value = t.category; }, 200);
       
       window.scrollTo(0, 0);
@@ -175,7 +178,8 @@
         row: currentRow,
         date: document.getElementById('t-date').value,
         payee: document.getElementById('t-payee').value,
-        amount: document.getElementById('t-amount').value,
+        // 💡 修正：保存する時はカンマを外して送信する
+        amount: document.getElementById('t-amount').value.replace(/,/g, ''),
         category: document.getElementById('t-category').value,
         memo: document.getElementById('t-memo').value
       };
