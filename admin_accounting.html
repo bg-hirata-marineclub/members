@@ -104,7 +104,15 @@
       
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getTransactions" }) })
       .then(res => res.json()).then(data => {
-        if (data.status === "success") { transData = data.transactions; renderList(); }
+        if (data.status === "success") { 
+          transData = data.transactions; 
+          renderList(); 
+        } else {
+          // 💡 エラー内容を画面に赤文字で表示する
+          document.getElementById('loading').innerHTML = "<span style='color:red;'>エラー: " + data.message + "</span><br>スプレッドシートの1行目の項目名（日付、支払先など）が間違っていないか確認してください。";
+        }
+      }).catch(e => {
+        document.getElementById('loading').innerHTML = "<span style='color:red;'>通信エラーが発生しました。デプロイの更新忘れがないか確認してください。</span>";
       });
     }
 
