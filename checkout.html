@@ -13,7 +13,6 @@
     #loading, #errorScreen { text-align: center; padding: 50px 20px; color: #666; line-height: 1.6; }
     #errorScreen { display: none; color: #d9534f; font-weight: bold; }
     
-    /* リスト画面・詳細画面のデザインはそのまま */
     #listScreen { max-width: 600px; margin: 0 auto; display: none; }
     .visitor-card { background: #fff; padding: 15px 20px; margin-bottom: 10px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-left: 5px solid #ffc107; }
     .v-time { font-size: 13px; color: #666; display: flex; align-items: center; gap: 8px; }
@@ -32,7 +31,11 @@
     .eq-price { font-size: 12px; color: #888; margin-top: 3px; }
     .qty-controls { display: flex; align-items: center; gap: 10px; }
     .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: #f0f2f5; font-size: 18px; font-weight: bold; color: #333; cursor: pointer; }
-    .qty-input { width: 30px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
+    
+    /* 💡 CSSの修正：横幅を広げ、PC特有の上下矢印（スピナー）を隠す */
+    .qty-input { width: 50px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
+    input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
     
     .total-area { margin-top: 25px; padding: 15px; background: #e8f4fd; border-radius: 8px; text-align: center; }
     .total-label { font-size: 14px; color: #0056b3; }
@@ -44,14 +47,9 @@
 </head>
 <body>
 
-  <div class="header">💳 ビジター精算レジ</div>
-  
-  <div id="loading">🔄 セキュリティチェック中...<br><span style="font-size: 12px;">スタッフ権限を確認しています</span></div>
-  
-  <div id="errorScreen">
-    ⛔️ アクセス拒否<br><br>
-    <span id="errorText" style="font-size: 14px; font-weight: normal; color: #333;">この画面を開く権限がありません。</span>
-  </div>
+  <div class="header">💳 ビジター・団体 精算レジ</div>
+  <div id="loading">🔄 データを読み込み中...</div>
+  <div id="errorScreen">⛔️ アクセス拒否<br><span id="errorText"></span></div>
 
   <div id="listScreen">
     <div class="staff-info">👤 担当: <span id="displayStaffName"></span></div>
@@ -71,49 +69,32 @@
   </div>
 
   <script>
-    const LIFF_ID = "2009367368-epwEMsKs";
+    const LIFF_ID = "2009367368-epwEMsKs"; // 自身の精算レジ用LIFF ID
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
 
     let currentStaffName = "";
     let priceMaster = {};
     let visitorsData = [];
     let currentVisitor = null;
+    
+    // 基本の舟艇リスト
     const BOAT_TYPES = [ "カヌー（大人）", "カヌー（子ども）", "ペアカヌー（大人）", "ペアカヌー（子ども）", "ローボート（大人）", "ローボート（子ども）" ];
 
     document.addEventListener("DOMContentLoaded", initializeApp);
 
-    // 💡ステップ1：LIFFの初期化とログイン
     function initializeApp() {
-      liff.init({ liffId: LIFF_ID })
-        .then(() => {
-          if (!liff.isLoggedIn()) {
-            liff.login();
-          } else {
-            liff.getProfile().then(profile => {
-              verifyStaffAccess(profile.userId);
-            }).catch(err => showError("プロフィールの取得に失敗しました。"));
-          }
-        })
-        .catch(err => showError("LIFFの初期化に失敗しました。LINEアプリから開いてください。"));
+      liff.init({ liffId: LIFF_ID }).then(() => {
+        if (!liff.isLoggedIn()) liff.login();
+        else liff.getProfile().then(p => verifyStaffAccess(p.userId)).catch(err => showError("プロフィールの取得エラー"));
+      }).catch(err => showError("LIFF初期化エラー"));
     }
 
-    // 💡ステップ2：GASに問い合わせて「権限」をチェック
     function verifyStaffAccess(uid) {
-      fetch(GAS_URL, {
-        method: "POST", headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action: "verifyStaff", uid: uid })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === "success") {
-          currentStaffName = data.staffName;
-          document.getElementById('displayStaffName').innerText = currentStaffName;
-          loadData(); // 権限OKならレジのデータを読み込む
-        } else {
-          showError(data.message); // 権限NGなら弾く
-        }
-      })
-      .catch(e => showError("通信エラーが発生しました。"));
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "verifyStaff", uid: uid }) })
+      .then(res => res.json()).then(data => {
+        if (data.status === "success") { currentStaffName = data.staffName; document.getElementById('displayStaffName').innerText = currentStaffName; loadData(); } 
+        else showError(data.message);
+      }).catch(e => showError("通信エラー"));
     }
 
     function showError(msg) {
@@ -122,15 +103,11 @@
       document.getElementById('errorText').innerText = msg;
     }
 
-    // --- 以降は元のレジ機能 ---
     function loadData() {
-      document.getElementById('loading').innerHTML = "🔄 データを読み込み中...";
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getCheckoutData" }) })
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === "success") {
-          priceMaster = data.prices; visitorsData = data.visitors; renderList();
-        } else showError(data.message);
+      .then(res => res.json()).then(data => {
+        if (data.status === "success") { priceMaster = data.prices; visitorsData = data.visitors; renderList(); } 
+        else showError(data.message);
       }).catch(e => showError("通信エラー"));
     }
 
@@ -139,11 +116,11 @@
       document.getElementById('listScreen').style.display = 'block';
       const listDiv = document.getElementById('visitorList');
       listDiv.innerHTML = '';
-      if (visitorsData.length === 0) { listDiv.innerHTML = '<div class="empty-msg">✅ 現在、未払いのビジターはいません</div>'; return; }
+      if (visitorsData.length === 0) { listDiv.innerHTML = '<div class="empty-msg">✅ 現在、未払いのデータはありません</div>'; return; }
 
       visitorsData.forEach((v, index) => {
         const card = document.createElement('div'); card.className = 'visitor-card'; card.onclick = () => openDetail(index);
-        card.innerHTML = `<div><div class="v-time">受付: ${v.time} <span class="v-badge">大人${v.adults||0} / 子${v.children||0}</span></div><div class="v-name">${v.name} 様</div></div><div class="v-arrow">精算する ＞</div>`;
+        card.innerHTML = `<div><div class="v-time">受付: ${v.time} <span class="v-badge">大人${v.adults||0} / 子${v.children||0}</span></div><div class="v-name">${v.name}</div></div><div class="v-arrow">精算する ＞</div>`;
         listDiv.appendChild(card);
       });
     }
@@ -151,31 +128,29 @@
     function openDetail(index) {
       currentVisitor = visitorsData[index];
       document.getElementById('listScreen').style.display = 'none'; document.getElementById('detailScreen').style.display = 'block';
-      document.getElementById('d-name').innerText = currentVisitor.name + " 様";
+      document.getElementById('d-name').innerText = currentVisitor.name;
       document.getElementById('d-people').innerText = `👨大人: ${currentVisitor.adults||0}名 / 👦子ども: ${currentVisitor.children||0}名`;
       renderBoats(); calcTotal();
     }
 
+    // 💡 修正：予約から来た「カヌー」なども動的に表示する
     function renderBoats() {
       const container = document.getElementById('boatList'); container.innerHTML = '';
-      BOAT_TYPES.forEach(boatName => {
-        const price = priceMaster[boatName] || 0; const currentQty = currentVisitor.orderData[boatName] || 0; 
+      
+      let displayBoats = [...BOAT_TYPES];
+      if (currentVisitor.orderData) {
+        for (let key in currentVisitor.orderData) {
+          if (!displayBoats.includes(key) && key !== "その他") displayBoats.push(key);
+        }
+      }
+
+      displayBoats.forEach(boatName => {
+        const price = priceMaster[boatName] || 0; 
+        const currentQty = currentVisitor.orderData[boatName] || 0; 
         const div = document.createElement('div'); div.className = 'eq-item';
-        // 💡 修正：readonly を外し、inputmode と onchange を付与
         div.innerHTML = `<div><div class="eq-name">${boatName}</div><div class="eq-price">@${price}円</div></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty('${boatName}', -1)">-</button><input type="number" id="qty-${boatName}" class="qty-input" value="${currentQty}" inputmode="numeric" onchange="validateQty(this)"><button class="qty-btn" onclick="changeQty('${boatName}', 1)">+</button></div>`;
         container.appendChild(div);
       });
-    }
-
-    // 💡 追加：手入力された値の検証と、合計金額の再計算
-    function validateQty(input) {
-      let val = parseInt(input.value);
-      if (isNaN(val) || val < 0) {
-        input.value = 0;
-      } else {
-        input.value = val;
-      }
-      calcTotal(); // 精算画面なので合計金額を瞬時に再計算させる
     }
 
     function changeQty(boatName, delta) {
@@ -183,9 +158,19 @@
       input.value = next < 0 ? 0 : next; calcTotal();
     }
 
+    function validateQty(input) {
+      let val = parseInt(input.value);
+      input.value = (isNaN(val) || val < 0) ? 0 : val;
+      calcTotal();
+    }
+
     function calcTotal() {
       let total = 0;
-      BOAT_TYPES.forEach(boatName => { total += (parseInt(document.getElementById(`qty-${boatName}`).value)||0) * (priceMaster[boatName]||0); });
+      const inputs = document.querySelectorAll('.qty-input');
+      inputs.forEach(input => {
+        const boatName = input.id.replace('qty-', '');
+        total += (parseInt(input.value) || 0) * (priceMaster[boatName] || 0);
+      });
       document.getElementById('d-total').innerText = total.toLocaleString();
     }
 
@@ -196,15 +181,18 @@
       const btn = document.getElementById('checkoutBtn'); btn.innerText = "通信中..."; btn.disabled = true;
 
       let newOrderData = { ...currentVisitor.orderData }; let newEqList = []; let total = 0;
-      BOAT_TYPES.forEach(boatName => {
-        const qty = parseInt(document.getElementById(`qty-${boatName}`).value)||0; newOrderData[boatName] = qty; 
-        if (qty > 0) { newEqList.push(`${boatName}×${qty}`); total += qty * (priceMaster[boatName]||0); }
+      const inputs = document.querySelectorAll('.qty-input');
+      inputs.forEach(input => {
+        const boatName = input.id.replace('qty-', '');
+        const qty = parseInt(input.value) || 0;
+        newOrderData[boatName] = qty;
+        if (qty > 0) { newEqList.push(`${boatName}×${qty}`); total += qty * (priceMaster[boatName] || 0); }
       });
       if (newOrderData['その他']) newEqList.push(`その他(${newOrderData['その他']})`);
       
       const payload = {
         row: currentVisitor.row, equipment: newEqList.join("、 "), orderData: newOrderData, total: total,
-        staffName: currentStaffName // 💡精算担当者の名前をGASに送る
+        staffName: currentStaffName 
       };
 
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "processCheckout", data: payload }) })
