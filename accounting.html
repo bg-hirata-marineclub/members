@@ -9,14 +9,12 @@
     body { font-family: sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; color: #333; }
     .header { text-align: center; margin-bottom: 20px; color: #0056b3; font-size: 22px; font-weight: bold; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px; }
     
-    /* レスポンシブ設計: PCは左右、スマホは上下 */
     .app-container { display: flex; flex-direction: column; gap: 20px; max-width: 1000px; margin: 0 auto; }
     @media (min-width: 768px) {
       .app-container { flex-direction: row; align-items: flex-start; }
       .image-panel, .form-panel { flex: 1; position: sticky; top: 20px; }
     }
     
-    /* 左パネル（画像エリア） */
     .image-panel { background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
     .upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
     .upload-btn { border: 2px dashed #007bff; color: #007bff; background-color: white; padding: 20px 20px; border-radius: 8px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; box-sizing: border-box; }
@@ -27,11 +25,10 @@
     #aiLoading { display: none; margin-top: 15px; font-weight: bold; color: #ff9800; background: #fff3e0; padding: 10px; border-radius: 8px; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
-    /* 右パネル（フォームエリア） */
     .form-panel { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .form-group { margin-bottom: 15px; }
     label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; background: #e8f4fd; padding: 5px 10px; border-left: 4px solid #0056b3; }
-    input[type="text"], input[type="number"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
+    input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     
     .submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -45,7 +42,6 @@
   <div class="header">📸 AI経理・領収書読取</div>
   
   <div id="mainScreen" class="app-container">
-    
     <div class="image-panel">
       <div class="upload-btn-wrapper">
         <button class="upload-btn">📷 領収書を撮影 / 選択</button>
@@ -66,7 +62,7 @@
       </div>
       <div class="form-group">
         <label>金額（円）</label>
-        <input type="number" id="t-amount" inputmode="numeric" placeholder="0">
+        <input type="text" id="t-amount" inputmode="numeric" placeholder="0" style="text-align: right; font-weight: bold; font-size: 20px;" oninput="formatCurrency(this)">
       </div>
       <div class="form-group">
         <label>勘定科目（AI推測）</label>
@@ -80,7 +76,6 @@
       </div>
       <button type="button" id="saveBtn" class="submit-btn" onclick="saveTransaction()">💾 会計帳簿に記録する</button>
     </div>
-
   </div>
 
   <div id="successScreen">
@@ -100,26 +95,29 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       fetchAccountCategories();
-      initializeApp(); // 💡 LIFFの初期化を呼び出す
+      initializeApp(); 
     });
 
-    // 💡 LIFFの初期化とスタッフ名の自動取得
+    // 💡 入力された数字に3桁カンマを付ける関数
+    function formatCurrency(input) {
+      let val = input.value.replace(/[^0-9]/g, '');
+      input.value = val ? Number(val).toLocaleString() : '';
+    }
+
     function initializeApp() {
       liff.init({ liffId: LIFF_ID }).then(() => {
         if (!liff.isLoggedIn()) {
-          // PC等の場合はURLパラメータでテスト可能にする
           const urlParams = new URLSearchParams(window.location.search);
           if (urlParams.get('staff')) currentStaffName = urlParams.get('staff');
         } else {
           liff.getProfile().then(p => {
-            // GASのスタッフ認証機能を呼び出して名前を取得
             fetch(GAS_URL, { 
               method: "POST", headers: { "Content-Type": "text/plain" }, 
               body: JSON.stringify({ action: "verifyStaff", uid: p.userId }) 
             })
             .then(res => res.json()).then(data => {
               if (data.status === "success") {
-                currentStaffName = data.staffName; // 💡 スタッフ名をセット！
+                currentStaffName = data.staffName; 
               }
             });
           }).catch(err => console.error("プロフィール取得エラー"));
@@ -169,7 +167,8 @@
           const ai = res.data;
           if(ai.date) document.getElementById('t-date').value = ai.date.replace(/\//g, "-");
           if(ai.payee) document.getElementById('t-payee').value = ai.payee;
-          if(ai.amount) document.getElementById('t-amount').value = ai.amount;
+          // 💡 修正：AIから返ってきた金額にカンマをつけて表示
+          if(ai.amount) document.getElementById('t-amount').value = Number(ai.amount).toLocaleString();
           if(ai.memo) document.getElementById('t-memo').value = ai.memo;
           
           if(ai.category) {
@@ -200,10 +199,11 @@
       const data = {
         date: document.getElementById('t-date').value,
         payee: document.getElementById('t-payee').value,
-        amount: document.getElementById('t-amount').value,
+        // 💡 修正：保存する時はカンマを外して送信する
+        amount: document.getElementById('t-amount').value.replace(/,/g, ''),
         category: document.getElementById('t-category').value,
         memo: document.getElementById('t-memo').value,
-        staffName: currentStaffName, // 💡 LIFFで取得した名前が送信される
+        staffName: currentStaffName,
         imageBase64: currentBase64,
         mimeType: currentMimeType
       };
