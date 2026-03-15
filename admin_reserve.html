@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>B&G 平田海洋クラブ - 予約ダッシュボード</title>
+  <style>
+    body { font-family: sans-serif; background-color: #e9ecef; padding: 10px; margin: 0; color: #333; }
+    .header { text-align: center; margin-bottom: 20px; color: #0056b3; font-size: 20px; font-weight: bold; }
+    
+    #loading, #errorScreen { text-align: center; padding: 50px 20px; color: #666; font-weight: bold; }
+    #errorScreen { display: none; color: #d9534f; }
+    
+    /* 一覧画面 */
+    #listScreen { max-width: 600px; margin: 0 auto; display: none; }
+    .res-card { background: #fff; padding: 15px; margin-bottom: 12px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border-left: 5px solid #ccc; display: flex; justify-content: space-between; align-items: center;}
+    .res-card.status-問合せ { border-left-color: #ffc107; }
+    .res-card.status-仮予約 { border-left-color: #17a2b8; }
+    .res-card.status-予約確定 { border-left-color: #06C755; }
+    .res-card.status-実施済 { border-left-color: #6c757d; opacity: 0.7; }
+    .res-card.status-キャンセル { border-left-color: #d9534f; opacity: 0.5; }
+    
+    .r-date { font-size: 13px; color: #666; font-weight: bold; margin-bottom: 4px; }
+    .r-name { font-size: 18px; font-weight: bold; color: #333; }
+    .r-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: bold; background: #e8f4fd; color: #0056b3; margin-left: 5px;}
+    .r-status { font-size: 14px; font-weight: bold; color: #555; }
+
+    /* 詳細・更新画面 */
+    #detailScreen { display: none; max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    .back-btn { background: none; border: none; color: #007bff; font-size: 16px; font-weight: bold; padding: 0; margin-bottom: 20px; cursor: pointer; }
+    .d-group { font-size: 22px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    
+    .info-row { margin-bottom: 10px; display: flex; }
+    .info-label { width: 90px; font-size: 13px; color: #666; font-weight: bold; }
+    .info-val { flex: 1; font-size: 15px; font-weight: bold; color: #333; }
+    
+    .status-area { margin-top: 25px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #ddd; }
+    .status-label { font-size: 14px; font-weight: bold; color: #0056b3; margin-bottom: 10px; display: block; }
+    select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; font-weight: bold; }
+    
+    .update-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">📋 予約ダッシュボード</div>
+  
+  <div id="loading">🔄 予約データを読み込み中...</div>
+  
+  <div id="listScreen">
+    <div id="resList"></div>
+  </div>
+
+  <div id="detailScreen">
+    <button class="back-btn" onclick="showList()">← 一覧に戻る</button>
+    <div class="d-group" id="d-groupName">団体名</div>
+    
+    <div class="info-row"><div class="info-label">利用予定日</div><div class="info-val" id="d-date"></div></div>
+    <div class="info-row"><div class="info-label">代表者</div><div class="info-val" id="d-repName"></div></div>
+    <div class="info-row"><div class="info-label">連絡先</div><div class="info-val" id="d-phone"></div></div>
+    <div class="info-row"><div class="info-label">舟艇</div><div class="info-val" id="d-equip"></div></div>
+    <div class="info-row"><div class="info-label">経路</div><div class="info-val" id="d-route"></div></div>
+
+    <div class="status-area">
+      <label class="status-label">現在のステータス</label>
+      <select id="editStatus">
+        <option value="問合せ">問合せ（未確定）</option>
+        <option value="仮予約">仮予約（調整中）</option>
+        <option value="予約確定">予約確定</option>
+        <option value="実施済">実施済（完了）</option>
+        <option value="キャンセル">キャンセル</option>
+      </select>
+      <button class="update-btn" id="updateBtn" onclick="updateStatus()">ステータスを更新する</button>
+    </div>
+  </div>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
+    let resData = [];
+    let currentRow = null;
+
+    document.addEventListener("DOMContentLoaded", loadData);
+
+    function loadData() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('listScreen').style.display = 'none';
+      
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getReservations" }) })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          resData = data.reservations;
+          renderList();
+        } else {
+          document.getElementById('loading').innerText = "エラー: " + data.message;
+        }
+      }).catch(e => {
+        document.getElementById('loading').innerText = "通信エラーが発生しました";
+      });
+    }
+
+    function renderList() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('listScreen').style.display = 'block';
+      const listDiv = document.getElementById('resList');
+      listDiv.innerHTML = '';
+      
+      if (resData.length === 0) {
+        listDiv.innerHTML = '<div style="text-align:center; color:#666; margin-top:30px;">現在、予約データはありません。</div>';
+        return;
+      }
+
+      resData.forEach((r, index) => {
+        const card = document.createElement('div');
+        // CSSクラスでステータスごとの左線の色を変える
+        card.className = 'res-card status-' + r.status;
+        card.onclick = () => openDetail(index);
+        
+        card.innerHTML = `
+          <div>
+            <div class="r-date">${r.date} ${r.time} <span class="r-badge">${r.route}</span></div>
+            <div class="r-name">${r.groupName}</div>
+          </div>
+          <div class="r-status">${r.status} ＞</div>
+        `;
+        listDiv.appendChild(card);
+      });
+    }
+
+    function openDetail(index) {
+      const r = resData[index];
+      currentRow = r.row;
+      
+      document.getElementById('listScreen').style.display = 'none';
+      document.getElementById('detailScreen').style.display = 'block';
+      
+      document.getElementById('d-groupName').innerText = r.groupName;
+      document.getElementById('d-date').innerText = r.date + " " + r.time;
+      document.getElementById('d-repName').innerText = r.repName;
+      document.getElementById('d-phone').innerText = r.phone;
+      document.getElementById('d-equip').innerText = r.equip || "なし";
+      document.getElementById('d-route').innerText = r.route;
+      
+      document.getElementById('editStatus').value = r.status;
+      window.scrollTo(0, 0);
+    }
+
+    function showList() {
+      document.getElementById('detailScreen').style.display = 'none';
+      document.getElementById('listScreen').style.display = 'block';
+    }
+
+    function updateStatus() {
+      const newStatus = document.getElementById('editStatus').value;
+      if (!confirm(`ステータスを「${newStatus}」に更新しますか？`)) return;
+      
+      const btn = document.getElementById('updateBtn');
+      btn.innerText = "更新中..."; btn.disabled = true;
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "updateReservationStatus", data: { row: currentRow, status: newStatus } })
+      }).then(res => res.json()).then(data => {
+        if (data.status === "success") {
+          alert("✅ 更新しました！");
+          btn.innerText = "ステータスを更新する"; btn.disabled = false;
+          loadData(); // 一覧を再読み込みして戻る
+        } else {
+          alert("エラー: " + data.message);
+          btn.innerText = "ステータスを更新する"; btn.disabled = false;
+        }
+      }).catch(e => {
+        alert("通信エラー");
+        btn.innerText = "ステータスを更新する"; btn.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
