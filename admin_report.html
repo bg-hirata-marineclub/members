@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>B&G 平田海洋クラブ - 日報生成ツール</title>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; color: #333; text-align: center; }
+    .container { max-width: 400px; margin: 0 auto; background: #fff; padding: 30px 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #0056b3; font-size: 22px; margin-bottom: 20px; }
+    
+    .form-group { margin-bottom: 25px; text-align: left; }
+    label { font-weight: bold; color: #555; display: block; margin-bottom: 8px; font-size: 14px; }
+    input[type="date"] { width: 100%; padding: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 18px; font-weight: bold; background-color: #fafafa; box-sizing: border-box; }
+    
+    .btn { display: block; width: 100%; padding: 20px; margin-bottom: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; color: #fff; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background-color: #06C755; }
+    .btn:disabled { background-color: #ccc; cursor: not-allowed; }
+    
+    #loading { display: none; margin-top: 20px; font-weight: bold; color: #ff9800; }
+    #resultMessage { display: none; margin-top: 20px; padding: 15px; border-radius: 8px; font-weight: bold; }
+    .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>📝 手動日報・生成ツール</h2>
+    <p style="font-size: 13px; color: #666; text-align: left; margin-bottom: 20px;">
+      指定した日付の勤怠・ビジター・メンバー・予約データを集計し、AI日報を自動生成します。<br>※すでに同日の日報が存在する場合は<b>上書き更新</b>されます。
+    </p>
+
+    <div class="form-group">
+      <label>📅 作成する日報の日付</label>
+      <input type="date" id="targetDate">
+    </div>
+
+    <button id="generateBtn" class="btn" onclick="executeGeneration()">✨ この日付で日報を生成する</button>
+
+    <div id="loading">🤖 AIが各シートのデータを集計して日報を作成中...<br>（約10〜15秒かかります）</div>
+    <div id="resultMessage"></div>
+  </div>
+
+  <script>
+    // 💡 自身のWebアプリURLに書き換えてください
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
+
+    // 初期値として今日の日付をセット
+    document.addEventListener("DOMContentLoaded", () => {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      document.getElementById('targetDate').value = `${yyyy}-${mm}-${dd}`;
+    });
+
+    function executeGeneration() {
+      const targetDate = document.getElementById('targetDate').value;
+      if (!targetDate) return alert("日付を選択してください。");
+      
+      const btn = document.getElementById('generateBtn');
+      const loading = document.getElementById('loading');
+      const resultBox = document.getElementById('resultMessage');
+      
+      btn.disabled = true;
+      loading.style.display = 'block';
+      resultBox.style.display = 'none';
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "generateDailyReport", targetDate: targetDate })
+      })
+      .then(res => res.json())
+      .then(data => {
+        loading.style.display = 'none';
+        resultBox.style.display = 'block';
+        if (data.status === "success") {
+          resultBox.className = "success";
+          resultBox.innerHTML = `✅ ${data.message}<br><br><span style="font-size:12px; font-weight:normal;">スプレッドシートの「T_日次報告書」をご確認ください。</span>`;
+        } else {
+          resultBox.className = "error";
+          resultBox.innerText = "⚠️ エラー: " + data.message;
+        }
+      })
+      .catch(e => {
+        loading.style.display = 'none';
+        resultBox.style.display = 'block';
+        resultBox.className = "error";
+        resultBox.innerText = "通信エラーが発生しました。";
+      })
+      .finally(() => {
+        btn.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
