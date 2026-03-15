@@ -19,6 +19,8 @@
     .eq-name { font-size: 14px; font-weight: bold; color: #444; }
     .qty-controls { display: flex; align-items: center; gap: 10px; }
     .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: #e4e6eb; font-size: 18px; font-weight: bold; cursor: pointer; }
+    
+    /* 💡 CSSの修正：横幅を広げ、PC特有の上下矢印（スピナー）を隠す */
     .qty-input { width: 50px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
     input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     input[type="number"] { -moz-appearance: textfield; }
@@ -28,7 +30,6 @@
     #infantAlert { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 10px; }
     #successScreen { display: none; text-align: center; padding: 30px 10px; }
     
-    /* スタッフ専用項目のデザイン */
     #adminSection { display: none; background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     .admin-title { font-weight: bold; color: #d9534f; margin-bottom: 10px; font-size: 14px; }
   </style>
@@ -101,9 +102,12 @@
         <div class="form-group">
           <label>利用予定の舟艇</label>
           <div class="eq-list">
-            <div class="eq-item"><div class="eq-name">🛶 カヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe', -1)">-</button><input type="number" id="b-canoe" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-canoe', 1)">+</button></div></div>
-            <div class="eq-item"><div class="eq-name">🛶 ペアカヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair', -1)">-</button><input type="number" id="b-pair" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-pair', 1)">+</button></div></div>
-            <div class="eq-item"><div class="eq-name">🚣 ローボート</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row', -1)">-</button><input type="number" id="b-row" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🛶 カヌー（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-adult', -1)">-</button><input type="number" id="b-canoe-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-adult', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🛶 カヌー（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-kid', -1)">-</button><input type="number" id="b-canoe-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-kid', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🛶 ペアカヌー（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair-adult', -1)">-</button><input type="number" id="b-pair-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-pair-adult', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🛶 ペアカヌー（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair-kid', -1)">-</button><input type="number" id="b-pair-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-pair-kid', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🚣 ローボート（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row-adult', -1)">-</button><input type="number" id="b-row-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row-adult', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">🚣 ローボート（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row-kid', -1)">-</button><input type="number" id="b-row-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row-kid', 1)">+</button></div></div>
             
             <div class="eq-item" style="background-color: #fff3f3;">
               <div class="eq-name" style="color: #666; font-size: 14px;">🏄 SUP<br><span style="font-size: 11px; color: #d9534f;">※メンバー限定の利用となります</span></div>
@@ -141,7 +145,6 @@
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
 
-    // 💡 画面ロード時にURLをチェックし、スタッフモードかどうか判定
     document.addEventListener("DOMContentLoaded", () => {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('staff') === '1') {
@@ -175,11 +178,16 @@
       const btn = document.getElementById('submitBtn');
       btn.innerText = "送信中..."; btn.disabled = true;
 
+      // 💡 修正：大人・子ども別に集計
       const orderData = {
-        "カヌー": parseInt(document.getElementById('b-canoe').value) || 0,
-        "ペアカヌー": parseInt(document.getElementById('b-pair').value) || 0,
-        "ローボート": parseInt(document.getElementById('b-row').value) || 0
+        "カヌー（大人）": parseInt(document.getElementById('b-canoe-adult').value) || 0,
+        "カヌー（子ども）": parseInt(document.getElementById('b-canoe-kid').value) || 0,
+        "ペアカヌー（大人）": parseInt(document.getElementById('b-pair-adult').value) || 0,
+        "ペアカヌー（子ども）": parseInt(document.getElementById('b-pair-kid').value) || 0,
+        "ローボート（大人）": parseInt(document.getElementById('b-row-adult').value) || 0,
+        "ローボート（子ども）": parseInt(document.getElementById('b-row-kid').value) || 0
       };
+      
       let eqList = [];
       for (const [key, val] of Object.entries(orderData)) {
         if (val > 0) eqList.push(`${key}×${val}`);
@@ -192,7 +200,6 @@
       const memIdNum = document.getElementById('memberIdNum').value.trim();
       const memIdToSave = memIdNum ? "M" + String(memIdNum).padStart(4, '0') : "";
 
-      // スタッフモード判定（表示されていればその値を、隠れていれば固定値を使う）
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
       const statusVal = isAdminVisible ? document.getElementById('status').value : "問合せ";
       const routeVal  = isAdminVisible ? document.getElementById('route').value : "WEB";
