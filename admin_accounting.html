@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>B&G 平田海洋クラブ - 会計ダッシュボード</title>
+  <style>
+    body { font-family: sans-serif; background-color: #e9ecef; padding: 10px; margin: 0; color: #333; }
+    .header { text-align: center; margin-bottom: 20px; color: #0056b3; font-size: 20px; font-weight: bold; }
+    
+    #loading { text-align: center; padding: 50px 20px; color: #666; font-weight: bold; }
+    
+    /* 一覧画面 */
+    #listScreen { max-width: 800px; margin: 0 auto; display: none; }
+    .trans-card { background: #fff; padding: 15px; margin-bottom: 12px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border-left: 5px solid #0056b3; display: flex; justify-content: space-between; align-items: center;}
+    .t-date { font-size: 13px; color: #666; font-weight: bold; margin-bottom: 4px; }
+    .t-payee { font-size: 16px; font-weight: bold; color: #333; }
+    .t-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: bold; background: #e8f4fd; color: #0056b3; margin-left: 5px;}
+    .t-amount { font-size: 18px; font-weight: bold; color: #d9534f; }
+
+    /* 詳細・編集画面 */
+    #detailScreen { display: none; max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    .back-btn { background: none; border: none; color: #007bff; font-size: 16px; font-weight: bold; padding: 0; margin-bottom: 20px; cursor: pointer; }
+    
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; background: #e8f4fd; padding: 5px 10px; border-left: 4px solid #0056b3; }
+    input[type="text"], input[type="number"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
+    
+    .img-link { display: block; text-align: center; padding: 12px; background: #f8f9fa; border: 1px dashed #ccc; border-radius: 8px; color: #007bff; text-decoration: none; font-weight: bold; margin-bottom: 20px; }
+    
+    .update-btn { width: 100%; padding: 15px; background-color: #0056b3; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">💰 会計ダッシュボード</div>
+  <div id="loading">🔄 データを読み込み中...</div>
+  
+  <div id="listScreen"><div id="transList"></div></div>
+
+  <div id="detailScreen">
+    <button class="back-btn" onclick="showList()">← 一覧に戻る</button>
+    
+    <a href="#" id="receiptLink" target="_blank" class="img-link">🖼️ 保存された領収書画像を確認する</a>
+
+    <form id="transForm">
+      <div class="form-group">
+        <label>日付</label>
+        <input type="date" id="t-date">
+      </div>
+      <div class="form-group">
+        <label>支払先</label>
+        <input type="text" id="t-payee">
+      </div>
+      <div class="form-group">
+        <label>金額（円）</label>
+        <input type="number" id="t-amount" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>勘定科目</label>
+        <select id="t-category">
+          <option value="">読込中...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>摘要（メモ）</label>
+        <textarea id="t-memo" rows="3"></textarea>
+      </div>
+      
+      <p style="font-size: 12px; color: #666; text-align: right;">入力スタッフ: <span id="t-staffName"></span></p>
+
+      <button type="button" id="updateBtn" class="update-btn" onclick="submitUpdate()">📝 変更を保存する</button>
+    </form>
+  </div>
+
+  <script>
+    const GAS_URL = "[https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec](https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec)";
+    let transData = [];
+    let currentRow = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchAccountCategories();
+      loadData();
+    });
+
+    function fetchAccountCategories() {
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "getAccountCategories" })
+      }).then(r => r.json()).then(res => {
+        if (res.status === "success" && res.categories) {
+          const select = document.getElementById('t-category');
+          select.innerHTML = '<option value="">科目を選択してください</option>';
+          res.categories.forEach(cat => {
+            select.innerHTML += `<option value="${cat}">${cat}</option>`;
+          });
+        }
+      });
+    }
+
+    function loadData() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('listScreen').style.display = 'none';
+      
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getTransactions" }) })
+      .then(res => res.json()).then(data => {
+        if (data.status === "success") { transData = data.transactions; renderList(); }
+      });
+    }
+
+    function renderList() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('listScreen').style.display = 'block';
+      const listDiv = document.getElementById('transList');
+      listDiv.innerHTML = '';
+      
+      if (transData.length === 0) {
+        listDiv.innerHTML = '<div style="text-align:center; color:#666; margin-top:30px;">現在、会計データはありません。</div>'; return;
+      }
+
+      transData.forEach((t, index) => {
+        const card = document.createElement('div');
+        card.className = 'trans-card';
+        card.onclick = () => openDetail(index);
+        card.innerHTML = `<div><div class="t-date">${t.date} <span class="t-badge">${t.category}</span></div><div class="t-payee">${t.payee}</div></div><div class="t-amount">¥${Number(t.amount).toLocaleString()}</div>`;
+        listDiv.appendChild(card);
+      });
+    }
+
+    function openDetail(index) {
+      const t = transData[index];
+      currentRow = t.row;
+      
+      document.getElementById('listScreen').style.display = 'none';
+      document.getElementById('detailScreen').style.display = 'block';
+      
+      const link = document.getElementById('receiptLink');
+      if(t.fileUrl) {
+        link.href = t.fileUrl;
+        link.style.display = 'block';
+      } else {
+        link.style.display = 'none';
+      }
+
+      document.getElementById('t-date').value = t.date.replace(/\//g, "-");
+      document.getElementById('t-payee').value = t.payee;
+      document.getElementById('t-amount').value = t.amount;
+      document.getElementById('t-memo').value = t.memo;
+      document.getElementById('t-staffName').innerText = t.staffName || "不明";
+      
+      // 科目の選択（非同期で読み込んでいるため、少し待ってセットする）
+      setTimeout(() => { document.getElementById('t-category').value = t.category; }, 200);
+      
+      window.scrollTo(0, 0);
+    }
+
+    function showList() {
+      document.getElementById('detailScreen').style.display = 'none';
+      document.getElementById('listScreen').style.display = 'block';
+    }
+
+    function submitUpdate() {
+      const btn = document.getElementById('updateBtn');
+      btn.innerText = "保存中..."; btn.disabled = true;
+
+      const data = {
+        row: currentRow,
+        date: document.getElementById('t-date').value,
+        payee: document.getElementById('t-payee').value,
+        amount: document.getElementById('t-amount').value,
+        category: document.getElementById('t-category').value,
+        memo: document.getElementById('t-memo').value
+      };
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "updateTransaction", data: data })
+      }).then(r => r.json()).then(res => {
+        if (res.status === "success") { alert("✅ 保存しました"); loadData(); } 
+        else alert("エラー: " + res.message);
+      }).finally(() => { btn.innerText = "📝 変更を保存する"; btn.disabled = false; });
+    }
+  </script>
+</body>
+</html>
