@@ -10,7 +10,6 @@
     
     #loading, #errorScreen { text-align: center; padding: 50px 20px; color: #666; font-weight: bold; }
     
-    /* 一覧画面 */
     #listScreen { max-width: 600px; margin: 0 auto; display: none; }
     .res-card { background: #fff; padding: 15px; margin-bottom: 12px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border-left: 5px solid #ccc; display: flex; justify-content: space-between; align-items: center;}
     .res-card.status-問合せ { border-left-color: #ffc107; }
@@ -23,7 +22,6 @@
     .r-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: bold; background: #e8f4fd; color: #0056b3; margin-left: 5px;}
     .r-status { font-size: 14px; font-weight: bold; color: #555; }
 
-    /* 詳細・編集画面（予約フォームと共通スタイル） */
     #detailScreen { display: none; max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
     .back-btn { background: none; border: none; color: #007bff; font-size: 16px; font-weight: bold; padding: 0; margin-bottom: 20px; cursor: pointer; }
     
@@ -37,6 +35,8 @@
     .eq-name { font-size: 14px; font-weight: bold; color: #444; }
     .qty-controls { display: flex; align-items: center; gap: 10px; }
     .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: #e4e6eb; font-size: 18px; font-weight: bold; cursor: pointer; }
+    
+    /* 💡 CSSの修正：横幅を広げ、PC特有の上下矢印（スピナー）を隠す */
     .qty-input { width: 50px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
     input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     input[type="number"] { -moz-appearance: textfield; }
@@ -119,9 +119,12 @@
       <div class="form-group">
         <label>利用予定の舟艇</label>
         <div class="eq-list">
-          <div class="eq-item"><div class="eq-name">🛶 カヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe', -1)">-</button><input type="number" id="b-canoe" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-canoe', 1)">+</button></div></div>
-          <div class="eq-item"><div class="eq-name">🛶 ペアカヌー</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair', -1)">-</button><input type="number" id="b-pair" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-pair', 1)">+</button></div></div>
-          <div class="eq-item"><div class="eq-name">🚣 ローボート</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row', -1)">-</button><input type="number" id="b-row" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row', 1)">+</button></div></div>
+          <div class="eq-item"><div class="eq-name">🛶 カヌー（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-adult', -1)">-</button><input type="number" id="b-canoe-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-adult', 1)">+</button></div></div>
+          <div class="eq-item"><div class="eq-name">🛶 カヌー（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-kid', -1)">-</button><input type="number" id="b-canoe-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-kid', 1)">+</button></div></div>
+          <div class="eq-item"><div class="eq-name">🛶 ペアカヌー（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair-adult', -1)">-</button><input type="number" id="b-pair-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-pair-adult', 1)">+</button></div></div>
+          <div class="eq-item"><div class="eq-name">🛶 ペアカヌー（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair-kid', -1)">-</button><input type="number" id="b-pair-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-pair-kid', 1)">+</button></div></div>
+          <div class="eq-item"><div class="eq-name">🚣 ローボート（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row-adult', -1)">-</button><input type="number" id="b-row-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row-adult', 1)">+</button></div></div>
+          <div class="eq-item"><div class="eq-name">🚣 ローボート（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row-kid', -1)">-</button><input type="number" id="b-row-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row-kid', 1)">+</button></div></div>
         </div>
       </div>
 
@@ -210,9 +213,14 @@
       document.getElementById('q-el').value = r.elemLow || 0;
       document.getElementById('q-inf').value = r.infant || 0;
       
-      document.getElementById('b-canoe').value = r.orderData['カヌー'] || 0;
-      document.getElementById('b-pair').value = r.orderData['ペアカヌー'] || 0;
-      document.getElementById('b-row').value = r.orderData['ローボート'] || 0;
+      // 💡 修正：大人・子ども別に展開
+      document.getElementById('b-canoe-adult').value = r.orderData['カヌー（大人）'] || 0;
+      document.getElementById('b-canoe-kid').value = r.orderData['カヌー（子ども）'] || 0;
+      document.getElementById('b-pair-adult').value = r.orderData['ペアカヌー（大人）'] || 0;
+      document.getElementById('b-pair-kid').value = r.orderData['ペアカヌー（子ども）'] || 0;
+      document.getElementById('b-row-adult').value = r.orderData['ローボート（大人）'] || 0;
+      document.getElementById('b-row-kid').value = r.orderData['ローボート（子ども）'] || 0;
+      
       document.getElementById('notes').value = r.notes || "";
       
       window.scrollTo(0, 0);
@@ -223,12 +231,14 @@
       document.getElementById('listScreen').style.display = 'block';
     }
 
-    // 画面の入力データをまとめるヘルパー関数
     function gatherFormData() {
       const orderData = {
-        "カヌー": parseInt(document.getElementById('b-canoe').value) || 0,
-        "ペアカヌー": parseInt(document.getElementById('b-pair').value) || 0,
-        "ローボート": parseInt(document.getElementById('b-row').value) || 0
+        "カヌー（大人）": parseInt(document.getElementById('b-canoe-adult').value) || 0,
+        "カヌー（子ども）": parseInt(document.getElementById('b-canoe-kid').value) || 0,
+        "ペアカヌー（大人）": parseInt(document.getElementById('b-pair-adult').value) || 0,
+        "ペアカヌー（子ども）": parseInt(document.getElementById('b-pair-kid').value) || 0,
+        "ローボート（大人）": parseInt(document.getElementById('b-row-adult').value) || 0,
+        "ローボート（子ども）": parseInt(document.getElementById('b-row-kid').value) || 0
       };
       let eqList = [];
       for (const [key, val] of Object.entries(orderData)) if (val > 0) eqList.push(`${key}×${val}`);
@@ -278,7 +288,6 @@
       const btn = document.getElementById('checkoutBtn');
       btn.innerText = "処理中..."; btn.disabled = true;
 
-      // 1. 画面の最新データを「実施済」にして保存
       const data = gatherFormData();
       data.status = "実施済";
 
@@ -289,7 +298,6 @@
       .then(r => r.json())
       .then(res => {
         if (res.status === "success") {
-          // 2. 精算レジへの転送処理を呼び出し
           return fetch(GAS_URL, {
              method: "POST", headers: { "Content-Type": "text/plain" },
              body: JSON.stringify({ action: "sendReservationToCheckout", row: currentRow })
