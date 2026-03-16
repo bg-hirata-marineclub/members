@@ -53,6 +53,13 @@
         </thead>
         <tbody id="salaryTableBody"></tbody>
       </table>
+
+      <div style="margin-top: 30px; display: flex; gap: 15px;">
+        <button class="btn" style="background-color: #d9534f; flex: 1;" onclick="exportData('exportPDF')">📄 勤務実績報告書 (PDF) を作成</button>
+        <button class="btn" style="background-color: #0056b3; flex: 1;" onclick="exportData('exportCSV')">🏦 銀行振込データ (CSV) を作成</button>
+      </div>
+      
+      <div id="exportStatus" style="margin-top: 15px; font-weight: bold; text-align: center;"></div>
       
       </div>
   </div>
@@ -109,6 +116,32 @@
       }).catch(e => {
         document.getElementById('loading').style.display = 'none';
         alert("通信エラーが発生しました。");
+      });
+    }
+
+    // 💡 追加：出力処理関数
+    function exportData(actionName) {
+      const ym = document.getElementById('targetMonth').value;
+      if (!ym) return;
+
+      const statusDiv = document.getElementById('exportStatus');
+      statusDiv.style.color = "#ff9800";
+      statusDiv.innerHTML = "⏳ Googleドライブにファイルを生成中...（数秒かかります）";
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: actionName, yearMonth: ym })
+      }).then(r => r.json()).then(data => {
+        if (data.status === "success") {
+          statusDiv.style.color = "#06C755";
+          statusDiv.innerHTML = `✅ 作成完了！ドライブに保存されました。<br><a href="${data.url}" target="_blank" style="color:#0056b3; text-decoration:underline;">📥 ${data.fileName} を開く・ダウンロードする</a>`;
+        } else {
+          statusDiv.style.color = "#d9534f";
+          statusDiv.innerHTML = "⚠️ エラー: " + data.message;
+        }
+      }).catch(e => {
+        statusDiv.style.color = "#d9534f";
+        statusDiv.innerHTML = "⚠️ 通信エラーが発生しました。";
       });
     }
   </script>
