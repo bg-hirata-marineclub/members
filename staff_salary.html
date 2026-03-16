@@ -135,8 +135,8 @@
           const st = res.data;
           document.getElementById('salaryCard').style.display = 'block';
           document.getElementById('dispTotal').innerText = `¥${Number(st.totalPay).toLocaleString()}`;
-          document.getElementById('dispGenba').innerText = `${st.genbaHours} 時間`;
-          document.getElementById('dispJimu').innerText = `${st.jimuHours} 時間`;
+          document.getElementById('dispGenba').innerText = st.genbaHours;
+          document.getElementById('dispJimu').innerText = st.jimuHours;
           document.getElementById('dispAllowance').innerText = `¥${Number(st.allowance).toLocaleString()}`;
           
           const errBox = document.getElementById('errorBox');
