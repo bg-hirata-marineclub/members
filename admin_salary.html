@@ -101,8 +101,8 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td>${st.name} ${errorHtml}</td>
-              <td class="text-right">${st.genbaHours} h</td>
-              <td class="text-right">${st.jimuHours} h</td>
+              <td class="text-right">${st.genbaHours}</td>
+              <td class="text-right">${st.jimuHours}</td>
               <td class="text-right">¥${Number(st.allowance).toLocaleString()}</td>
               <td class="text-right pay-amount">¥${Number(st.totalPay).toLocaleString()}</td>
             `;
