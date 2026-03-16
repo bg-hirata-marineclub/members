@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>マイ給与明細</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; color: #333; }
+    .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { color: #0056b3; margin-top: 0; text-align: center; font-size: 22px; }
+    
+    .profile-area { text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+    .staff-name { font-size: 20px; font-weight: bold; color: #333; }
+    
+    .filter-area { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    input[type="month"] { width: 100%; padding: 12px; font-size: 18px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; text-align: center; font-weight: bold; }
+    .btn { padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    
+    #loading, #errorScreen { text-align: center; padding: 20px; font-weight: bold; display: none; }
+    #errorScreen { color: #d9534f; }
+    
+    .salary-card { background: #e8f4fd; border: 2px solid #b6d4fe; border-radius: 10px; padding: 20px; margin-top: 15px; display: none; }
+    .total-pay { font-size: 32px; font-weight: bold; color: #d9534f; text-align: center; margin: 15px 0; border-bottom: 2px dashed #b6d4fe; padding-bottom: 15px; }
+    
+    .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 16px; font-weight: bold; color: #555; }
+    .detail-val { color: #333; }
+    .error-msg { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; font-size: 13px; margin-top: 15px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>💴 マイ給与明細</h2>
+    
+    <div id="loading" style="display: block;">🔄 認証情報を取得中...</div>
+    <div id="errorScreen">⛔️ 権限がありません</div>
+
+    <div id="appContent" style="display: none;">
+      <div class="profile-area">
+        <div class="staff-name">👤 <span id="displayName">読込中...</span> さん</div>
+      </div>
+
+      <div class="filter-area">
+        <input type="month" id="targetMonth">
+        <button class="btn" onclick="fetchMySalary()">明細を見る</button>
+      </div>
+
+      <div id="calcLoading" style="display: none; text-align: center; font-weight: bold; color: #666; padding: 20px;">
+        ⏳ 計算しています...
+      </div>
+
+      <div id="salaryCard" class="salary-card">
+        <div style="text-align: center; font-weight: bold; color: #0056b3; margin-bottom: 5px;">支給予定額</div>
+        <div class="total-pay" id="dispTotal">¥0</div>
+        
+        <div class="detail-row">
+          <span>🛶 現場実務</span>
+          <span class="detail-val" id="dispGenba">0.00 時間</span>
+        </div>
+        <div class="detail-row">
+          <span>💻 事務仕事</span>
+          <span class="detail-val" id="dispJimu">0.00 時間</span>
+        </div>
+        <div class="detail-row">
+          <span>🛥️ 船舶手当</span>
+          <span class="detail-val" id="dispAllowance">¥0</span>
+        </div>
+        
+        <div id="errorBox" class="error-msg" style="display: none;"></div>
+      </div>
+      
+      <div id="noDataMsg" style="display: none; text-align: center; padding: 30px 10px; color: #666; font-weight: bold;">
+        指定された年月の勤務データはありません。
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 💡 勤怠打刻（scan.html）等で使っているのと同じ、スタッフ用LIFF IDを設定してください
+    const LIFF_ID = "2009367368-GI5IPPSf"; 
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
+
+    let currentMemberId = "";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // 初期値として「先月」か「今月」をセット（とりあえず今月）
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      document.getElementById('targetMonth').value = `${yyyy}-${mm}`;
+
+      liff.init({ liffId: LIFF_ID }).then(() => {
+        if (!liff.isLoggedIn()) liff.login();
+        else {
+          liff.getProfile().then(p => verifyStaffAccess(p.userId));
+        }
+      });
+    });
+
+    // まずLINEのUIDからスタッフIDを特定する
+    function verifyStaffAccess(uid) {
+      fetch(GAS_URL, { 
+        method: "POST", headers: { "Content-Type": "text/plain" }, 
+        body: JSON.stringify({ action: "verifyStaff", uid: uid }) 
+      })
+      .then(res => res.json()).then(data => {
+        document.getElementById('loading').style.display = 'none';
+        if (data.status === "success") { 
+          currentMemberId = data.memberId;
+          document.getElementById('displayName').innerText = data.staffName;
+          document.getElementById('appContent').style.display = 'block'; 
+          fetchMySalary(); // 開いた瞬間に今月のデータを取得
+        } else { 
+          document.getElementById('errorScreen').style.display = 'block'; 
+        }
+      });
+    }
+
+    function fetchMySalary() {
+      const ym = document.getElementById('targetMonth').value;
+      if (!ym || !currentMemberId) return;
+
+      document.getElementById('salaryCard').style.display = 'none';
+      document.getElementById('noDataMsg').style.display = 'none';
+      document.getElementById('calcLoading').style.display = 'block';
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "getIndividualSalary", memberId: currentMemberId, yearMonth: ym })
+      }).then(r => r.json()).then(res => {
+        document.getElementById('calcLoading').style.display = 'none';
+        
+        if (res.status === "success" && res.data) {
+          const st = res.data;
+          document.getElementById('salaryCard').style.display = 'block';
+          document.getElementById('dispTotal').innerText = `¥${Number(st.totalPay).toLocaleString()}`;
+          document.getElementById('dispGenba').innerText = `${st.genbaHours} 時間`;
+          document.getElementById('dispJimu').innerText = `${st.jimuHours} 時間`;
+          document.getElementById('dispAllowance').innerText = `¥${Number(st.allowance).toLocaleString()}`;
+          
+          const errBox = document.getElementById('errorBox');
+          if (st.errors && st.errors.length > 0) {
+            errBox.style.display = 'block';
+            errBox.innerHTML = "<b>⚠️ 打刻エラーがあります</b><br>" + st.errors.join("<br>") + "<br><small>※管理者に修正を依頼してください</small>";
+          } else {
+            errBox.style.display = 'none';
+          }
+        } else {
+          document.getElementById('noDataMsg').style.display = 'block';
+        }
+      }).catch(e => {
+        document.getElementById('calcLoading').style.display = 'none';
+        alert("通信エラーが発生しました。");
+      });
+    }
+  </script>
+</body>
+</html>
