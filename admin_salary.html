@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>B&G 平田海洋クラブ - 給与計算ダッシュボード</title>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; color: #333; }
+    .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    h2 { color: #0056b3; margin-top: 0; text-align: center; border-bottom: 2px solid #e8f4fd; padding-bottom: 15px; }
+    
+    .filter-area { display: flex; justify-content: space-between; align-items: center; background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .filter-area input[type="month"] { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; }
+    .btn { padding: 12px 25px; background-color: #06C755; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    
+    #loading { display: none; text-align: center; padding: 30px; font-weight: bold; color: #666; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #f8f9fa; font-size: 14px; color: #555; }
+    td { font-size: 15px; font-weight: bold; }
+    .text-right { text-align: right; }
+    
+    .error-box { background-color: #f8d7da; color: #721c24; padding: 5px; border-radius: 4px; font-size: 12px; margin-top: 5px; font-weight: normal; }
+    .pay-amount { font-size: 18px; color: #d9534f; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>💴 従業員 給与計算ダッシュボード</h2>
+    
+    <div class="filter-area">
+      <div>
+        <label style="font-weight:bold; margin-right: 10px;">📅 対象年月</label>
+        <input type="month" id="targetMonth">
+      </div>
+      <button class="btn" onclick="fetchSalary()">データ集計・計算</button>
+    </div>
+
+    <div id="loading">🔄 勤怠データを読み込み、給与を計算しています...</div>
+
+    <div id="resultArea" style="display: none;">
+      <table>
+        <thead>
+          <tr>
+            <th>スタッフ名</th>
+            <th class="text-right">現場実務</th>
+            <th class="text-right">事務仕事</th>
+            <th class="text-right">船舶手当</th>
+            <th class="text-right">💰 支給額合計</th>
+          </tr>
+        </thead>
+        <tbody id="salaryTableBody"></tbody>
+      </table>
+      
+      </div>
+  </div>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      document.getElementById('targetMonth').value = `${yyyy}-${mm}`;
+    });
+
+    function fetchSalary() {
+      const ym = document.getElementById('targetMonth').value;
+      if (!ym) return;
+
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('resultArea').style.display = 'none';
+      const tbody = document.getElementById('salaryTableBody');
+      tbody.innerHTML = '';
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "calculateSalary", yearMonth: ym })
+      }).then(r => r.json()).then(data => {
+        document.getElementById('loading').style.display = 'none';
+        
+        if (data.status === "success" && data.data.length > 0) {
+          document.getElementById('resultArea').style.display = 'block';
+          
+          data.data.forEach(st => {
+            let errorHtml = '';
+            if (st.errors.length > 0) {
+              errorHtml = `<div class="error-box">⚠️ 打刻エラー: ${st.errors.join(", ")}<br>※スプレッドシートで手動修正してください</div>`;
+            }
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${st.name} ${errorHtml}</td>
+              <td class="text-right">${st.genbaHours} h</td>
+              <td class="text-right">${st.jimuHours} h</td>
+              <td class="text-right">¥${Number(st.allowance).toLocaleString()}</td>
+              <td class="text-right pay-amount">¥${Number(st.totalPay).toLocaleString()}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } else if (data.status === "success") {
+          alert("指定された年月の勤怠データがありません。");
+        } else {
+          alert("エラー: " + data.message);
+        }
+      }).catch(e => {
+        document.getElementById('loading').style.display = 'none';
+        alert("通信エラーが発生しました。");
+      });
+    }
+  </script>
+</body>
+</html>
