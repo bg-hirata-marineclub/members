@@ -54,9 +54,10 @@
         <tbody id="salaryTableBody"></tbody>
       </table>
 
-      <div style="margin-top: 30px; display: flex; gap: 15px;">
-        <button class="btn" style="background-color: #d9534f; flex: 1;" onclick="exportData('exportPDF')">📄 勤務実績報告書 (PDF) を作成</button>
-        <button class="btn" style="background-color: #0056b3; flex: 1;" onclick="exportData('exportCSV')">🏦 銀行振込データ (CSV) を作成</button>
+      <div style="margin-top: 30px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn" style="background-color: #d9534f; flex: 1; min-width: 200px;" onclick="exportData('exportPDF')">📄 報告書 (PDF)</button>
+        <button class="btn" style="background-color: #0056b3; flex: 1; min-width: 200px;" onclick="exportData('exportCSV')">🏦 銀行振込 (全銀CSV)</button>
+        <button class="btn" style="background-color: #f0ad4e; flex: 1; min-width: 200px;" onclick="exportData('exportAuditCSV')">📊 監査用 勤怠詳細 (CSV)</button>
       </div>
       
       <div id="exportStatus" style="margin-top: 15px; font-weight: bold; text-align: center;"></div>
