@@ -24,15 +24,16 @@
     #loading, #errorScreen { text-align: center; padding: 20px; font-weight: bold; display: none; }
     #errorScreen { color: #d9534f; }
     
-    .salary-card { background: #e8f4fd; border: 2px solid #b6d4fe; border-radius: 10px; padding: 20px; margin-top: 15px; display: none; }
+    .salary-card { background: #e8f4fd; border: 2px solid #b6d4fe; border-radius: 10px; padding: 20px 15px; margin-top: 15px; display: none; }
     .total-pay { font-size: 32px; font-weight: bold; color: #d9534f; text-align: center; margin: 15px 0; border-bottom: 2px dashed #b6d4fe; padding-bottom: 15px; }
     
-    /* ご指定の3列レイアウト（CSS Grid） */
-    .detail-grid { display: grid; grid-template-columns: 2.5fr 4fr 2.5fr; align-items: center; margin-bottom: 12px; font-size: 15px; color: #555; }
-    .dg-name { font-weight: bold; color: #333; }
-    .dg-calc { text-align: center; font-size: 13px; color: #666; }
-    .dg-amount { text-align: right; font-weight: bold; color: #333; }
-    .detail-header { border-bottom: 2px solid #b6d4fe; padding-bottom: 8px; margin-bottom: 15px; font-size: 13px; color: #0056b3; font-weight: bold; }
+    /* スマホに最適化した2列レイアウト */
+    .detail-flex { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #cce0ff; }
+    .detail-flex:last-child { border-bottom: none; padding-bottom: 0; }
+    .df-name { font-weight: bold; color: #333; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+    .df-right { text-align: right; }
+    .df-amount { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 4px; }
+    .df-calc { font-size: 13px; color: #666; }
 
     .error-msg { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; font-size: 13px; margin-top: 15px; }
   </style>
@@ -70,26 +71,28 @@
         <div style="text-align: center; font-weight: bold; color: #0056b3; margin-bottom: 5px;">支給予定額</div>
         <div class="total-pay" id="dispTotal">¥0</div>
         
-        <div class="detail-grid detail-header">
-          <div class="dg-name">項目名</div>
-          <div class="dg-calc">時間/日数 × 単価</div>
-          <div class="dg-amount">金額</div>
+        <div class="detail-flex">
+          <div class="df-name">🦺 現場実務</div>
+          <div class="df-right">
+            <div class="df-amount" id="dispGenbaAmt">0円</div>
+            <div class="df-calc" id="dispGenbaCalc">0時間00分 × 0円</div>
+          </div>
         </div>
-
-        <div class="detail-grid">
-          <div class="dg-name">🦺 現場実務</div>
-          <div class="dg-calc" id="dispGenbaCalc">0.0h × 0円</div>
-          <div class="dg-amount" id="dispGenbaAmt">0円</div>
+        
+        <div class="detail-flex">
+          <div class="df-name">💻 事務仕事</div>
+          <div class="df-right">
+            <div class="df-amount" id="dispJimuAmt">0円</div>
+            <div class="df-calc" id="dispJimuCalc">0時間00分 × 0円</div>
+          </div>
         </div>
-        <div class="detail-grid">
-          <div class="dg-name">💻 事務仕事</div>
-          <div class="dg-calc" id="dispJimuCalc">0.0h × 0円</div>
-          <div class="dg-amount" id="dispJimuAmt">0円</div>
-        </div>
-        <div class="detail-grid">
-          <div class="dg-name">🛥️ 船舶手当</div>
-          <div class="dg-calc" id="dispShipCalc">0日 × 0円</div>
-          <div class="dg-amount" id="dispShipAmt">0円</div>
+        
+        <div class="detail-flex">
+          <div class="df-name">🛥️ 船舶手当</div>
+          <div class="df-right">
+            <div class="df-amount" id="dispShipAmt">0円</div>
+            <div class="df-calc" id="dispShipCalc">0日 × 0円</div>
+          </div>
         </div>
         
         <div id="errorBox" class="error-msg" style="display: none;"></div>
@@ -161,7 +164,6 @@
 
     // 表示のヘルパー関数
     function formatNumber(num) { return Number(num).toLocaleString(); }
-    function formatHours(h) { return (Math.floor(h * 10) / 10).toFixed(1) + "h"; }
 
     function fetchMySalary() {
       const periodType = document.getElementById('periodType').value;
@@ -187,17 +189,17 @@
           
           document.getElementById('dispTotal').innerText = `¥${formatNumber(st.totalPay)}`;
 
-          // 現場実務
+          // 現場実務 (st.genbaHours には既に "〇〇時間〇〇分" の形式が入っています)
           const genbaAmt = Math.floor(st.genbaHoursFloat * st.genbaWage);
-          document.getElementById('dispGenbaCalc').innerText = `${formatHours(st.genbaHoursFloat)} × ${formatNumber(st.genbaWage)}円`;
+          document.getElementById('dispGenbaCalc').innerText = `${st.genbaHours} × ${formatNumber(st.genbaWage)}円`;
           document.getElementById('dispGenbaAmt').innerText = `${formatNumber(genbaAmt)}円`;
 
-          // 事務仕事
+          // 事務仕事 (st.jimuHours には既に "〇〇時間〇〇分" の形式が入っています)
           const jimuAmt = Math.floor(st.jimuHoursFloat * st.jimuWage);
-          document.getElementById('dispJimuCalc').innerText = `${formatHours(st.jimuHoursFloat)} × ${formatNumber(st.jimuWage)}円`;
+          document.getElementById('dispJimuCalc').innerText = `${st.jimuHours} × ${formatNumber(st.jimuWage)}円`;
           document.getElementById('dispJimuAmt').innerText = `${formatNumber(jimuAmt)}円`;
 
-          // 船舶手当（合計から逆算して単価を算出）
+          // 船舶手当
           const shipUnit = st.allowanceDays > 0 ? Math.floor(st.allowance / st.allowanceDays) : 0;
           document.getElementById('dispShipCalc').innerText = `${st.allowanceDays}日 × ${formatNumber(shipUnit)}円`;
           document.getElementById('dispShipAmt').innerText = `${formatNumber(st.allowance)}円`;
