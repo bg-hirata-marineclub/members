@@ -14,7 +14,11 @@
     .staff-name { font-size: 20px; font-weight: bold; color: #333; }
     
     .filter-area { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-    input[type="month"] { width: 100%; padding: 12px; font-size: 18px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; text-align: center; font-weight: bold; }
+    .filter-inputs { display: flex; gap: 10px; }
+    .select-box, .date-box { padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-weight: bold; }
+    .select-box { width: 40%; }
+    .date-box { flex: 1; text-align: center; }
+
     .btn { padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     
     #loading, #errorScreen { text-align: center; padding: 20px; font-weight: bold; display: none; }
@@ -23,8 +27,13 @@
     .salary-card { background: #e8f4fd; border: 2px solid #b6d4fe; border-radius: 10px; padding: 20px; margin-top: 15px; display: none; }
     .total-pay { font-size: 32px; font-weight: bold; color: #d9534f; text-align: center; margin: 15px 0; border-bottom: 2px dashed #b6d4fe; padding-bottom: 15px; }
     
-    .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 16px; font-weight: bold; color: #555; }
-    .detail-val { color: #333; }
+    /* ご指定の3列レイアウト（CSS Grid） */
+    .detail-grid { display: grid; grid-template-columns: 2.5fr 4fr 2.5fr; align-items: center; margin-bottom: 12px; font-size: 15px; color: #555; }
+    .dg-name { font-weight: bold; color: #333; }
+    .dg-calc { text-align: center; font-size: 13px; color: #666; }
+    .dg-amount { text-align: right; font-weight: bold; color: #333; }
+    .detail-header { border-bottom: 2px solid #b6d4fe; padding-bottom: 8px; margin-bottom: 15px; font-size: 13px; color: #0056b3; font-weight: bold; }
+
     .error-msg { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; font-size: 13px; margin-top: 15px; }
   </style>
 </head>
@@ -33,8 +42,8 @@
   <div class="container">
     <h2>💴 マイ給与明細</h2>
     
-    <div id="loading" style="display: block;">🔄 認証情報を取得中...</div>
-    <div id="errorScreen">⛔️ 権限がありません</div>
+    <div id="loading" style="display: block;">⏳ 認証情報を取得中...</div>
+    <div id="errorScreen">🚫 権限がありません</div>
 
     <div id="appContent" style="display: none;">
       <div class="profile-area">
@@ -42,63 +51,96 @@
       </div>
 
       <div class="filter-area">
-        <input type="month" id="targetMonth">
+        <div class="filter-inputs">
+          <select id="periodType" class="select-box" onchange="togglePeriodInput()">
+            <option value="month">月別</option>
+            <option value="year">年度別</option>
+          </select>
+          <input type="month" id="targetMonth" class="date-box">
+          <select id="targetYear" class="date-box" style="display: none;"></select>
+        </div>
         <button class="btn" onclick="fetchMySalary()">明細を見る</button>
       </div>
 
       <div id="calcLoading" style="display: none; text-align: center; font-weight: bold; color: #666; padding: 20px;">
-        ⏳ 計算しています...
+        🔄 計算しています...
       </div>
 
       <div id="salaryCard" class="salary-card">
         <div style="text-align: center; font-weight: bold; color: #0056b3; margin-bottom: 5px;">支給予定額</div>
         <div class="total-pay" id="dispTotal">¥0</div>
         
-        <div class="detail-row">
-          <span>🛶 現場実務</span>
-          <span class="detail-val" id="dispGenba">0.00 時間</span>
+        <div class="detail-grid detail-header">
+          <div class="dg-name">項目名</div>
+          <div class="dg-calc">時間/日数 × 単価</div>
+          <div class="dg-amount">金額</div>
         </div>
-        <div class="detail-row">
-          <span>💻 事務仕事</span>
-          <span class="detail-val" id="dispJimu">0.00 時間</span>
+
+        <div class="detail-grid">
+          <div class="dg-name">🦺 現場実務</div>
+          <div class="dg-calc" id="dispGenbaCalc">0.0h × 0円</div>
+          <div class="dg-amount" id="dispGenbaAmt">0円</div>
         </div>
-        <div class="detail-row">
-          <span>🛥️ 船舶手当</span>
-          <span class="detail-val" id="dispAllowance">¥0</span>
+        <div class="detail-grid">
+          <div class="dg-name">💻 事務仕事</div>
+          <div class="dg-calc" id="dispJimuCalc">0.0h × 0円</div>
+          <div class="dg-amount" id="dispJimuAmt">0円</div>
+        </div>
+        <div class="detail-grid">
+          <div class="dg-name">🛥️ 船舶手当</div>
+          <div class="dg-calc" id="dispShipCalc">0日 × 0円</div>
+          <div class="dg-amount" id="dispShipAmt">0円</div>
         </div>
         
         <div id="errorBox" class="error-msg" style="display: none;"></div>
       </div>
       
       <div id="noDataMsg" style="display: none; text-align: center; padding: 30px 10px; color: #666; font-weight: bold;">
-        指定された年月の勤務データはありません。
+        指定された期間の勤務データはありません。
       </div>
     </div>
   </div>
 
   <script>
-    // 💡 勤怠打刻（scan.html）等で使っているのと同じ、スタッフ用LIFF IDを設定してください
-    const LIFF_ID = "2009367368-GI5IPPSf"; 
+    const LIFF_ID = "2009367368-pyqIgDeS"; 
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
 
     let currentMemberId = "";
 
+    function togglePeriodInput() {
+      const type = document.getElementById('periodType').value;
+      if (type === 'month') {
+        document.getElementById('targetMonth').style.display = 'block';
+        document.getElementById('targetYear').style.display = 'none';
+      } else {
+        document.getElementById('targetMonth').style.display = 'none';
+        document.getElementById('targetYear').style.display = 'block';
+      }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
-      // 初期値として「先月」か「今月」をセット（とりあえず今月）
       const today = new Date();
       const yyyy = today.getFullYear();
       const mm = String(today.getMonth() + 1).padStart(2, '0');
       document.getElementById('targetMonth').value = `${yyyy}-${mm}`;
 
+      // 年度のセレクトボックス生成（前年度〜来年度）
+      const currentFiscalYear = today.getMonth() + 1 < 4 ? yyyy - 1 : yyyy;
+      const yearSelect = document.getElementById('targetYear');
+      for (let i = currentFiscalYear - 1; i <= currentFiscalYear + 1; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.innerText = i + "年度";
+        if (i === currentFiscalYear) opt.selected = true;
+        yearSelect.appendChild(opt);
+      }
+
       liff.init({ liffId: LIFF_ID }).then(() => {
         if (!liff.isLoggedIn()) liff.login();
-        else {
-          liff.getProfile().then(p => verifyStaffAccess(p.userId));
-        }
+        else liff.getProfile().then(p => verifyStaffAccess(p.userId));
       });
     });
 
-    // まずLINEのUIDからスタッフIDを特定する
     function verifyStaffAccess(uid) {
       fetch(GAS_URL, { 
         method: "POST", headers: { "Content-Type": "text/plain" }, 
@@ -110,16 +152,24 @@
           currentMemberId = data.memberId;
           document.getElementById('displayName').innerText = data.staffName;
           document.getElementById('appContent').style.display = 'block'; 
-          fetchMySalary(); // 開いた瞬間に今月のデータを取得
+          fetchMySalary(); // 初期表示（今月）
         } else { 
           document.getElementById('errorScreen').style.display = 'block'; 
         }
       });
     }
 
+    // 表示のヘルパー関数
+    function formatNumber(num) { return Number(num).toLocaleString(); }
+    function formatHours(h) { return (Math.floor(h * 10) / 10).toFixed(1) + "h"; }
+
     function fetchMySalary() {
-      const ym = document.getElementById('targetMonth').value;
-      if (!ym || !currentMemberId) return;
+      const periodType = document.getElementById('periodType').value;
+      const targetPeriod = periodType === 'month' 
+        ? document.getElementById('targetMonth').value 
+        : document.getElementById('targetYear').value;
+
+      if (!targetPeriod || !currentMemberId) return;
 
       document.getElementById('salaryCard').style.display = 'none';
       document.getElementById('noDataMsg').style.display = 'none';
@@ -127,22 +177,36 @@
 
       fetch(GAS_URL, {
         method: "POST", headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action: "getIndividualSalary", memberId: currentMemberId, yearMonth: ym })
+        body: JSON.stringify({ action: "getIndividualSalary", memberId: currentMemberId, yearMonth: targetPeriod })
       }).then(r => r.json()).then(res => {
         document.getElementById('calcLoading').style.display = 'none';
         
         if (res.status === "success" && res.data) {
           const st = res.data;
           document.getElementById('salaryCard').style.display = 'block';
-          document.getElementById('dispTotal').innerText = `¥${Number(st.totalPay).toLocaleString()}`;
-          document.getElementById('dispGenba').innerText = st.genbaHours;
-          document.getElementById('dispJimu').innerText = st.jimuHours;
-          document.getElementById('dispAllowance').innerText = `¥${Number(st.allowance).toLocaleString()}`;
           
+          document.getElementById('dispTotal').innerText = `¥${formatNumber(st.totalPay)}`;
+
+          // 現場実務
+          const genbaAmt = Math.floor(st.genbaHoursFloat * st.genbaWage);
+          document.getElementById('dispGenbaCalc').innerText = `${formatHours(st.genbaHoursFloat)} × ${formatNumber(st.genbaWage)}円`;
+          document.getElementById('dispGenbaAmt').innerText = `${formatNumber(genbaAmt)}円`;
+
+          // 事務仕事
+          const jimuAmt = Math.floor(st.jimuHoursFloat * st.jimuWage);
+          document.getElementById('dispJimuCalc').innerText = `${formatHours(st.jimuHoursFloat)} × ${formatNumber(st.jimuWage)}円`;
+          document.getElementById('dispJimuAmt').innerText = `${formatNumber(jimuAmt)}円`;
+
+          // 船舶手当（合計から逆算して単価を算出）
+          const shipUnit = st.allowanceDays > 0 ? Math.floor(st.allowance / st.allowanceDays) : 0;
+          document.getElementById('dispShipCalc').innerText = `${st.allowanceDays}日 × ${formatNumber(shipUnit)}円`;
+          document.getElementById('dispShipAmt').innerText = `${formatNumber(st.allowance)}円`;
+          
+          // 打刻エラーの表示
           const errBox = document.getElementById('errorBox');
           if (st.errors && st.errors.length > 0) {
             errBox.style.display = 'block';
-            errBox.innerHTML = "<b>⚠️ 打刻エラーがあります</b><br>" + st.errors.join("<br>") + "<br><small>※管理者に修正を依頼してください</small>";
+            errBox.innerHTML = "<b>🚨 打刻エラーがあります</b><br>" + st.errors.join("<br>") + "<br><small>※管理者に修正を依頼してください</small>";
           } else {
             errBox.style.display = 'none';
           }
