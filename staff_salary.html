@@ -27,10 +27,10 @@
     .salary-card { background: #e8f4fd; border: 2px solid #b6d4fe; border-radius: 10px; padding: 20px 15px; margin-top: 15px; display: none; }
     .total-pay { font-size: 32px; font-weight: bold; color: #d9534f; text-align: center; margin: 15px 0; border-bottom: 2px dashed #b6d4fe; padding-bottom: 15px; }
     
-    /* スマホに最適化した2列レイアウト */
-    .detail-flex { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #cce0ff; }
+    /* 上段揃え(flex-start)の2列レイアウト */
+    .detail-flex { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #cce0ff; }
     .detail-flex:last-child { border-bottom: none; padding-bottom: 0; }
-    .df-name { font-weight: bold; color: #333; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+    .df-name { font-weight: bold; color: #333; font-size: 16px; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
     .df-right { text-align: right; }
     .df-amount { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 4px; }
     .df-calc { font-size: 13px; color: #666; }
@@ -80,7 +80,7 @@
         </div>
         
         <div class="detail-flex">
-          <div class="df-name">💻 事務仕事</div>
+          <div class="df-name">💻 事務業務</div>
           <div class="df-right">
             <div class="df-amount" id="dispJimuAmt">0円</div>
             <div class="df-calc" id="dispJimuCalc">0時間00分 × 0円</div>
@@ -127,7 +127,6 @@
       const mm = String(today.getMonth() + 1).padStart(2, '0');
       document.getElementById('targetMonth').value = `${yyyy}-${mm}`;
 
-      // 年度のセレクトボックス生成（前年度〜来年度）
       const currentFiscalYear = today.getMonth() + 1 < 4 ? yyyy - 1 : yyyy;
       const yearSelect = document.getElementById('targetYear');
       for (let i = currentFiscalYear - 1; i <= currentFiscalYear + 1; i++) {
@@ -155,14 +154,13 @@
           currentMemberId = data.memberId;
           document.getElementById('displayName').innerText = data.staffName;
           document.getElementById('appContent').style.display = 'block'; 
-          fetchMySalary(); // 初期表示（今月）
+          fetchMySalary(); 
         } else { 
           document.getElementById('errorScreen').style.display = 'block'; 
         }
       });
     }
 
-    // 表示のヘルパー関数
     function formatNumber(num) { return Number(num).toLocaleString(); }
 
     function fetchMySalary() {
@@ -189,22 +187,18 @@
           
           document.getElementById('dispTotal').innerText = `¥${formatNumber(st.totalPay)}`;
 
-          // 現場実務 (st.genbaHours には既に "〇〇時間〇〇分" の形式が入っています)
           const genbaAmt = Math.floor(st.genbaHoursFloat * st.genbaWage);
           document.getElementById('dispGenbaCalc').innerText = `${st.genbaHours} × ${formatNumber(st.genbaWage)}円`;
           document.getElementById('dispGenbaAmt').innerText = `${formatNumber(genbaAmt)}円`;
 
-          // 事務仕事 (st.jimuHours には既に "〇〇時間〇〇分" の形式が入っています)
           const jimuAmt = Math.floor(st.jimuHoursFloat * st.jimuWage);
           document.getElementById('dispJimuCalc').innerText = `${st.jimuHours} × ${formatNumber(st.jimuWage)}円`;
           document.getElementById('dispJimuAmt').innerText = `${formatNumber(jimuAmt)}円`;
 
-          // 船舶手当
           const shipUnit = st.allowanceDays > 0 ? Math.floor(st.allowance / st.allowanceDays) : 0;
           document.getElementById('dispShipCalc').innerText = `${st.allowanceDays}日 × ${formatNumber(shipUnit)}円`;
           document.getElementById('dispShipAmt').innerText = `${formatNumber(st.allowance)}円`;
           
-          // 打刻エラーの表示
           const errBox = document.getElementById('errorBox');
           if (st.errors && st.errors.length > 0) {
             errBox.style.display = 'block';
