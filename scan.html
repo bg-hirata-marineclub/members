@@ -61,7 +61,7 @@
           <p style="font-size: 14px; font-weight: bold; color: #555; margin: 0 0 10px 0;">💻 業務区分を選択</p>
           <select id="workType" class="work-type-select">
             <option value="現場実務">現場実務（カヌー場等）</option>
-            <option value="事務仕事">事務仕事（リモート可）</option>
+            <option value="事務業務">事務業務（リモート可）</option>
           </select>
         </div>
 
@@ -202,9 +202,9 @@
     function startGpsFlow(type) {
       pendingTimecardType = type;
       
-      // 💡 追加：事務仕事の場合はGPSと船舶手当をスキップして直接送信！
+      // 💡 追加：事務業務の場合はGPSと船舶手当をスキップして直接送信！
       const workType = document.getElementById('workType').value;
-      if (workType === "事務仕事") {
+      if (workType === "事務業務") {
         currentLat = null; currentLng = null;
         executeTimecardWithShip(0);
         return;
@@ -248,7 +248,7 @@
       const workType = document.getElementById('workType') ? document.getElementById('workType').value : "現場実務";
 
       document.getElementById('timecardArea').style.display = 'none';
-      document.getElementById('timecardSelectArea').style.display = 'none'; // 事務仕事用
+      document.getElementById('timecardSelectArea').style.display = 'none'; // 事務業務用
       document.getElementById('successMessage').style.display = 'block';
       document.getElementById('successText').innerText = "通信中...";
 
