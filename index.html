@@ -62,7 +62,7 @@
     <h2>B&G 平田海洋クラブ<br>会員システム</h2>
     
     <div id="loadingScreen" style="text-align: center; padding: 50px 10px;">
-      <p style="font-size: 18px; font-weight: bold; color: #0056b3; margin-bottom: 10px;">⏳ アカウントを確認中...</p>
+      <p style="font-size: 18px; font-weight: bold; color: #0056b3; margin-bottom: 10px;">🔄 アカウントを確認中...</p>
     </div>
     
     <div class="tab-container" id="tabContainer" style="display: none;">
@@ -74,10 +74,10 @@
       <form id="myForm">
         <div class="form-group">
           <label>顔写真</label>
-          <label for="photoInput" class="photo-upload-btn">📸 写真を撮影/選択</label>
+          <label for="photoInput" class="photo-upload-btn">📷 写真を撮影/選択</label>
           <input type="file" id="photoInput" accept="image/*" capture="user" style="display: none;">
           <div id="previewContainer" style="display: none; margin-top: 15px; text-align: center;">
-            <p style="font-size: 13px; color: #d32f2f; font-weight: bold; margin-bottom: 10px;">👇 顔を枠に合わせてください</p>
+            <p style="font-size: 13px; color: #d32f2f; font-weight: bold; margin-bottom: 10px;">💡 顔を枠に合わせてください</p>
             <div class="img-container"><img id="imageToCrop" src=""></div>
             <button type="button" id="cropBtn" style="background-color: #0056b3; margin-top: 15px; padding: 12px; font-size: 16px;">この位置で決定</button>
           </div>
@@ -152,12 +152,20 @@
         <div class="card-qr"><img id="resultQr" src=""></div>
       </div>
       
+      <div id="staffMenuControls" style="display:none; margin-top: 25px; padding: 15px; background: #e8f4fd; border-radius: 8px; border: 1px dashed #0056b3;">
+        <p style="font-size: 13px; color: #0056b3; font-weight: bold; text-align: center; margin: 0 0 10px 0;">⚙️ スタッフ専用メニュー切替</p>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" onclick="executeToggleMenu('staff')" style="flex: 1; padding: 12px; background-color: #0056b3; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; margin: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">スタッフ用</button>
+          <button type="button" onclick="executeToggleMenu('general')" style="flex: 1; padding: 12px; background-color: #6c757d; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; margin: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">一般（お客様）用</button>
+        </div>
+      </div>
+
       <button type="button" id="linkLineBtn" onclick="executeLinkLine()" style="display:none; width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px;">
-        📱 このLINEアカウントと紐付ける
+        🔗 このLINEアカウントと紐付ける
       </button>
 
       <button type="button" id="editInfoBtn" onclick="openEditForm()" style="display:none; width: 100%; padding: 15px; background-color: #ffc107; color: #333; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px;">
-        ✏️ 登録情報の確認・変更
+        📝 登録情報の確認・変更
       </button>
     </div>
   </div>
@@ -259,7 +267,7 @@
         imageToCrop.src = ev.target.result; document.getElementById('previewContainer').style.display = 'block'; document.getElementById('finalPreviewContainer').style.display = 'none'; document.getElementById('imageBase64').value = '';
         if (cropper) cropper.destroy();
         cropper = new Cropper(imageToCrop, { aspectRatio: 1, viewMode: 1, dragMode: 'move', autoCropArea: 0.9, cropBoxMovable: false, cropBoxResizable: false, guides: true, center: true });
-        document.querySelector('.photo-upload-btn').innerText = '📸 写真を再選択'; document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
+        document.querySelector('.photo-upload-btn').innerText = '🔄 写真を再選択'; document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
       }; reader.readAsDataURL(file);
     });
     cropBtn.addEventListener('click', () => {
@@ -270,7 +278,6 @@
       document.querySelector('.photo-upload-btn').innerText = '✅ 写真をセットしました'; document.querySelector('.photo-upload-btn').style.backgroundColor = '#05b34c';
     });
 
-    // 💡修正: UIの「同行者」を「家族メンバー」に変更
     function addFamilyMember() {
       familyCount++; document.getElementById('memberType').value = "家族会員（代表者）"; 
       const container = document.getElementById('familySection');
@@ -323,11 +330,38 @@
         if (document.getElementById('editInfoBtn')) document.getElementById('editInfoBtn').style.display = (!isNewRegistration && currentUserData) ? 'block' : 'none';
       }
 
+      // 🌟 スタッフ用メニュー切替ボタンの表示制御
+      if (currentUserData && currentUserData['権限'] === 'スタッフ') {
+        document.getElementById('staffMenuControls').style.display = 'block';
+      } else {
+        document.getElementById('staffMenuControls').style.display = 'none';
+      }
+
       document.getElementById('resultYear').innerText = result.schoolYear; 
       document.getElementById('resultPhoto').src = result.imageUrl || "data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Ccircle cx=\"50\" cy=\"50\" r=\"50\" fill=\"%23ccc\"/%3E%3C/svg%3E";
       document.getElementById('resultId').innerText = result.memberId; document.getElementById('resultName').innerText = result.memberName + ' 様'; 
       document.getElementById('resultQr').src = new QRious({ value: result.memberId, size: 150 }).toDataURL(); 
       window.scrollTo(0, 0);
+    }
+
+    // 🌟 メニューの切り替えを実行する関数
+    function executeToggleMenu(target) {
+      const uid = document.getElementById('lineUid').value;
+      if (!uid) return alert("LINE連携が完了していないため操作できません。");
+      
+      const btnName = target === 'staff' ? 'スタッフ用' : '一般用';
+      if (!confirm(`LINEのメニューを「${btnName}」に切り替えますか？\n※LINEのトーク画面に戻ると反映されます。`)) return;
+      
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "toggleRichMenu", uid: uid, target: target })
+      }).then(r => r.json()).then(res => {
+        if (res.status === "success") {
+          alert(`✅ メニューを「${btnName}」に切り替えました！\nLINEのトーク画面に戻ってご確認ください。`);
+        } else {
+          alert("⚠️ エラー: " + res.message);
+        }
+      }).catch(() => alert("通信エラーが発生しました。"));
     }
 
     function executeLinkLine() {
@@ -339,7 +373,7 @@
           alert("✅ 紐付けが完了しました！\n次回から自動でログインできます。"); 
           location.reload(); 
         } else { 
-          alert(res.message); btn.innerText = "📱 このLINEアカウントと紐付ける"; btn.disabled = false; 
+          alert(res.message); btn.innerText = "🔗 このLINEアカウントと紐付ける"; btn.disabled = false; 
         } 
       });
     }
@@ -348,7 +382,7 @@
       if (!currentUserData) return; isUpdateMode = true;
       document.getElementById('successScreen').style.display = 'none'; document.getElementById('registerSection').style.display = 'block';
       
-      document.querySelector('.photo-upload-btn').innerText = '📸 写真を変更する(変更なしはそのまま)'; 
+      document.querySelector('.photo-upload-btn').innerText = '🔄 写真を変更する(変更なしはそのまま)'; 
       document.querySelector('.photo-upload-btn').style.backgroundColor = '#6c757d';
       
       document.getElementById('rep-sei').value = currentUserData['姓'] || ''; document.getElementById('rep-mei').value = currentUserData['名'] || '';
@@ -361,12 +395,10 @@
       let currentType = currentUserData['会員種別'] || '';
       let repId = currentUserData['代表者ID'] || '';
       
-      // 💡過去データの補正（古い表記を最新に合わせる）
       if (currentType.includes("家族") || currentType.includes("同行者")) {
         currentType = repId ? "家族会員（家族メンバー）" : "家族会員（代表者）";
       }
       
-      // optionにない値を入れるための保険
       if (!Array.from(typeSelect.options).some(opt => opt.value === currentType)) {
         typeSelect.add(new Option(currentType, currentType));
       }
@@ -375,7 +407,6 @@
       let isLocked = false;
       let lockMsg = "";
       
-      // 💡ロック条件の判定（子ID判定 ＆ 入金済判定）
       if (repId) { 
         isLocked = true; 
         lockMsg = "※家族メンバーのため会員種別は変更できません。"; 
