@@ -89,7 +89,14 @@
         </div>
         <div class="form-group flex-row"><div><label>姓</label><input type="text" id="rep-sei"></div><div><label>名</label><input type="text" id="rep-mei"></div></div>
         <div class="form-group flex-row"><div><label>せい</label><input type="text" id="rep-kana-sei" pattern="^[ぁ-んー\s]+$"></div><div><label>めい</label><input type="text" id="rep-kana-mei" pattern="^[ぁ-んー\s]+$"></div></div>
-        <div class="form-group"><label>生年月日</label><input type="date" id="birthDate"></div>
+        <div class="form-group">
+          <label>生年月日 
+            <span style="font-size: 12px; font-weight: normal; color: #d9534f; display: block; margin-top: 4px;">
+              ※Androidの方は、カレンダー左上の「年」をタップすると素早く選択できます
+            </span>
+          </label>
+          <input type="date" id="birthDate">
+        </div>
         <div class="form-group"><label>メールアドレス</label><input type="email" id="email"></div>
         <div class="form-group"><label>電話番号</label><input type="tel" id="phone"></div>
         <div class="form-group flex-row"><div style="flex: 0 0 100px;"><label>郵便番号</label><input type="tel" id="postalCode" maxlength="7"></div><div><label>住所</label><input type="text" id="address"></div></div>
@@ -119,7 +126,14 @@
           <input type="tel" id="loginIdNum" maxlength="4" style="border: none; background: transparent; padding: 15px 0; width: 100%;">
         </div>
       </div>
-      <div class="form-group"><label>生年月日</label><input type="date" id="loginBirthDate"></div>
+      <div class="form-group">
+        <label>生年月日 
+            <span style="font-size: 12px; font-weight: normal; color: #d9534f; display: block; margin-top: 4px;">
+              ※Androidの方は左上の「年」をタップして選択
+            </span>
+        </label>
+        <input type="date" id="loginBirthDate">
+      </div>
       <button type="button" id="loginBtn" onclick="executeLogin()">会員証を表示する</button>
     </div>
 
@@ -281,7 +295,7 @@
     function addFamilyMember() {
       familyCount++; document.getElementById('memberType').value = "家族会員（代表者）"; 
       const container = document.getElementById('familySection');
-      const html = `<div class="family-member-card" id="family_${familyCount}"><button type="button" class="remove-btn" onclick="removeFamilyMember(${familyCount})">×</button><label>家族メンバー${familyCount} 氏名</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-sei-${familyCount}" class="fam-sei" placeholder="姓"></div><div><input type="text" id="fam-mei-${familyCount}" class="fam-mei" placeholder="名"></div></div><label>ふりがな</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-kana-sei-${familyCount}" class="fam-kana-sei" pattern="^[ぁ-んー\\s]+$" placeholder="せい"></div><div><input type="text" id="fam-kana-mei-${familyCount}" class="fam-kana-mei" pattern="^[ぁ-んー\\s]+$" placeholder="めい"></div></div><label>生年月日</label><input type="date" id="fam-date-${familyCount}" class="fam-date"></div>`;
+      const html = `<div class="family-member-card" id="family_${familyCount}"><button type="button" class="remove-btn" onclick="removeFamilyMember(${familyCount})">×</button><label>家族メンバー${familyCount} 氏名</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-sei-${familyCount}" class="fam-sei" placeholder="姓"></div><div><input type="text" id="fam-mei-${familyCount}" class="fam-mei" placeholder="名"></div></div><label>ふりがな</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-kana-sei-${familyCount}" class="fam-kana-sei" pattern="^[ぁ-んー\\s]+$" placeholder="せい"></div><div><input type="text" id="fam-kana-mei-${familyCount}" class="fam-kana-mei" pattern="^[ぁ-んー\\s]+$" placeholder="めい"></div></div><label>生年月日 <span style="font-size: 11px; font-weight: normal; color: #d9534f;">（※Androidは左上の「年」をタップ）</span></label><input type="date" id="fam-date-${familyCount}" class="fam-date"></div>`;
       container.insertAdjacentHTML('beforeend', html);
       bindFurigana(`fam-sei-${familyCount}`, `fam-kana-sei-${familyCount}`);
       bindFurigana(`fam-mei-${familyCount}`, `fam-kana-mei-${familyCount}`);
