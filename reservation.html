@@ -149,6 +149,10 @@
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('staff') === '1') {
         document.getElementById('adminSection').style.display = 'block';
+      } else {
+        // ▼ 追加：お客様画面の場合は、カレンダーの「min属性」に今日の日付をセットする
+        const todayStr = new Date().toLocaleDateString('sv-SE'); // "YYYY-MM-DD"形式
+        document.getElementById('resDate').min = todayStr;
       }
     });
 
@@ -171,9 +175,43 @@
     }
 
     function submitReservation() {
+      // ▼▼▼ 既存の必須チェック ▼▼▼
       if (!document.getElementById('resDate').value) return alert("利用予定日を入力してください。");
       if (!document.getElementById('groupName').value) return alert("団体名を入力してください。");
       if (!document.getElementById('repName').value) return alert("代表者氏名を入力してください。");
+
+      // ▼▼▼ 追加：過去の日付と営業時間のチェック ▼▼▼
+      const resDateStr = document.getElementById('resDate').value;
+      const sTime = document.getElementById('startTime').value;
+      const eTime = document.getElementById('endTime').value;
+      const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
+
+      // 1. 過去の日付チェック（スタッフ画面以外）
+      if (!isAdminVisible) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // 今日の午前0時
+        const inputDate = new Date(resDateStr);
+        if (inputDate < today) {
+          return alert("エラー：過去の日付で予約することはできません。");
+        }
+      }
+
+      // 2. 営業時間チェック（9:00〜16:00）※スタッフ画面以外
+      if (!isAdminVisible) {
+        if (!sTime || !eTime) {
+          return alert("利用時間（開始・終了）を両方入力してください。");
+        }
+        const sHour = parseInt(sTime.split(':')[0], 10);
+        const eHour = parseInt(eTime.split(':')[0], 10);
+        const eMin = parseInt(eTime.split(':')[1], 10);
+
+        if (sHour < 9 || eHour > 16 || (eHour === 16 && eMin > 0)) {
+          return alert("エラー：予約可能な時間は 9:00 から 16:00 までです。\n時間を修正してください。");
+        }
+        if (sTime >= eTime) {
+          return alert("エラー：開始時間と終了時間が正しくありません。");
+        }
+      }
 
       const btn = document.getElementById('submitBtn');
       btn.innerText = "送信中..."; btn.disabled = true;
