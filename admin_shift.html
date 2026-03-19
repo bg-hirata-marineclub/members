@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>シフト編成(管理者) - B&G 平田海洋クラブ</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; background-color: #e8f4fd; margin: 0; padding: 15px; color: #333; }
+    .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #0056b3; margin-top: 0; font-size: 20px; border-bottom: 2px solid #0056b3; padding-bottom: 10px; }
+    .shift-row { background: #fdfdfd; border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .date-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 16px; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 8px;}
+    .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; background-color: #17a2b8; }
+    
+    /* スタッフ選択ボタン */
+    .staff-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .staff-btn { padding: 8px 12px; border: 2px solid #ddd; border-radius: 20px; background: #fff; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
+    .staff-btn.status-ok { border-color: #28a745; color: #155724; }
+    .staff-btn.status-maybe { border-color: #ffc107; color: #856404; }
+    /* 選択状態（管理者が出勤を決定した状態） */
+    .staff-btn.selected { background-color: #0056b3; color: white; border-color: #0056b3; }
+    
+    .no-data { font-size: 13px; color: #999; font-style: italic; }
+    .submit-btn { width: 100%; padding: 18px; background-color: #e83e8c; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; position: sticky; bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>👑 管理者シフト編成</h2>
+    <p style="font-size: 13px; color: #666; margin-bottom: 20px;">出勤してほしいスタッフの名前をタップして選択し、最後に一番下の「一括保存」を押してください。（※❌の人は表示されません）</p>
+    
+    <div id="loading" style="text-align: center; padding: 20px; color: #0056b3; font-weight: bold;">🔄 全員のデータを集計中...</div>
+    <div id="adminList"></div>
+
+    <button class="submit-btn" id="saveBtn" onclick="saveAdminShift()" style="display:none;">💾 確定シフトとして一括保存する</button>
+  </div>
+
+  <script>
+    // 💡 ご自身のデプロイURLに書き換えてください（00_main.gs のURL）
+    const GAS_URL = "ここにGASのURLを貼り付けます";
+    // 💡 管理者シフト用のLIFF ID
+    const LIFF_ID = "ここにLIFF_IDを貼り付けます"; 
+
+    let masterData = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      liff.init({ liffId: LIFF_ID }).then(() => {
+        if (liff.isLoggedIn()) { fetchAdminData(); } else { liff.login(); }
+      }).catch(err => alert("LIFF初期化エラー"));
+    });
+
+    function fetchAdminData() {
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getAdminShiftData" }) })
+      .then(r => r.json()).then(res => {
+        if(res.status === "success") {
+          masterData = res.calendar.map(day => {
+            return {
+              ...day,
+              requests: res.requests[day.date] || [], // その日の希望者リスト
+              selectedMembers: day.confirmed ? day.confirmed.split(',').map(s => s.trim()) : [] // すでに確定しているメンバー配列
+            };
+          });
+          renderAdminList();
+          document.getElementById('loading').style.display = "none";
+          document.getElementById('saveBtn').style.display = "block";
+        } else { alert("取得エラー: " + res.message); }
+      }).catch(e => alert("通信エラー"));
+    }
+
+    function renderAdminList() {
+      const container = document.getElementById('adminList'); container.innerHTML = "";
+      
+      masterData.forEach((day, dayIndex) => {
+        // ❌(不可)の人は除外して表示する
+        const availableStaff = day.requests.filter(req => req.status !== '❌');
+        
+        let staffButtonsHtml = "";
+        if (availableStaff.length > 0) {
+          availableStaff.forEach(staff => {
+            const isSelected = day.selectedMembers.includes(staff.name);
+            const statusClass = staff.status === '⭕️' ? 'status-ok' : 'status-maybe';
+            const selectedClass = isSelected ? 'selected' : '';
+            
+            // ボタンをタップした時に toggleStaff() を呼ぶ
+            staffButtonsHtml += `
+              <button class="staff-btn ${statusClass} ${selectedClass}" onclick="toggleStaff(${dayIndex}, '${staff.name}', this)">
+                ${staff.status} ${staff.name}
+              </button>
+            `;
+          });
+        } else {
+          staffButtonsHtml = `<span class="no-data">まだ出勤可能な希望者がいません</span>`;
+        }
+
+        const html = `
+          <div class="shift-row">
+            <div class="date-header">
+              <span>${day.date.substring(5)} (${day.day})</span>
+              <span class="badge">${day.type}</span>
+            </div>
+            ${day.note ? `<div style="font-size: 12px; color: #d63384; margin-bottom: 5px;">📌 ${day.note}</div>` : ""}
+            <div class="staff-grid">${staffButtonsHtml}</div>
+          </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+      });
+    }
+
+    // スタッフの選択状態を切り替える関数
+    function toggleStaff(dayIndex, staffName, btnElement) {
+      const selectedArray = masterData[dayIndex].selectedMembers;
+      const index = selectedArray.indexOf(staffName);
+      
+      if (index > -1) {
+        // すでに選択されていれば解除
+        selectedArray.splice(index, 1);
+        btnElement.classList.remove('selected');
+      } else {
+        // 選択されていなければ追加
+        selectedArray.push(staffName);
+        btnElement.classList.add('selected');
+      }
+    }
+
+    // 確定データを送信する関数
+    function saveAdminShift() {
+      const btn = document.getElementById('saveBtn'); btn.innerText = "⏳ 保存中..."; btn.disabled = true;
+      
+      // 送信用データ（行番号と、カンマ区切りにした名前のセット）を作る
+      const payload = masterData.map(day => {
+        return { rowNum: day.rowNum, members: day.selectedMembers.join(', ') };
+      });
+
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "saveAdminShift", confirmedData: payload }) })
+      .then(r => r.json()).then(res => {
+        if(res.status === "success") { alert("✅ 全ての確定シフトを保存しました！\n（M_カレンダーに反映されました）"); liff.closeWindow(); } 
+        else { alert("エラー: " + res.message); }
+      }).catch(e => alert("通信エラー")).finally(() => { btn.innerText = "💾 確定シフトとして一括保存する"; btn.disabled = false; });
+    }
+  </script>
+</body>
+</html>
