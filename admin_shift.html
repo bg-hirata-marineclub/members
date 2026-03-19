@@ -14,14 +14,13 @@
     .date-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 16px; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 8px;}
     .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; background-color: #17a2b8; }
     
-    /* スタッフ選択ボタン */
     .staff-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
     .staff-btn { padding: 8px 12px; border: 2px solid #ddd; border-radius: 20px; background: #fff; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
     .staff-btn.status-ok { border-color: #28a745; color: #155724; }
     .staff-btn.status-maybe { border-color: #ffc107; color: #856404; }
-    /* 選択状態（管理者が出勤を決定した状態） */
     .staff-btn.selected { background-color: #0056b3; color: white; border-color: #0056b3; }
     
+    .ship-icon { margin-left: 2px; font-size: 16px; }
     .no-data { font-size: 13px; color: #999; font-style: italic; }
     .submit-btn { width: 100%; padding: 18px; background-color: #e83e8c; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; position: sticky; bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
   </style>
@@ -29,7 +28,8 @@
 <body>
   <div class="container">
     <h2>👑 管理者シフト編成</h2>
-    <p style="font-size: 13px; color: #666; margin-bottom: 20px;">出勤してほしいスタッフの名前をタップして選択し、最後に一番下の「一括保存」を押してください。（※❌の人は表示されません）</p>
+    <p style="font-size: 13px; color: #666; margin-bottom: 5px;">出勤してほしいスタッフをタップして「一括保存」を押してください。（※❌の人は表示されません）</p>
+    <p style="font-size: 12px; color: #dc3545; font-weight: bold; margin-bottom: 20px;">💡 急な変更時も、ボタンを押し直して再度保存すれば何度でも上書き修正できます。</p>
     
     <div id="loading" style="text-align: center; padding: 20px; color: #0056b3; font-weight: bold;">🔄 全員のデータを集計中...</div>
     <div id="adminList"></div>
@@ -38,7 +38,7 @@
   </div>
 
   <script>
-    // 💡 ご自身のデプロイURLに書き換えてください（00_main.gs のURL）
+    // 💡 ご自身のデプロイURLに書き換えてください
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
     // 💡 管理者シフト用のLIFF ID
     const LIFF_ID = "2009367368-356rnaIC"; 
@@ -58,8 +58,8 @@
           masterData = res.calendar.map(day => {
             return {
               ...day,
-              requests: res.requests[day.date] || [], // その日の希望者リスト
-              selectedMembers: day.confirmed ? day.confirmed.split(',').map(s => s.trim()) : [] // すでに確定しているメンバー配列
+              requests: res.requests[day.date] || [],
+              selectedMembers: day.confirmed ? day.confirmed.split(',').map(s => s.trim()) : []
             };
           });
           renderAdminList();
@@ -73,7 +73,6 @@
       const container = document.getElementById('adminList'); container.innerHTML = "";
       
       masterData.forEach((day, dayIndex) => {
-        // ❌(不可)の人は除外して表示する
         const availableStaff = day.requests.filter(req => req.status !== '❌');
         
         let staffButtonsHtml = "";
@@ -83,10 +82,12 @@
             const statusClass = staff.status === '⭕️' ? 'status-ok' : 'status-maybe';
             const selectedClass = isSelected ? 'selected' : '';
             
-            // ボタンをタップした時に toggleStaff() を呼ぶ
+            // S列（保有資格）に文字が入っていればボートのアイコンを表示
+            const shipIcon = staff.licenseText ? `<span class="ship-icon" title="資格: ${staff.licenseText}">🚤</span>` : '';
+            
             staffButtonsHtml += `
               <button class="staff-btn ${statusClass} ${selectedClass}" onclick="toggleStaff(${dayIndex}, '${staff.name}', this)">
-                ${staff.status} ${staff.name}
+                ${staff.status} ${staff.name}${shipIcon}
               </button>
             `;
           });
@@ -108,34 +109,29 @@
       });
     }
 
-    // スタッフの選択状態を切り替える関数
     function toggleStaff(dayIndex, staffName, btnElement) {
       const selectedArray = masterData[dayIndex].selectedMembers;
       const index = selectedArray.indexOf(staffName);
       
       if (index > -1) {
-        // すでに選択されていれば解除
         selectedArray.splice(index, 1);
         btnElement.classList.remove('selected');
       } else {
-        // 選択されていなければ追加
         selectedArray.push(staffName);
         btnElement.classList.add('selected');
       }
     }
 
-    // 確定データを送信する関数
     function saveAdminShift() {
       const btn = document.getElementById('saveBtn'); btn.innerText = "⏳ 保存中..."; btn.disabled = true;
       
-      // 送信用データ（行番号と、カンマ区切りにした名前のセット）を作る
       const payload = masterData.map(day => {
         return { rowNum: day.rowNum, members: day.selectedMembers.join(', ') };
       });
 
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "saveAdminShift", confirmedData: payload }) })
       .then(r => r.json()).then(res => {
-        if(res.status === "success") { alert("✅ 全ての確定シフトを保存しました！\n（M_カレンダーに反映されました）"); liff.closeWindow(); } 
+        if(res.status === "success") { alert("✅ シフトを保存しました！\n（※再修正したい場合はもう一度開き直して保存可能です）"); liff.closeWindow(); } 
         else { alert("エラー: " + res.message); }
       }).catch(e => alert("通信エラー")).finally(() => { btn.innerText = "💾 確定シフトとして一括保存する"; btn.disabled = false; });
     }
