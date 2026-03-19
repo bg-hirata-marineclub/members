@@ -5,11 +5,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>B&G 平田海洋クラブ - 会員登録</title>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ja.js"></script>
+
   <style>
     body { font-family: sans-serif; background-color: #f0f2f5; padding: 10px; margin: 0; color: #333; font-size: 16px; }
     .container { max-width: 100%; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); box-sizing: border-box; }
@@ -17,7 +23,8 @@
     .form-group { margin-bottom: 25px; }
     label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 16px; }
     .help-text { font-size: 13px; color: #666; margin-bottom: 10px; display: block; line-height: 1.4; }
-    input[type="text"], input[type="tel"], input[type="email"], input[type="date"], select { width: 100%; max-width: 100%; margin: 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
+    /* 👇 input[type="date"] を削除し、すべて text で統一 */
+    input[type="text"], input[type="tel"], input[type="email"], select { width: 100%; max-width: 100%; margin: 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; }
     input:focus, select:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     select:disabled { background-color: #e9ecef; color: #666; cursor: not-allowed; }
     .flex-row { display: flex; gap: 15px; } .flex-row > div { flex: 1; }
@@ -89,7 +96,12 @@
         </div>
         <div class="form-group flex-row"><div><label>姓</label><input type="text" id="rep-sei"></div><div><label>名</label><input type="text" id="rep-mei"></div></div>
         <div class="form-group flex-row"><div><label>せい</label><input type="text" id="rep-kana-sei" pattern="^[ぁ-んー\s]+$"></div><div><label>めい</label><input type="text" id="rep-kana-mei" pattern="^[ぁ-んー\s]+$"></div></div>
-        <div class="form-group"><label>生年月日</label><input type="date" id="birthDate"></div>
+        
+        <div class="form-group">
+          <label>生年月日</label>
+          <input type="text" id="birthDate" placeholder="例: 1980/01/01（タップで選択）" style="background-color: #fff; cursor: pointer;">
+        </div>
+        
         <div class="form-group"><label>メールアドレス</label><input type="email" id="email"></div>
         <div class="form-group"><label>電話番号</label><input type="tel" id="phone"></div>
         <div class="form-group flex-row"><div style="flex: 0 0 100px;"><label>郵便番号</label><input type="tel" id="postalCode" maxlength="7"></div><div><label>住所</label><input type="text" id="address"></div></div>
@@ -119,7 +131,12 @@
           <input type="tel" id="loginIdNum" maxlength="4" style="border: none; background: transparent; padding: 15px 0; width: 100%;">
         </div>
       </div>
-      <div class="form-group"><label>生年月日</label><input type="date" id="loginBirthDate"></div>
+      
+      <div class="form-group">
+        <label>生年月日</label>
+        <input type="text" id="loginBirthDate" placeholder="例: 1980/01/01" style="background-color: #fff; cursor: pointer;">
+      </div>
+      
       <button type="button" id="loginBtn" onclick="executeLogin()">会員証を表示する</button>
     </div>
 
@@ -175,6 +192,15 @@
     let currentUserData = null; let isUpdateMode = false; let savedProfileImage = "";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec"; 
 
+    // 👇 カレンダーの共通設定（Android対策：disableMobile = true）
+    const fpConfig = { 
+      locale: "ja", 
+      disableMobile: true, // スマホ標準のカレンダーを無効化し、使いやすい専用UIにする魔法
+      dateFormat: "Y-m-d", 
+      maxDate: "today",
+      allowInput: true // 直接キーボードで入力することも許可する
+    };
+
     function switchTab(tabName) {
       document.getElementById('registerSection').style.display = (tabName === 'register') ? 'block' : 'none';
       document.getElementById('loginSection').style.display = (tabName === 'login') ? 'block' : 'none';
@@ -221,6 +247,10 @@
       initializeLiff();
       bindFurigana('rep-sei', 'rep-kana-sei'); 
       bindFurigana('rep-mei', 'rep-kana-mei'); 
+      
+      // 👇 カレンダーライブラリの起動（ページ読み込み時）
+      flatpickr("#birthDate", fpConfig);
+      flatpickr("#loginBirthDate", fpConfig);
     });
 
     function executeAutoLogin(uid) {
@@ -281,10 +311,14 @@
     function addFamilyMember() {
       familyCount++; document.getElementById('memberType').value = "家族会員（代表者）"; 
       const container = document.getElementById('familySection');
-      const html = `<div class="family-member-card" id="family_${familyCount}"><button type="button" class="remove-btn" onclick="removeFamilyMember(${familyCount})">×</button><label>家族メンバー${familyCount} 氏名</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-sei-${familyCount}" class="fam-sei" placeholder="姓"></div><div><input type="text" id="fam-mei-${familyCount}" class="fam-mei" placeholder="名"></div></div><label>ふりがな</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-kana-sei-${familyCount}" class="fam-kana-sei" pattern="^[ぁ-んー\\s]+$" placeholder="せい"></div><div><input type="text" id="fam-kana-mei-${familyCount}" class="fam-kana-mei" pattern="^[ぁ-んー\\s]+$" placeholder="めい"></div></div><label>生年月日</label><input type="date" id="fam-date-${familyCount}" class="fam-date"></div>`;
+      // 👇 type="text" に変更し、プレースホルダーを追加
+      const html = `<div class="family-member-card" id="family_${familyCount}"><button type="button" class="remove-btn" onclick="removeFamilyMember(${familyCount})">×</button><label>家族メンバー${familyCount} 氏名</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-sei-${familyCount}" class="fam-sei" placeholder="姓"></div><div><input type="text" id="fam-mei-${familyCount}" class="fam-mei" placeholder="名"></div></div><label>ふりがな</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-kana-sei-${familyCount}" class="fam-kana-sei" pattern="^[ぁ-んー\\s]+$" placeholder="せい"></div><div><input type="text" id="fam-kana-mei-${familyCount}" class="fam-kana-mei" pattern="^[ぁ-んー\\s]+$" placeholder="めい"></div></div><label>生年月日</label><input type="text" id="fam-date-${familyCount}" class="fam-date" placeholder="例: 1980/01/01" style="background-color: #fff; cursor: pointer;"></div>`;
       container.insertAdjacentHTML('beforeend', html);
       bindFurigana(`fam-sei-${familyCount}`, `fam-kana-sei-${familyCount}`);
       bindFurigana(`fam-mei-${familyCount}`, `fam-kana-mei-${familyCount}`);
+      
+      // 👇 追加された入力欄にカレンダーライブラリを適用
+      flatpickr(`#fam-date-${familyCount}`, fpConfig);
     }
     
     function removeFamilyMember(id) { const el = document.getElementById(`family_${id}`); if(el) el.remove(); if (document.querySelectorAll('.family-member-card').length === 0) { document.getElementById('memberType').value = "個人会員（一般）"; } }
@@ -330,7 +364,6 @@
         if (document.getElementById('editInfoBtn')) document.getElementById('editInfoBtn').style.display = (!isNewRegistration && currentUserData) ? 'block' : 'none';
       }
 
-      // 🌟 スタッフ用メニュー切替ボタンの表示制御
       if (currentUserData && currentUserData['権限'] === 'スタッフ') {
         document.getElementById('staffMenuControls').style.display = 'block';
       } else {
@@ -344,7 +377,6 @@
       window.scrollTo(0, 0);
     }
 
-    // 🌟 メニューの切り替えを実行する関数
     function executeToggleMenu(target) {
       const uid = document.getElementById('lineUid').value;
       if (!uid) return alert("LINE連携が完了していないため操作できません。");
@@ -387,7 +419,13 @@
       
       document.getElementById('rep-sei').value = currentUserData['姓'] || ''; document.getElementById('rep-mei').value = currentUserData['名'] || '';
       document.getElementById('rep-kana-sei').value = currentUserData['せい'] || ''; document.getElementById('rep-kana-mei').value = currentUserData['めい'] || '';
-      if(currentUserData['生年月日']) document.getElementById('birthDate').value = currentUserData['生年月日'].split('T')[0];
+      
+      // 👇 Flatpickrに値をセット
+      if(currentUserData['生年月日']) {
+        const _date = currentUserData['生年月日'].split('T')[0];
+        document.getElementById('birthDate')._flatpickr.setDate(_date);
+      }
+      
       document.getElementById('email').value = currentUserData['メールアドレス'] || ''; document.getElementById('phone').value = currentUserData['電話番号'] || '';
       document.getElementById('postalCode').value = currentUserData['郵便番号'] || ''; document.getElementById('address').value = currentUserData['住所'] || '';
       
