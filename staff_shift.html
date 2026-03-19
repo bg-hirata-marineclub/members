@@ -16,14 +16,18 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .shift-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
-    .date-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 8px; }
+    
+    /* 👇 変更箇所：横並びの美しいレイアウト用のCSS */
+    .info-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+    .info-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .date-text { font-size: 16px; font-weight: bold; color: #212529; }
+    .time-text { font-size: 14px; color: #495057; font-weight: bold; }
+    .note-text { font-size: 12px; color: #d63384; font-weight: bold; background: #fdf2f4; padding: 2px 6px; border-radius: 4px; border: 1px solid #f8d7da; }
     .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; }
     .badge-holiday { background-color: #dc3545; }
     .badge-summer { background-color: #ffc107; color: #333; }
     .badge-normal { background-color: #17a2b8; }
-    .time-text { font-size: 13px; color: #666; margin-bottom: 5px; }
-    .note-text { font-size: 12px; color: #d63384; font-weight: bold; }
+    
     .btn-group { display: flex; gap: 5px; margin-top: 10px; }
     .toggle-btn { flex: 1; padding: 10px 0; text-align: center; border: 1px solid #ccc; border-radius: 6px; background: #fff; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; }
     .toggle-btn.selected-ok { background: #d4edda; border-color: #28a745; color: #155724; }
@@ -58,9 +62,7 @@
   <input type="hidden" id="staffName" value="スタッフ">
 
   <script>
-    // 💡 ご自身のデプロイURLに書き換えてください（00_main.gs のURL）
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw3s5UuxG0BqzCBmFJ0_dvNUHCma8b0IkZerGfYiMlNbS0paSCyCv8skNSvdG0jKuYf/exec";
-    // 💡 スタッフシフト用のLIFF ID
     const LIFF_ID = "2009367368-3Og92YBz"; 
 
     let calendarData = []; let currentSelections = {};
@@ -103,11 +105,17 @@
         if(day.type.includes("夏休み")) badgeClass = "badge-summer";
         let savedStatus = currentSelections[day.date] || "";
 
+        // 👇 変更箇所：時間や備考を上段にまとめたHTML構造
         const html = `
           <div class="shift-card">
-            <div class="date-header"><span class="date-text">${day.date.substring(5)} (${day.day})</span><span class="badge ${badgeClass}">${day.type}</span></div>
-            <div class="time-text">🕒 ${day.startTime} 〜 ${day.endTime}</div>
-            ${day.note ? `<div class="note-text">📌 ${day.note}</div>` : ""}
+            <div class="info-row">
+              <div class="info-left">
+                <span class="date-text">${day.date.substring(5)} (${day.day})</span>
+                <span class="time-text">🕒 ${day.startTime} 〜 ${day.endTime}</span>
+                ${day.note ? `<span class="note-text">📌 ${day.note}</span>` : ""}
+              </div>
+              <span class="badge ${badgeClass}">${day.type}</span>
+            </div>
             <div class="btn-group">
               <button type="button" class="toggle-btn ${savedStatus === '⭕️' ? 'selected-ok' : ''}" onclick="selectStatus('${day.date}', '⭕️', this)">⭕️ 可</button>
               <button type="button" class="toggle-btn ${savedStatus === '🔺' ? 'selected-maybe' : ''}" onclick="selectStatus('${day.date}', '🔺', this)">🔺 調整可</button>
@@ -126,7 +134,7 @@
         if (!day.confirmed) return;
         let isMyShift = day.confirmed.includes(myName);
         let boxClass = isMyShift ? "confirmed-box my-shift-highlight" : "confirmed-box";
-        container.insertAdjacentHTML('beforeend', `<div class="shift-card"><div class="date-header"><span class="date-text">${day.date.substring(5)} (${day.day})</span><span class="badge badge-normal">${day.type}</span></div><div class="${boxClass}">${isMyShift ? "🌟 あなたの出勤日です<br>" : ""}👨‍👩‍👧‍👦 メンバー: ${day.confirmed}</div></div>`);
+        container.insertAdjacentHTML('beforeend', `<div class="shift-card"><div class="info-row"><div class="info-left"><span class="date-text">${day.date.substring(5)} (${day.day})</span></div><span class="badge badge-normal">${day.type}</span></div><div class="${boxClass}">${isMyShift ? "🌟 あなたの出勤日です<br>" : ""}👨‍👩‍👧‍👦 メンバー: ${day.confirmed}</div></div>`);
       });
       if (container.innerHTML === "") container.innerHTML = "<p style='text-align:center; color:#666;'>まだ確定したシフトはありません。</p>";
     }
