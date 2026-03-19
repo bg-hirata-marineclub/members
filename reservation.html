@@ -20,7 +20,6 @@
     .qty-controls { display: flex; align-items: center; gap: 10px; }
     .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: #e4e6eb; font-size: 18px; font-weight: bold; cursor: pointer; }
     
-    /* 💡 CSSの修正：横幅を広げ、PC特有の上下矢印（スピナー）を隠す */
     .qty-input { width: 50px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
     input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     input[type="number"] { -moz-appearance: textfield; }
@@ -150,8 +149,7 @@
       if (urlParams.get('staff') === '1') {
         document.getElementById('adminSection').style.display = 'block';
       } else {
-        // ▼ 追加：お客様画面の場合は、カレンダーの「min属性」に今日の日付をセットする
-        const todayStr = new Date().toLocaleDateString('sv-SE'); // "YYYY-MM-DD"形式
+        const todayStr = new Date().toLocaleDateString('sv-SE'); 
         document.getElementById('resDate').min = todayStr;
       }
     });
@@ -175,29 +173,27 @@
     }
 
     function submitReservation() {
-      // ▼▼▼ 既存の必須チェック ▼▼▼
+      // 必須チェック
       if (!document.getElementById('resDate').value) return alert("利用予定日を入力してください。");
       if (!document.getElementById('groupName').value) return alert("団体名を入力してください。");
       if (!document.getElementById('repName').value) return alert("代表者氏名を入力してください。");
 
-      // ▼▼▼ 追加：過去の日付と営業時間のチェック ▼▼▼
+      // 日付と時間のチェック
       const resDateStr = document.getElementById('resDate').value;
       const sTime = document.getElementById('startTime').value;
       const eTime = document.getElementById('endTime').value;
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
 
-      // 1. 過去の日付チェック（スタッフ画面以外）
       if (!isAdminVisible) {
+        // 過去日付チェック
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // 今日の午前0時
+        today.setHours(0, 0, 0, 0); 
         const inputDate = new Date(resDateStr);
         if (inputDate < today) {
           return alert("エラー：過去の日付で予約することはできません。");
         }
-      }
 
-      // 2. 営業時間チェック（9:00〜16:00）※スタッフ画面以外
-      if (!isAdminVisible) {
+        // 営業時間チェック（9:00〜16:00）
         if (!sTime || !eTime) {
           return alert("利用時間（開始・終了）を両方入力してください。");
         }
@@ -216,7 +212,6 @@
       const btn = document.getElementById('submitBtn');
       btn.innerText = "送信中..."; btn.disabled = true;
 
-      // 💡 修正：大人・子ども別に集計
       const orderData = {
         "カヌー（大人）": parseInt(document.getElementById('b-canoe-adult').value) || 0,
         "カヌー（子ども）": parseInt(document.getElementById('b-canoe-kid').value) || 0,
@@ -231,21 +226,17 @@
         if (val > 0) eqList.push(`${key}×${val}`);
       }
 
-      const sTime = document.getElementById('startTime').value;
-      const eTime = document.getElementById('endTime').value;
       const resTime = (sTime && eTime) ? (sTime + "〜" + eTime) : "";
-      
       const memIdNum = document.getElementById('memberIdNum').value.trim();
       const memIdToSave = memIdNum ? "M" + String(memIdNum).padStart(4, '0') : "";
 
-      const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
       const statusVal = isAdminVisible ? document.getElementById('status').value : "問合せ";
       const routeVal  = isAdminVisible ? document.getElementById('route').value : "WEB";
 
       const data = {
         status: statusVal,
         route: routeVal,
-        date: document.getElementById('resDate').value,
+        date: resDateStr,
         time: resTime,
         groupName: document.getElementById('groupName').value,
         groupType: document.getElementById('groupType').value,
