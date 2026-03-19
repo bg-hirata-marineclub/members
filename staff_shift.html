@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>シフト提出 - B&G 平田海洋クラブ</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #0056b3; margin-top: 0; font-size: 20px; }
+    .tab-container { display: flex; margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #0056b3; }
+    .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; background: #fff; color: #0056b3; border: none; cursor: pointer; }
+    .tab-btn.active { background: #0056b3; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .shift-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+    .date-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 8px; }
+    .date-text { font-size: 16px; font-weight: bold; color: #212529; }
+    .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; }
+    .badge-holiday { background-color: #dc3545; }
+    .badge-summer { background-color: #ffc107; color: #333; }
+    .badge-normal { background-color: #17a2b8; }
+    .time-text { font-size: 13px; color: #666; margin-bottom: 5px; }
+    .note-text { font-size: 12px; color: #d63384; font-weight: bold; }
+    .btn-group { display: flex; gap: 5px; margin-top: 10px; }
+    .toggle-btn { flex: 1; padding: 10px 0; text-align: center; border: 1px solid #ccc; border-radius: 6px; background: #fff; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .toggle-btn.selected-ok { background: #d4edda; border-color: #28a745; color: #155724; }
+    .toggle-btn.selected-maybe { background: #fff3cd; border-color: #ffc107; color: #856404; }
+    .toggle-btn.selected-ng { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+    .confirmed-box { background: #e2e3e5; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 14px; font-weight: bold; color: #383d41; }
+    .my-shift-highlight { background: #cce5ff; border: 1px solid #b8daff; color: #004085; }
+    .submit-btn { width: 100%; padding: 16px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📅 シフト希望提出＆確認</h2>
+    <div id="loading" style="text-align: center; padding: 20px; color: #0056b3; font-weight: bold;">🔄 データを読み込み中...</div>
+    <div id="mainContent" style="display: none;">
+      <div class="tab-container">
+        <button class="tab-btn active" onclick="switchTab('input')">📝 希望を出す</button>
+        <button class="tab-btn" onclick="switchTab('confirm')">🌟 確定シフト</button>
+      </div>
+      <div id="inputTab" class="tab-content active">
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">出勤可能な日にチェックを入れて一番下の「保存」を押してください。（何度でも修正可能です）</p>
+        <div id="shiftList"></div>
+        <button class="submit-btn" id="saveBtn" onclick="submitShift()">💾 この内容で保存する</button>
+      </div>
+      <div id="confirmTab" class="tab-content">
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">管理者が決定したシフトです。自分の名前がある日はハイライトされます。</p>
+        <div id="confirmedList"></div>
+      </div>
+    </div>
+  </div>
+  <input type="hidden" id="lineUid">
+  <input type="hidden" id="staffName" value="スタッフ">
+
+  <script>
+    // 💡 ご自身のデプロイURLに書き換えてください（00_main.gs のURL）
+    const GAS_URL = "ここにGASのURLを貼り付けます";
+    // 💡 スタッフシフト用のLIFF ID
+    const LIFF_ID = "ここにLIFF_IDを貼り付けます"; 
+
+    let calendarData = []; let currentSelections = {};
+
+    document.addEventListener("DOMContentLoaded", () => {
+      liff.init({ liffId: LIFF_ID }).then(() => {
+        if (liff.isLoggedIn()) {
+          liff.getProfile().then(p => {
+            document.getElementById('lineUid').value = p.userId;
+            document.getElementById('staffName').value = p.displayName;
+            fetchData(p.userId);
+          });
+        } else { liff.login(); }
+      }).catch(err => alert("LIFF初期化エラー"));
+    });
+
+    function switchTab(tab) {
+      document.getElementById('inputTab').classList.remove('active'); document.getElementById('confirmTab').classList.remove('active');
+      document.querySelectorAll('.tab-btn')[0].classList.remove('active'); document.querySelectorAll('.tab-btn')[1].classList.remove('active');
+      if (tab === 'input') { document.getElementById('inputTab').classList.add('active'); document.querySelectorAll('.tab-btn')[0].classList.add('active'); } 
+      else { document.getElementById('confirmTab').classList.add('active'); document.querySelectorAll('.tab-btn')[1].classList.add('active'); }
+    }
+
+    function fetchData(uid) {
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getShiftData", uid: uid }) })
+      .then(r => r.json()).then(res => {
+        if(res.status === "success") {
+          calendarData = res.calendar; currentSelections = res.myShifts || {};
+          renderShiftList(); renderConfirmedList();
+          document.getElementById('loading').style.display = "none"; document.getElementById('mainContent').style.display = "block";
+        } else { alert("取得エラー: " + res.message); }
+      }).catch(e => alert("通信エラー"));
+    }
+
+    function renderShiftList() {
+      const container = document.getElementById('shiftList'); container.innerHTML = "";
+      calendarData.forEach(day => {
+        let badgeClass = "badge-normal";
+        if(day.type.includes("祝日")) badgeClass = "badge-holiday";
+        if(day.type.includes("夏休み")) badgeClass = "badge-summer";
+        let savedStatus = currentSelections[day.date] || "";
+
+        const html = `
+          <div class="shift-card">
+            <div class="date-header"><span class="date-text">${day.date.substring(5)} (${day.day})</span><span class="badge ${badgeClass}">${day.type}</span></div>
+            <div class="time-text">🕒 ${day.startTime} 〜 ${day.endTime}</div>
+            ${day.note ? `<div class="note-text">📌 ${day.note}</div>` : ""}
+            <div class="btn-group">
+              <button type="button" class="toggle-btn ${savedStatus === '⭕️' ? 'selected-ok' : ''}" onclick="selectStatus('${day.date}', '⭕️', this)">⭕️ 可</button>
+              <button type="button" class="toggle-btn ${savedStatus === '🔺' ? 'selected-maybe' : ''}" onclick="selectStatus('${day.date}', '🔺', this)">🔺 調整可</button>
+              <button type="button" class="toggle-btn ${savedStatus === '❌' ? 'selected-ng' : ''}" onclick="selectStatus('${day.date}', '❌', this)">❌ 不可</button>
+            </div>
+          </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+      });
+    }
+
+    function renderConfirmedList() {
+      const container = document.getElementById('confirmedList'); container.innerHTML = "";
+      const myName = document.getElementById('staffName').value;
+      calendarData.forEach(day => {
+        if (!day.confirmed) return;
+        let isMyShift = day.confirmed.includes(myName);
+        let boxClass = isMyShift ? "confirmed-box my-shift-highlight" : "confirmed-box";
+        container.insertAdjacentHTML('beforeend', `<div class="shift-card"><div class="date-header"><span class="date-text">${day.date.substring(5)} (${day.day})</span><span class="badge badge-normal">${day.type}</span></div><div class="${boxClass}">${isMyShift ? "🌟 あなたの出勤日です<br>" : ""}👨‍👩‍👧‍👦 メンバー: ${day.confirmed}</div></div>`);
+      });
+      if (container.innerHTML === "") container.innerHTML = "<p style='text-align:center; color:#666;'>まだ確定したシフトはありません。</p>";
+    }
+
+    function selectStatus(date, status, btnElement) {
+      currentSelections[date] = status;
+      const group = btnElement.parentElement.children;
+      for(let i=0; i<group.length; i++) group[i].className = "toggle-btn";
+      if(status === '⭕️') btnElement.classList.add('selected-ok');
+      if(status === '🔺') btnElement.classList.add('selected-maybe');
+      if(status === '❌') btnElement.classList.add('selected-ng');
+    }
+
+    function submitShift() {
+      const uid = document.getElementById('lineUid').value; const staffName = document.getElementById('staffName').value;
+      const shiftsToSend = [];
+      for (const [date, status] of Object.entries(currentSelections)) { if (status) shiftsToSend.push({ date: date, status: status }); }
+      if (shiftsToSend.length === 0) return alert("提出するデータがありません。");
+      
+      const btn = document.getElementById('saveBtn'); btn.innerText = "⏳ 保存中..."; btn.disabled = true;
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "submitShift", uid: uid, staffName: staffName, shifts: shiftsToSend }) })
+      .then(r => r.json()).then(res => {
+        if(res.status === "success") { alert("✅ 保存しました！"); liff.closeWindow(); } 
+        else { alert("エラー: " + res.message); }
+      }).catch(e => alert("通信エラー")).finally(() => { btn.innerText = "💾 この内容で保存する"; btn.disabled = false; });
+    }
+  </script>
+</body>
+</html>
