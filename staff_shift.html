@@ -138,25 +138,25 @@
       const container = document.getElementById('confirmedList'); container.innerHTML = "";
       const myName = document.getElementById('staffName').value;
       
-      const normalizeName = (str) => String(str).replace(/[\s　]+/g, ""); // 空白削除
-      const myNameNorm = normalizeName(myName);
+      // 💡 修正：比較用に名前から「すべての空白」を消す関数
+      const normalize = (str) => String(str || "").replace(/[\s　]+/g, "").toLowerCase();
+      const myNameNorm = normalize(myName);
       
       calendarData.forEach(day => {
         if (!day.confirmed) return;
         
-        let memberArray = day.confirmed.split(',').map(s => s.trim()).filter(Boolean);
+        // カンマまたは読点で分割
+        let memberArray = day.confirmed.split(/[,,、]/).map(s => s.trim()).filter(Boolean);
         if(memberArray.length === 0) return;
         
-        // 💡 修正：重複を排除しつつ、自分かどうかを判定
-        memberArray = [...new Set(memberArray)];
-        let isMyShift = memberArray.some(name => normalizeName(name) === myNameNorm);
-        
+        // 💡 修正：空白を無視して「自分が含まれているか」を判定
+        let isMyShift = memberArray.some(name => normalize(name) === myNameNorm);
         let boxClass = isMyShift ? "confirmed-box my-shift-highlight" : "confirmed-box";
         
         let formattedMembers = memberArray.map(name => {
-          // 空白を無視して一致するかチェック
-          return normalizeName(name) === myNameNorm 
-            ? `<span style="color:#d63384; font-size:16px; font-weight:900; text-decoration:underline;">${name}</span>` 
+          // 💡 修正：空白を無視して一致したらハイライト（表示は元のスペース付きのまま）
+          return normalize(name) === myNameNorm 
+            ? `<span style="color:#d63384; font-size:16px; font-weight:900; text-decoration:underline; border-bottom: 2px solid #d63384;">${name}</span>` 
             : name;
         }).join('、');
         
