@@ -40,6 +40,9 @@
   <div class="container">
     <h2>📅 シフト希望提出＆確認</h2>
     <div id="staffNameDisplay" style="text-align: center; font-size: 14px; color: #0056b3; font-weight: bold; margin-bottom: 10px; background: #e8f4fd; padding: 5px; border-radius: 5px;">👤 読込中...</div>
+    
+    <div id="loading" style="text-align: center; padding: 20px; color: #0056b3; font-weight: bold;">🔄 データを読み込み中...</div>
+    
     <div id="mainContent" style="display: none;">
       <div class="tab-container">
         <button class="tab-btn active" onclick="switchTab('input')">📝 希望を出す</button>
@@ -74,7 +77,10 @@
             fetchData(p.userId);
           });
         } else { liff.login(); }
-      }).catch(err => alert("LIFF初期化エラー"));
+      }).catch(err => {
+        alert("LIFF初期化エラー");
+        document.getElementById('staffNameDisplay').innerText = "⚠️ LIFFエラー";
+      });
     });
 
     function switchTab(tab) {
@@ -88,9 +94,9 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getShiftData", uid: uid }) })
       .then(r => r.json()).then(res => {
         if(res.status === "success") {
-          calendarData = res.calendar; currentSelections = res.myShifts || {};
+          calendarData = res.calendar || []; 
+          currentSelections = res.myShifts || {};
           
-          // 💡 重要：本名が取得できたら上書きし、画面に表示する
           if(res.realName) {
             document.getElementById('staffName').value = res.realName;
             document.getElementById('staffNameDisplay').innerText = "👤 ログイン中: " + res.realName + " さん";
@@ -99,28 +105,44 @@
             document.getElementById('staffNameDisplay').style.color = "red";
           }
           
-          renderShiftList(); renderConfirmedList();
-          document.getElementById('loading').style.display = "none"; document.getElementById('mainContent').style.display = "block";
-        } else { alert("取得エラー: " + res.message); }
-      }).catch(e => alert("通信エラー"));
+          try {
+            renderShiftList(); 
+            renderConfirmedList();
+            document.getElementById('loading').style.display = "none"; 
+            document.getElementById('mainContent').style.display = "block";
+          } catch(renderError) {
+            console.error(renderError);
+            alert("画面の表示中にエラーが発生しました。");
+          }
+        } else { 
+          alert("取得エラー: " + res.message); 
+        }
+      }).catch(e => {
+        console.error(e);
+        alert("通信エラーまたはデータエラーが発生しました");
+      });
     }
 
     function renderShiftList() {
       const container = document.getElementById('shiftList'); container.innerHTML = "";
       calendarData.forEach(day => {
         let badgeClass = "badge-normal";
-        if(day.type.includes("祝日")) badgeClass = "badge-holiday";
-        if(day.type.includes("夏休み")) badgeClass = "badge-summer";
+        // 💡 修正：数値等が入っていてもエラーにならないよう強制的に文字列化
+        let typeStr = String(day.type || ""); 
+        if(typeStr.includes("祝日")) badgeClass = "badge-holiday";
+        if(typeStr.includes("夏休み")) badgeClass = "badge-summer";
+        
         let savedStatus = currentSelections[day.date] || "";
+        let displayDate = String(day.date || "").substring(5);
 
         const html = `
           <div class="shift-card">
             <div class="date-header">
               <div class="date-time-wrap">
-                <span class="date-text">${day.date.substring(5)}(${day.day})</span>
-                <span class="time-text">${day.startTime}-${day.endTime}</span>
+                <span class="date-text">${displayDate}(${day.day || ""})</span>
+                <span class="time-text">${day.startTime || ""}-${day.endTime || ""}</span>
               </div>
-              <span class="badge ${badgeClass}">${day.type}</span>
+              <span class="badge ${badgeClass}">${typeStr}</span>
             </div>
             ${day.note ? `<div class="note-text">※${day.note}</div>` : ""}
             <div class="btn-group">
@@ -138,33 +160,37 @@
       const container = document.getElementById('confirmedList'); container.innerHTML = "";
       const myName = document.getElementById('staffName').value;
       
-      // 💡 修正：比較用に名前から「すべての空白」を消す関数
       const normalize = (str) => String(str || "").replace(/[\s　]+/g, "").toLowerCase();
       const myNameNorm = normalize(myName);
       
       calendarData.forEach(day => {
-        if (!day.confirmed) return;
+        // 💡 修正：確定シフトのデータを強制的に文字列化（エラー防止）
+        let confirmedStr = String(day.confirmed || "");
+        if (!confirmedStr) return;
         
-        // カンマまたは読点で分割
-        let memberArray = day.confirmed.split(/[,,、]/).map(s => s.trim()).filter(Boolean);
+        // カンマと読点の両方に対応して分割
+        let memberArray = confirmedStr.split(/[,、]/).map(s => s.trim()).filter(Boolean);
         if(memberArray.length === 0) return;
         
-        // 💡 修正：空白を無視して「自分が含まれているか」を判定
+        memberArray = [...new Set(memberArray)]; // 重複排除
+        
         let isMyShift = memberArray.some(name => normalize(name) === myNameNorm);
         let boxClass = isMyShift ? "confirmed-box my-shift-highlight" : "confirmed-box";
         
         let formattedMembers = memberArray.map(name => {
-          // 💡 修正：空白を無視して一致したらハイライト（表示は元のスペース付きのまま）
           return normalize(name) === myNameNorm 
             ? `<span style="color:#d63384; font-size:16px; font-weight:900; text-decoration:underline; border-bottom: 2px solid #d63384;">${name}</span>` 
             : name;
         }).join('、');
         
+        let displayDate = String(day.date || "").substring(5);
+        let typeStr = String(day.type || "");
+
         const html = `
           <div class="shift-card">
             <div class="date-header">
-              <span class="date-text">${day.date.substring(5)}(${day.day})</span>
-              <span class="badge badge-normal">${day.type}</span>
+              <span class="date-text">${displayDate}(${day.day || ""})</span>
+              <span class="badge badge-normal">${typeStr}</span>
             </div>
             <div class="${boxClass}">
               ${isMyShift ? "<div style='color:#d63384; font-weight:bold; margin-bottom:6px;'>🌟 あなたの出勤日です</div>" : ""}
