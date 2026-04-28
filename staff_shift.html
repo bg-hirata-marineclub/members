@@ -70,7 +70,6 @@
         if (liff.isLoggedIn()) {
           liff.getProfile().then(p => {
             document.getElementById('lineUid').value = p.userId;
-            // 一旦LINEの名前をセット。後でバックエンドから本名を取得して上書き。
             document.getElementById('staffName').value = p.displayName;
             fetchData(p.userId);
           });
@@ -90,7 +89,6 @@
       .then(r => r.json()).then(res => {
         if(res.status === "success") {
           calendarData = res.calendar; currentSelections = res.myShifts || {};
-          // 💡 修正：バックエンドから取得した「本名」を保持する（ハイライト機能のため）
           if(res.realName) document.getElementById('staffName').value = res.realName;
           
           renderShiftList(); renderConfirmedList();
@@ -132,19 +130,25 @@
       const container = document.getElementById('confirmedList'); container.innerHTML = "";
       const myName = document.getElementById('staffName').value;
       
+      // 💡 修正：名前の「空白（全角・半角）」をすべて削除して比較するための関数
+      const normalizeName = (str) => String(str).replace(/[\s　]+/g, "");
+      const myNameNorm = normalizeName(myName);
+      
       calendarData.forEach(day => {
         if (!day.confirmed) return;
         
-        // 💡 修正：文字列を分割して配列化し、重複を排除
         let memberArray = [...new Set(day.confirmed.split(',').map(s => s.trim()).filter(Boolean))];
         if(memberArray.length === 0) return;
         
-        let isMyShift = memberArray.includes(myName);
+        // 💡 修正：空白を無視して「自分が含まれているか」をチェック
+        let isMyShift = memberArray.some(name => normalizeName(name) === myNameNorm);
         let boxClass = isMyShift ? "confirmed-box my-shift-highlight" : "confirmed-box";
         
-        // 💡 修正：自分の名前を完全一致で探し、太字ピンクのアンダーラインで目立たせる
+        // 💡 修正：空白を無視して一致する名前だけをハイライトする
         let formattedMembers = memberArray.map(name => {
-          return name === myName ? `<span style="color:#d63384; font-size:16px; font-weight:900; text-decoration:underline;">${name}</span>` : name;
+          return normalizeName(name) === myNameNorm 
+            ? `<span style="color:#d63384; font-size:16px; font-weight:900; text-decoration:underline;">${name}</span>` 
+            : name;
         }).join('、');
         
         const html = `
