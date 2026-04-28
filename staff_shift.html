@@ -31,8 +31,8 @@
     .toggle-btn.selected-ok { background: #d4edda; border-color: #28a745; color: #155724; }
     .toggle-btn.selected-maybe { background: #fff3cd; border-color: #ffc107; color: #856404; }
     .toggle-btn.selected-ng { background: #f8d7da; border-color: #dc3545; color: #721c24; }
-    .confirmed-box { background: #e2e3e5; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 14px; font-weight: bold; color: #383d41; }
-    .my-shift-highlight { background: #cce5ff; border: 1px solid #b8daff; color: #004085; }
+    .confirmed-box { background: #e2e3e5; padding: 12px; border-radius: 6px; margin-top: 10px; font-size: 14px; font-weight: bold; color: #383d41; }
+    .my-shift-highlight { background: #cce5ff; border: 2px solid #80bdff; }
     .submit-btn { width: 100%; padding: 16px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
   </style>
 </head>
@@ -70,6 +70,7 @@
         if (liff.isLoggedIn()) {
           liff.getProfile().then(p => {
             document.getElementById('lineUid').value = p.userId;
+            // 一旦LINEの名前をセット。後でバックエンドから本名を取得して上書き。
             document.getElementById('staffName').value = p.displayName;
             fetchData(p.userId);
           });
@@ -89,6 +90,9 @@
       .then(r => r.json()).then(res => {
         if(res.status === "success") {
           calendarData = res.calendar; currentSelections = res.myShifts || {};
+          // 💡 修正：バックエンドから取得した「本名」を保持する（ハイライト機能のため）
+          if(res.realName) document.getElementById('staffName').value = res.realName;
+          
           renderShiftList(); renderConfirmedList();
           document.getElementById('loading').style.display = "none"; document.getElementById('mainContent').style.display = "block";
         } else { alert("取得エラー: " + res.message); }
@@ -127,10 +131,21 @@
     function renderConfirmedList() {
       const container = document.getElementById('confirmedList'); container.innerHTML = "";
       const myName = document.getElementById('staffName').value;
+      
       calendarData.forEach(day => {
         if (!day.confirmed) return;
-        let isMyShift = day.confirmed.includes(myName);
+        
+        // 💡 修正：文字列を分割して配列化し、重複を排除
+        let memberArray = [...new Set(day.confirmed.split(',').map(s => s.trim()).filter(Boolean))];
+        if(memberArray.length === 0) return;
+        
+        let isMyShift = memberArray.includes(myName);
         let boxClass = isMyShift ? "confirmed-box my-shift-highlight" : "confirmed-box";
+        
+        // 💡 修正：自分の名前を完全一致で探し、太字ピンクのアンダーラインで目立たせる
+        let formattedMembers = memberArray.map(name => {
+          return name === myName ? `<span style="color:#d63384; font-size:16px; font-weight:900; text-decoration:underline;">${name}</span>` : name;
+        }).join('、');
         
         const html = `
           <div class="shift-card">
@@ -138,7 +153,11 @@
               <span class="date-text">${day.date.substring(5)}(${day.day})</span>
               <span class="badge badge-normal">${day.type}</span>
             </div>
-            <div class="${boxClass}">${isMyShift ? "🌟 あなたの出勤日です<br>" : ""}👨‍👩‍👧‍👦 メンバー: ${day.confirmed}</div>
+            <div class="${boxClass}">
+              ${isMyShift ? "<div style='color:#d63384; font-weight:bold; margin-bottom:6px;'>🌟 あなたの出勤日です</div>" : ""}
+              <div style="font-size:12px; color:#555; margin-bottom:4px;">👨‍👩‍👧‍👦 出勤メンバー (計 ${memberArray.length}名)</div>
+              <div style="line-height:1.6; font-size:14px;">${formattedMembers}</div>
+            </div>
           </div>
         `;
         container.insertAdjacentHTML('beforeend', html);
