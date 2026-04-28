@@ -39,7 +39,7 @@
 <body>
   <div class="container">
     <h2>📅 シフト希望提出＆確認</h2>
-    <div id="loading" style="text-align: center; padding: 20px; color: #0056b3; font-weight: bold;">🔄 データを読み込み中...</div>
+    <div id="staffNameDisplay" style="text-align: center; font-size: 14px; color: #0056b3; font-weight: bold; margin-bottom: 10px; background: #e8f4fd; padding: 5px; border-radius: 5px;">👤 読込中...</div>
     <div id="mainContent" style="display: none;">
       <div class="tab-container">
         <button class="tab-btn active" onclick="switchTab('input')">📝 希望を出す</button>
@@ -89,7 +89,15 @@
       .then(r => r.json()).then(res => {
         if(res.status === "success") {
           calendarData = res.calendar; currentSelections = res.myShifts || {};
-          if(res.realName) document.getElementById('staffName').value = res.realName;
+          
+          // 💡 重要：本名が取得できたら上書きし、画面に表示する
+          if(res.realName) {
+            document.getElementById('staffName').value = res.realName;
+            document.getElementById('staffNameDisplay').innerText = "👤 ログイン中: " + res.realName + " さん";
+          } else {
+            document.getElementById('staffNameDisplay').innerText = "⚠️ 名簿に名前が見つかりません";
+            document.getElementById('staffNameDisplay').style.color = "red";
+          }
           
           renderShiftList(); renderConfirmedList();
           document.getElementById('loading').style.display = "none"; document.getElementById('mainContent').style.display = "block";
@@ -130,22 +138,23 @@
       const container = document.getElementById('confirmedList'); container.innerHTML = "";
       const myName = document.getElementById('staffName').value;
       
-      // 💡 修正：名前の「空白（全角・半角）」をすべて削除して比較するための関数
-      const normalizeName = (str) => String(str).replace(/[\s　]+/g, "");
+      const normalizeName = (str) => String(str).replace(/[\s　]+/g, ""); // 空白削除
       const myNameNorm = normalizeName(myName);
       
       calendarData.forEach(day => {
         if (!day.confirmed) return;
         
-        let memberArray = [...new Set(day.confirmed.split(',').map(s => s.trim()).filter(Boolean))];
+        let memberArray = day.confirmed.split(',').map(s => s.trim()).filter(Boolean);
         if(memberArray.length === 0) return;
         
-        // 💡 修正：空白を無視して「自分が含まれているか」をチェック
+        // 💡 修正：重複を排除しつつ、自分かどうかを判定
+        memberArray = [...new Set(memberArray)];
         let isMyShift = memberArray.some(name => normalizeName(name) === myNameNorm);
+        
         let boxClass = isMyShift ? "confirmed-box my-shift-highlight" : "confirmed-box";
         
-        // 💡 修正：空白を無視して一致する名前だけをハイライトする
         let formattedMembers = memberArray.map(name => {
+          // 空白を無視して一致するかチェック
           return normalizeName(name) === myNameNorm 
             ? `<span style="color:#d63384; font-size:16px; font-weight:900; text-decoration:underline;">${name}</span>` 
             : name;
