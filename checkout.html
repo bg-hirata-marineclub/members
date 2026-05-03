@@ -146,6 +146,7 @@
       }).catch(e => showError("通信エラー"));
     }
 
+    // 💡 【修正】完了済みでもクリックできるように変更
     function renderList() {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('listScreen').style.display = 'block';
@@ -161,7 +162,7 @@
         
         const card = document.createElement('div'); 
         card.className = cardClass; 
-        if (!isDone) card.onclick = () => openDetail(index);
+        card.onclick = () => openDetail(index); // ← 完了済でもクリックできるように変更
         
         card.innerHTML = `
           <div>
@@ -173,12 +174,13 @@
             <div class="v-name">${v.name}</div>
             <div class="v-equip">${v.equipment || "舟艇未選択"}</div>
           </div>
-          <div class="v-arrow">${isDone ? "完了" : "確認 ＞"}</div>
+          <div class="v-arrow">${isDone ? "修正 ＞" : "確認 ＞"}</div>
         `;
         listDiv.appendChild(card);
       });
     }
 
+    // 💡 【修正】修正モードかどうかでボタンの表示と機能を切り替え
     function openDetail(index) {
       currentVisitor = visitorsData[index];
       document.getElementById('listScreen').style.display = 'none'; 
@@ -195,21 +197,60 @@
       }
       document.getElementById('d-sub').innerText = subInfo;
       
-      // UIの切り替え
+      const isDone = currentVisitor.status === "精算済" || currentVisitor.status === "利用終了";
       const btn = document.getElementById('checkoutBtn');
       const totalSec = document.getElementById('totalSection');
+      
       if (currentVisitor.type === "member") {
-        btn.innerText = "利用を終了する";
+        btn.innerText = isDone ? "📝 実績を修正して保存" : "利用を終了する";
         btn.className = "checkout-btn btn-member";
-        totalSec.style.display = 'none'; // メンバーは金額非表示
+        totalSec.style.display = 'none';
       } else {
-        btn.innerText = "精算を完了する";
+        btn.innerText = isDone ? "📝 実績を修正して保存" : "精算を完了する";
         btn.className = "checkout-btn";
         totalSec.style.display = 'block';
       }
+      
+      // 完了済みの場合は修正用の関数を呼ぶ
+      btn.onclick = isDone ? () => updateCheckout() : () => processCheckout();
 
       renderBoats(); 
       calcTotal();
+    }
+
+    // 💡 【新規追加】修正データを送信する関数（既存の</script>の手前に追加）
+    function updateCheckout() {
+      if (!confirm("実績を修正して保存しますか？\n（日報が作成済みの場合は、日報データも自動更新されます）")) return;
+      
+      const btn = document.getElementById('checkoutBtn'); btn.innerText = "通信中..."; btn.disabled = true;
+
+      let newOrderData = { ...currentVisitor.orderData }; let newEqList = []; let total = 0;
+      const inputs = document.querySelectorAll('.qty-input');
+      inputs.forEach(input => {
+        const boatName = input.id.replace('qty-', '');
+        const qty = parseInt(input.value) || 0;
+        newOrderData[boatName] = qty;
+        if (qty > 0) { newEqList.push(`${boatName}×${qty}`); total += qty * (priceMaster[boatName] || 0); }
+      });
+      if (newOrderData['その他']) newEqList.push(`その他(${newOrderData['その他']})`);
+      
+      const payload = {
+        type: currentVisitor.type,
+        row: currentVisitor.row, 
+        dateStr: currentVisitor.dateStr, // 連動用に日付を送る
+        equipment: newEqList.join("、 "), 
+        orderData: newOrderData, 
+        total: total
+      };
+
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "updateCheckoutData", data: payload }) })
+      .then(res => res.json()).then(data => {
+        if (data.status === "success") {
+          alert(data.message);
+          btn.innerText = "📝 実績を修正して保存"; btn.disabled = false; 
+          loadData(); 
+        } else { alert("エラー: " + data.message); btn.disabled = false; }
+      }).catch(e => { alert("通信エラー"); btn.disabled = false; });
     }
 
     function renderBoats() {
