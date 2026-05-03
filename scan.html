@@ -112,25 +112,96 @@
     let pendingTimecardType = ""; let currentLat = null; let currentLng = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-      liff.init({ liffId: "2009367368-GI5IPPSf" }).then(() => { if (!liff.isLoggedIn()) liff.login(); else liff.getProfile().then(p => verifyStaffAccess(p.userId)); });
+      liff.init({ liffId: "2009367368-GI5IPPSf" }).then(() => { 
+        if (!liff.isLoggedIn()) {
+          liff.login(); 
+        } else {
+          liff.getProfile().then(p => {
+            const uid = p.userId;
+            
+            // 💡 爆速化: LocalStorageからキャッシュを取得
+            const cachedStaff = localStorage.getItem('staffData_' + uid);
+            const cachedMembers = localStorage.getItem('memberCacheData');
+            
+            if (cachedStaff && cachedMembers) {
+              // キャッシュが存在する場合は即座にメモリに展開してスキャナーを起動（待ち時間ゼロ）
+              const staffData = JSON.parse(cachedStaff);
+              currentStaffName = staffData.staffName;
+              currentMemberId = staffData.memberId;
+              currentCerts = staffData.certs || "";
+              
+              const mData = JSON.parse(cachedMembers);
+              memberCache = mData.memberCache;
+              feeCache = mData.feeCache;
+              typeCache = mData.typeCache;
+              priceMaster = mData.priceMaster;
+              repCache = mData.repCache;
+              
+              document.getElementById('loading').style.display = 'none';
+              document.getElementById('appContent').style.display = 'block';
+              
+              html5QrCode = new Html5Qrcode("reader");
+              startScanner();
+              
+              // 裏側で非同期に権限と名簿の最新情報を取得してキャッシュを更新する
+              verifyStaffAccess(uid, true);
+              loadCache();
+            } else {
+              // 初回アクセス時、またはキャッシュがない場合は通常通り同期取得
+              verifyStaffAccess(uid, false);
+            }
+          });
+        }
+      });
     });
 
-    function verifyStaffAccess(uid) {
+    // 権限確認（isBackgroundフラグで裏側での処理かどうかを判定）
+    function verifyStaffAccess(uid, isBackground = false) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "verifyStaff", uid: uid }) })
       .then(res => res.json()).then(data => {
         if (data.status === "success") { 
           currentStaffName = data.staffName; currentMemberId = data.memberId; currentCerts = data.certs || ""; 
-          document.getElementById('loading').style.display = 'none'; document.getElementById('appContent').style.display = 'block'; 
-          loadCache(); html5QrCode = new Html5Qrcode("reader"); startScanner(); 
-        } else { document.getElementById('errorScreen').style.display = 'block'; }
+          
+          // 💡 取得したスタッフ情報をLocalStorageに保存
+          localStorage.setItem('staffData_' + uid, JSON.stringify({ staffName: currentStaffName, memberId: currentMemberId, certs: currentCerts }));
+          
+          if (!isBackground) {
+            document.getElementById('loading').style.display = 'none'; 
+            document.getElementById('appContent').style.display = 'block'; 
+            loadCache(() => {
+              html5QrCode = new Html5Qrcode("reader"); startScanner(); 
+            });
+          }
+        } else {
+          // 権限が剥奪された場合など、キャッシュを消去してエラー画面を強制表示
+          localStorage.removeItem('staffData_' + uid);
+          document.getElementById('appContent').style.display = 'none';
+          document.getElementById('errorScreen').style.display = 'block'; 
+          if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop().catch(e => console.error(e));
+        }
       });
     }
 
+    // 名簿データの取得とキャッシュ保存
     function loadCache(callback) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getMembers" }) })
       .then(res => res.json()).then(data => { 
-        if (data.status === "success") { memberCache = data.members; feeCache = data.feeStatuses; typeCache = data.memberTypes; priceMaster = data.feeMaster; repCache = data.repIds; if (callback) callback(); } 
+        if (data.status === "success") { 
+          memberCache = data.members; feeCache = data.feeStatuses; typeCache = data.memberTypes; priceMaster = data.feeMaster; repCache = data.repIds; 
+          
+          // 💡 名簿データをLocalStorageに保存
+          saveCachesToLocal();
+          
+          if (callback) callback(); 
+        } 
       });
+    }
+
+    // 💡 キャッシュ保存用の共通関数
+    function saveCachesToLocal() {
+      localStorage.setItem('memberCacheData', JSON.stringify({ 
+        memberCache: memberCache, feeCache: feeCache, typeCache: typeCache, priceMaster: priceMaster, repCache: repCache 
+      }));
     }
 
     function startScanner() {
@@ -152,6 +223,7 @@
           return;
         }
 
+        // キャッシュにない新規会員の場合は、強制的に最新データを取得し直す（既存の優れたフォールバック機能です）
         if (!memberCache[decodedText] && decodedText.startsWith("M")) {
           document.getElementById('loading').style.display = 'block'; document.getElementById('loading').innerText = "🔄 最新の会員データを取得中...";
           loadCache(() => { document.getElementById('loading').style.display = 'none'; processScannedMember(decodedText); });
@@ -194,7 +266,11 @@
       const memId = document.getElementById('displayId').innerText; const btn = document.getElementById('feeBtn'); btn.innerText = "⏳ 入金処理中..."; btn.disabled = true;
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "processFeeCollection", data: { memberId: memId, memberName: document.getElementById('displayName').innerText, staffName: currentStaffName, amount: price } }) })
       .then(res => res.json()).then(data => {
-        if (data.status === "success") { feeCache[memId] = "入金済"; const alertBox = document.getElementById('feeAlertArea'); alertBox.className = "fee-alert-box fee-alert-success"; alertBox.innerHTML = '<div style="color: #155724; font-weight: bold; font-size: 16px; text-align: center;">✅ 入金処理が完了しました！<br>続けて下のボタンから舟艇を選択してください。</div>'; } 
+        if (data.status === "success") { 
+          feeCache[memId] = "入金済"; 
+          saveCachesToLocal(); // 💡 入金処理が完了した際、ローカルのキャッシュもすぐに「入金済」として上書き保存します
+          const alertBox = document.getElementById('feeAlertArea'); alertBox.className = "fee-alert-box fee-alert-success"; alertBox.innerHTML = '<div style="color: #155724; font-weight: bold; font-size: 16px; text-align: center;">✅ 入金処理が完了しました！<br>続けて下のボタンから舟艇を選択してください。</div>'; 
+        } 
         else { alert("⚠️ エラー: " + data.message); btn.innerText = "💰 現金を受領して入金済みにする"; btn.disabled = false; }
       });
     }
@@ -202,7 +278,6 @@
     function startGpsFlow(type) {
       pendingTimecardType = type;
       
-      // 💡 追加：事務業務の場合はGPSと船舶手当をスキップして直接送信！
       const workType = document.getElementById('workType').value;
       if (workType === "事務業務") {
         currentLat = null; currentLng = null;
@@ -244,11 +319,10 @@
       }
       
       const commentText = document.getElementById('reportComment') ? document.getElementById('reportComment').value : "";
-      // 💡 業務区分を取得
       const workType = document.getElementById('workType') ? document.getElementById('workType').value : "現場実務";
 
       document.getElementById('timecardArea').style.display = 'none';
-      document.getElementById('timecardSelectArea').style.display = 'none'; // 事務業務用
+      document.getElementById('timecardSelectArea').style.display = 'none'; 
       document.getElementById('successMessage').style.display = 'block';
       document.getElementById('successText').innerText = "通信中...";
 
@@ -256,7 +330,6 @@
         method: "POST", headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
           action: "processTimecard", 
-          // 💡 業務区分(workType)をGASに送信
           data: { memberId: currentMemberId, staffName: currentStaffName, type: pendingTimecardType, lat: currentLat, lng: currentLng, shipAllowance: allowanceAmount, comment: commentText, workType: workType }
         })
       })
