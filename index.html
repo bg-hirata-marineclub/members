@@ -244,6 +244,7 @@
           currentUserData = res.userData; 
           currentUserData.dbLineUid = res.dbLineUid; 
           savedProfileImage = res.imageUrl; 
+          window.currentFamilyList = res.familyList; // 💡追加
           document.getElementById('loadingScreen').style.display = 'none'; 
           displayDigitalCard(res, false); 
         } else {
@@ -292,10 +293,35 @@
       document.querySelector('.photo-upload-btn').innerText = '✅ 写真をセットしました'; document.querySelector('.photo-upload-btn').style.backgroundColor = '#05b34c';
     });
 
-    function addFamilyMember() {
-      familyCount++; document.getElementById('memberType').value = "家族会員（代表者）"; 
+    function addFamilyMember(data = null) {
+      familyCount++; 
+      const isExisting = data !== null;
+      if (!isExisting) document.getElementById('memberType').value = "家族会員（代表者）"; 
+      
       const container = document.getElementById('familySection');
-      const html = `<div class="family-member-card" id="family_${familyCount}"><button type="button" class="remove-btn" onclick="removeFamilyMember(${familyCount})">×</button><label>家族メンバー${familyCount} 氏名</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-sei-${familyCount}" class="fam-sei" placeholder="姓"></div><div><input type="text" id="fam-mei-${familyCount}" class="fam-mei" placeholder="名"></div></div><label>ふりがな</label><div class="flex-row" style="margin-bottom:15px;"><div><input type="text" id="fam-kana-sei-${familyCount}" class="fam-kana-sei" pattern="^[ぁ-んー\\s]+$" placeholder="せい"></div><div><input type="text" id="fam-kana-mei-${familyCount}" class="fam-kana-mei" pattern="^[ぁ-んー\\s]+$" placeholder="めい"></div></div><label>生年月日 <span style="font-size: 11px; font-weight: normal; color: #d9534f;">（※Androidは左上の「年」をタップ）</span></label><input type="date" id="fam-date-${familyCount}" class="fam-date"></div>`;
+      
+      // 既存メンバーならIDを保持し、削除ボタンを隠す
+      const memberIdField = isExisting ? `<input type="hidden" class="fam-id" value="${data['会員ID']}">` : `<input type="hidden" class="fam-id" value="">`;
+      const removeBtn = !isExisting ? `<button type="button" class="remove-btn" onclick="removeFamilyMember(${familyCount})">×</button>` : '';
+      const labelText = isExisting ? `家族メンバー${familyCount} (登録済み: ${data['会員ID']})` : `家族メンバー${familyCount}`;
+
+      const html = `<div class="family-member-card" id="family_${familyCount}">
+        ${removeBtn}
+        <label style="color:#0056b3;">${labelText}</label>
+        ${memberIdField}
+        <div class="flex-row" style="margin-bottom:15px;">
+          <div><input type="text" id="fam-sei-${familyCount}" class="fam-sei" placeholder="姓" value="${isExisting ? data['姓'] || '' : ''}"></div>
+          <div><input type="text" id="fam-mei-${familyCount}" class="fam-mei" placeholder="名" value="${isExisting ? data['名'] || '' : ''}"></div>
+        </div>
+        <label>ふりがな</label>
+        <div class="flex-row" style="margin-bottom:15px;">
+          <div><input type="text" id="fam-kana-sei-${familyCount}" class="fam-kana-sei" pattern="^[ぁ-んー\\s]+$" placeholder="せい" value="${isExisting ? data['せい'] || '' : ''}"></div>
+          <div><input type="text" id="fam-kana-mei-${familyCount}" class="fam-kana-mei" pattern="^[ぁ-んー\\s]+$" placeholder="めい" value="${isExisting ? data['めい'] || '' : ''}"></div>
+        </div>
+        <label>生年月日 <span style="font-size: 11px; font-weight: normal; color: #d9534f;">（※Androidは左上の「年」をタップ）</span></label>
+        <input type="date" id="fam-date-${familyCount}" class="fam-date" value="${isExisting ? data['生年月日'] || '' : ''}">
+      </div>`;
+      
       container.insertAdjacentHTML('beforeend', html);
       bindFurigana(`fam-sei-${familyCount}`, `fam-kana-sei-${familyCount}`);
       bindFurigana(`fam-mei-${familyCount}`, `fam-kana-mei-${familyCount}`);
@@ -313,6 +339,7 @@
           currentUserData = res.userData; 
           currentUserData.dbLineUid = res.dbLineUid; 
           savedProfileImage = res.imageUrl; 
+          window.currentFamilyList = res.familyList; // 💡追加
           displayDigitalCard(res, false); 
         } else { 
           alert(res.message); btn.innerText = "表示する"; btn.disabled = false; 
@@ -438,7 +465,16 @@
         document.getElementById('memberTypeLockMsg').style.display = 'none';
       }
       
-      document.getElementById('addFamilyBtn').style.display = 'block'; // ボタンを表示
+      // 既存の家族メンバーを展開
+      const container = document.getElementById('familySection');
+      container.innerHTML = '';
+      familyCount = 0;
+
+      if (window.currentFamilyList && window.currentFamilyList.length > 0) {
+        window.currentFamilyList.forEach(fam => addFamilyMember(fam));
+      }
+      
+      document.getElementById('addFamilyBtn').style.display = 'block';
       window.scrollTo(0, 0);
     }
 
@@ -506,7 +542,15 @@
       
       const familyMembers = [];
       document.querySelectorAll('.family-member-card').forEach(card => {
-        familyMembers.push({ "姓": card.querySelector('.fam-sei').value, "名": card.querySelector('.fam-mei').value, "せい": card.querySelector('.fam-kana-sei').value, "めい": card.querySelector('.fam-kana-mei').value, "生年月日": card.querySelector('.fam-date').value });
+        const famIdInput = card.querySelector('.fam-id'); // 💡追加
+        familyMembers.push({ 
+          "memberId": famIdInput ? famIdInput.value : "", // 💡追加
+          "姓": card.querySelector('.fam-sei').value, 
+          "名": card.querySelector('.fam-mei').value, 
+          "せい": card.querySelector('.fam-kana-sei').value, 
+          "めい": card.querySelector('.fam-kana-mei').value, 
+          "生年月日": card.querySelector('.fam-date').value 
+        });
       });
       
       const data = { 
