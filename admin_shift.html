@@ -54,15 +54,23 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getAdminShiftData" }) })
       .then(r => r.json()).then(res => {
         if(res.status === "success") {
-          masterData = res.calendar.map(day => {
-            // 💡 修正：カンマ区切りを配列にする際、前後の空白を消して徹底的に綺麗にする
-            let confirmedArr = day.confirmed ? day.confirmed.split(',').map(s => s.trim()).filter(Boolean) : [];
-            return {
-              ...day,
-              requests: res.requests[day.date] || [],
-              selectedMembers: [...new Set(confirmedArr)]
-            };
-          });
+          
+          // 💡 フロントエンド（スマホ側）の正確な時計で「今日」の基準を作る
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          // 💡 filterを使って、確実に今日以降のデータだけを残す
+          masterData = res.calendar
+            .filter(day => new Date(day.date) >= today) 
+            .map(day => {
+              let confirmedArr = day.confirmed ? day.confirmed.split(',').map(s => s.trim()).filter(Boolean) : [];
+              return {
+                ...day,
+                requests: res.requests[day.date] || [],
+                selectedMembers: [...new Set(confirmedArr)]
+              };
+            });
+            
           renderAdminList();
           document.getElementById('loading').style.display = "none";
           document.getElementById('saveBtn').style.display = "block";
