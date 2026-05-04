@@ -61,6 +61,14 @@
     .checkout-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .checkout-btn:disabled { background-color: #ccc; }
     .checkout-btn.btn-member { background-color: #0056b3; }
+
+    .settings-menu { margin-top: 30px; background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .settings-summary { padding: 15px; font-weight: bold; color: #555; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; }
+    .settings-summary::-webkit-details-marker { display: none; }
+    .settings-summary::after { content: '▼'; font-size: 12px; transition: transform 0.3s; }
+    details[open] .settings-summary::after { transform: rotate(180deg); }
+    .settings-content { padding: 15px; border-top: 1px solid #ddd; }
+    .settings-link { display: block; padding: 15px; background: #e8f4fd; color: #0056b3; text-decoration: none; border-radius: 8px; font-weight: bold; text-align: center; border: 2px dashed #0056b3; }
   </style>
 </head>
 <body>
@@ -78,8 +86,17 @@
       </div>
     </div>
     <div class="staff-info">👤 担当: <span id="displayStaffName"></span></div>
+    
     <div id="visitorList"></div>
-  </div>
+
+    <details class="settings-menu">
+      <summary class="settings-summary">⚙️ その他のメニュー</summary>
+      <div class="settings-content">
+        <p style="font-size: 13px; color: #666; margin-top: 0; margin-bottom: 12px;">酒田市引渡用の売上実績（ビジター）を確認・集計します。</p>
+        <a href="https://liff.line.me/2009367368-AzNXLTMv" class="settings-link">📊 ビジター入金レポートを開く</a>
+      </div>
+    </details>
+    </div>
 
   <div id="detailScreen">
     <button class="back-btn" onclick="showList()">← 一覧に戻る</button>
