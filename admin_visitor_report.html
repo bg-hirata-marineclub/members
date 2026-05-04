@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>ビジター入金日次レポート - B&G 平田海洋クラブ</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #0056b3; margin-top: 0; font-size: 20px; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px; }
+    
+    .filter-area { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .date-box { padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-weight: bold; text-align: center; width: 100%; background-color: #fafafa; }
+    .btn { padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    
+    #loading, #errorScreen { text-align: center; padding: 20px; font-weight: bold; display: none; }
+    #errorScreen { color: #d9534f; }
+    
+    .summary-card { background: #fff8e1; border: 2px solid #ffe082; border-radius: 10px; padding: 20px 15px; margin-top: 15px; text-align: center; display: none; }
+    .total-label { font-weight: bold; color: #856404; margin-bottom: 5px; font-size: 14px; }
+    .total-amount { font-size: 32px; font-weight: bold; color: #d9534f; }
+    
+    .list-title { margin-top: 25px; font-size: 16px; font-weight: bold; color: #0056b3; border-left: 4px solid #0056b3; padding-left: 8px; display: none; }
+    .report-card { background: #fff; border: 1px solid #dee2e6; border-left: 5px solid #0056b3; border-radius: 8px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .r-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+    .r-name { font-size: 16px; font-weight: bold; color: #333; }
+    .r-amount { font-size: 18px; font-weight: bold; color: #d9534f; }
+    .r-detail { font-size: 13px; color: #555; display: flex; justify-content: space-between; margin-top: 4px; }
+    
+    .no-data { text-align: center; color: #666; font-weight: bold; padding: 30px 10px; display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>📊 ビジター入金日次レポート</h2>
+    
+    <div id="loading">⏳ 認証情報を取得中...</div>
+    <div id="errorScreen">🚫 権限がありません</div>
+
+    <div id="appContent" style="display: none;">
+      <p style="font-size: 13px; color: #666; margin-bottom: 15px; text-align: center;">酒田市引渡用の売上実績（ビジター）を確認できます。</p>
+      
+      <div class="filter-area">
+        <input type="date" id="targetDate" class="date-box">
+        <button class="btn" id="searchBtn" onclick="fetchDailyReport()">集計データを表示</button>
+      </div>
+
+      <div id="calcLoading" style="display: none; text-align: center; font-weight: bold; color: #666; padding: 20px;">
+        🔄 スプレッドシートから集計しています...
+      </div>
+
+      <div id="summaryCard" class="summary-card">
+        <div class="total-label">本日の引渡合計額（受領済）</div>
+        <div class="total-amount" id="dispTotal">¥0</div>
+      </div>
+      
+      <div id="noDataMsg" class="no-data">
+        指定された日付の受領済ビジター記録はありません。
+      </div>
+
+      <div id="listTitle" class="list-title">📋 ビジター利用明細</div>
+      <div id="reportList"></div>
+
+    </div>
+  </div>
+
+  <script>
+    // 💡 運用時に新しいLIFF IDを発行して書き換えてください
+    const LIFF_ID = "YOUR_LIFF_ID_HERE"; 
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // 初期値として今日の日付をセット
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      document.getElementById('targetDate').value = `${yyyy}-${mm}-${dd}`;
+
+      // LIFF初期化＆権限チェック
+      liff.init({ liffId: LIFF_ID }).then(() => {
+        if (!liff.isLoggedIn()) liff.login();
+        else liff.getProfile().then(p => verifyStaffAccess(p.userId));
+      }).catch(err => {
+        // LIFF環境外（PCブラウザ等）でのテスト用フォールバック
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
+      });
+    });
+
+    // スタッフ権限の確認
+    function verifyStaffAccess(uid) {
+      fetch(GAS_URL, { 
+        method: "POST", headers: { "Content-Type": "text/plain" }, 
+        body: JSON.stringify({ action: "verifyStaff", uid: uid }) 
+      })
+      .then(res => res.json()).then(data => {
+        document.getElementById('loading').style.display = 'none';
+        if (data.status === "success") { 
+          document.getElementById('appContent').style.display = 'block'; 
+        } else { 
+          document.getElementById('errorScreen').style.display = 'block'; 
+        }
+      });
+    }
+
+    // 金額のカンマ区切りヘルパー
+    function formatNumber(num) { return Number(num).toLocaleString(); }
+
+    // レポート取得処理
+    function fetchDailyReport() {
+      const targetDate = document.getElementById('targetDate').value;
+      if (!targetDate) return alert("日付を選択してください。");
+
+      // UIの初期化
+      document.getElementById('summaryCard').style.display = 'none';
+      document.getElementById('listTitle').style.display = 'none';
+      document.getElementById('noDataMsg').style.display = 'none';
+      document.getElementById('reportList').innerHTML = "";
+      
+      const btn = document.getElementById('searchBtn');
+      btn.innerText = "⏳ 処理中..."; btn.disabled = true;
+      document.getElementById('calcLoading').style.display = 'block';
+
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "getDailyVisitorReport", date: targetDate })
+      }).then(r => r.json()).then(res => {
+        document.getElementById('calcLoading').style.display = 'none';
+        
+        if (res.status === "success") {
+          // 合計金額の表示
+          document.getElementById('dispTotal').innerText = `¥${formatNumber(res.totalAmount)}`;
+          document.getElementById('summaryCard').style.display = 'block';
+
+          if (res.reportList && res.reportList.length > 0) {
+            document.getElementById('listTitle').style.display = 'block';
+            const listContainer = document.getElementById('reportList');
+            
+            // 明細カードの生成
+            res.reportList.forEach(item => {
+              const html = `
+                <div class="report-card">
+                  <div class="r-header">
+                    <span class="r-name">👤 ${item.name} 様</span>
+                    <span class="r-amount">¥${formatNumber(item.amount)}</span>
+                  </div>
+                  <div class="r-detail">
+                    <span>👨👩 大人: ${item.adults}名 / 👦👧 子ども: ${item.kids}名</span>
+                  </div>
+                  <div class="r-detail" style="margin-top: 8px;">
+                    <span>🛶 利用舟艇: ${item.equipment}</span>
+                  </div>
+                </div>
+              `;
+              listContainer.insertAdjacentHTML('beforeend', html);
+            });
+          } else {
+            document.getElementById('noDataMsg').style.display = 'block';
+          }
+        } else {
+          alert("エラーが発生しました: " + res.message);
+        }
+      }).catch(e => {
+        document.getElementById('calcLoading').style.display = 'none';
+        alert("通信エラーが発生しました。");
+      }).finally(() => {
+        btn.innerText = "集計データを表示"; btn.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
