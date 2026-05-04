@@ -41,7 +41,7 @@
 <body>
 
   <div class="container">
-    <h2>💴 マイ給与明細 <span style="font-size:12px; color:red;">(更新版)</span></h2>
+    <h2>💴 マイ給与明細</h2>
     
     <div id="loading" style="display: block;">⏳ 認証情報を取得中...</div>
     <div id="errorScreen">🚫 権限がありません</div>
@@ -238,7 +238,7 @@
                 <tr style="border-bottom:1px solid #eee;">
                   <td style="padding:8px 4px;">${shortDate}</td>
                   <td style="padding:8px 4px; text-align:center;">${log.calcIn}〜${log.calcOut}</td>
-                  <td style="padding:8px 4px; text-align:right;">${log.actualWork.replace('時間', 'h')}</td>
+                  <td style="padding:8px 4px; text-align:right;">${log.actualWork}</td>
                 </tr>
               `;
             });
