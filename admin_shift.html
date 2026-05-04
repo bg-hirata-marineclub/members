@@ -55,11 +55,12 @@
       .then(r => r.json()).then(res => {
         if(res.status === "success") {
           masterData = res.calendar.map(day => {
+            // 💡 修正：カンマ区切りを配列にする際、前後の空白を消して徹底的に綺麗にする
+            let confirmedArr = day.confirmed ? day.confirmed.split(',').map(s => s.trim()).filter(Boolean) : [];
             return {
               ...day,
               requests: res.requests[day.date] || [],
-              // 💡 修正：読み込みの段階で重複や空白を完全に排除（Setを利用）
-              selectedMembers: day.confirmed ? [...new Set(day.confirmed.split(',').map(s => s.trim()).filter(Boolean))] : []
+              selectedMembers: [...new Set(confirmedArr)]
             };
           });
           renderAdminList();
@@ -78,15 +79,14 @@
         let staffButtonsHtml = "";
         if (availableStaff.length > 0) {
           availableStaff.forEach(staff => {
-            const isSelected = day.selectedMembers.includes(staff.name);
+            // 💡 修正：名前の完全一致をチェックする
+            const isSelected = day.selectedMembers.some(name => name === staff.name);
             const statusClass = staff.status === '⭕️' ? 'status-ok' : 'status-maybe';
             const selectedClass = isSelected ? 'selected' : '';
             
-            const shipIcon = staff.licenseText ? `<span class="ship-icon" title="資格: ${staff.licenseText}">🚤</span>` : '';
-            
             staffButtonsHtml += `
               <button class="staff-btn ${statusClass} ${selectedClass}" onclick="toggleStaff(${dayIndex}, '${staff.name}', this)">
-                ${staff.status} ${staff.name}${shipIcon}
+                ${staff.status} ${staff.name}${staff.licenseText}
               </button>
             `;
           });
