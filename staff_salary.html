@@ -175,6 +175,10 @@
       document.getElementById('noDataMsg').style.display = 'none';
       document.getElementById('calcLoading').style.display = 'block';
 
+      // 💡 以前に表示した履歴テーブルがあれば消しておく（初期化）
+      const oldHistory = document.getElementById('workHistoryArea');
+      if(oldHistory) oldHistory.remove();
+
       fetch(GAS_URL, {
         method: "POST", headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ action: "getIndividualSalary", memberId: currentMemberId, yearMonth: targetPeriod })
@@ -206,6 +210,47 @@
           } else {
             errBox.style.display = 'none';
           }
+
+          // ==========================================
+          // 💡 追加：日次勤務履歴のテーブルを作成して表示する
+          // ==========================================
+          let historyHtml = `
+            <div id="workHistoryArea" style="margin-top:20px; background:#fff; border-radius:10px; padding:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05); border:1px solid #ddd;">
+              <h4 style="margin:0 0 10px 0; color:#0056b3; font-size:15px; border-bottom:2px solid #0056b3; padding-bottom:5px;">📅 勤務履歴</h4>
+              <table style="width:100%; border-collapse: collapse; font-size:12px;">
+                <thead>
+                  <tr style="background:#f8f9fa; border-bottom:1px solid #ddd;">
+                    <th style="padding:8px 4px; text-align:left; color:#555;">日付</th>
+                    <th style="padding:8px 4px; text-align:center; color:#555;">出勤〜退勤</th>
+                    <th style="padding:8px 4px; text-align:right; color:#555;">実働</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+
+          // GASから送られてくる日次明細（dailyDetails）から、自分のデータだけを絞り込む
+          const myLogs = (res.dailyDetails || []).filter(log => log.staffId === currentMemberId);
+
+          if (myLogs.length > 0) {
+            myLogs.forEach(log => {
+              const shortDate = log.date.substring(5); // "2026/05/04" -> "05/04"
+              historyHtml += `
+                <tr style="border-bottom:1px solid #eee;">
+                  <td style="padding:8px 4px;">${shortDate}</td>
+                  <td style="padding:8px 4px; text-align:center;">${log.calcIn}〜${log.calcOut}</td>
+                  <td style="padding:8px 4px; text-align:right;">${log.actualWork.replace('時間', 'h')}</td>
+                </tr>
+              `;
+            });
+          } else {
+            historyHtml += `<tr><td colspan="3" style="padding:15px; text-align:center; color:#999;">勤務記録がありません</td></tr>`;
+          }
+
+          historyHtml += `</tbody></table></div>`;
+
+          // salaryCardの直後に差し込む
+          document.getElementById('salaryCard').insertAdjacentHTML('afterend', historyHtml);
+
         } else {
           document.getElementById('noDataMsg').style.display = 'block';
         }
