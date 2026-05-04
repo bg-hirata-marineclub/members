@@ -228,8 +228,8 @@
                 <tbody>
           `;
 
-          // GASから送られてくる日次明細（dailyDetails）から、自分のデータだけを絞り込む
-          const myLogs = (res.dailyDetails || []).filter(log => log.staffId === currentMemberId);
+          // 💡 バックエンドから送られてきた明細データを受け取る
+          const myLogs = res.dailyDetails || [];
 
           if (myLogs.length > 0) {
             myLogs.forEach(log => {
