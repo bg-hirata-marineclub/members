@@ -84,6 +84,7 @@
           <label>代表者情報</label>
           <input type="text" id="repName" placeholder="代表者 氏名">
           <input type="tel" id="repPhone" placeholder="連絡先 電話番号">
+          <input type="email" id="repEmail" placeholder="連絡先 メールアドレス（必須）">
         </div>
 
         <div class="form-group">
@@ -178,6 +179,9 @@
       if (!document.getElementById('groupName').value) return alert("団体名を入力してください。");
       if (!document.getElementById('repName').value) return alert("代表者氏名を入力してください。");
 
+      const email = document.getElementById('repEmail').value.trim();
+      if (!email || !email.includes('@')) return alert("正しいメールアドレスを入力してください。");
+
       // 日付と時間のチェック
       const resDateStr = document.getElementById('resDate').value;
       const sTime = document.getElementById('startTime').value;
@@ -250,7 +254,8 @@
         infant: document.getElementById('q-inf').value,
         equipment: eqList.join("、 "),
         notes: document.getElementById('notes').value,
-        orderData: orderData
+        orderData: orderData,
+        email: email
       };
 
       fetch(GAS_URL, {
