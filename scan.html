@@ -45,10 +45,13 @@
         <div id="boatSelectionArea">
           <p style="font-size: 14px; font-weight: bold; color: #555; margin-bottom: 10px;">利用する舟艇をタップ</p>
           <div class="btn-grid">
-            <button class="btn-equipment" onclick="submitRecord('カヌー')">🛶 カヌー</button>
-            <button class="btn-equipment" onclick="submitRecord('ペアカヌー')">🛶 ペアカヌー</button>
-            <button class="btn-equipment" onclick="submitRecord('ローボート')">🚣 ローボート</button>
-            <button class="btn-equipment" onclick="submitRecord('SUP')">🏄 SUP</button>
+            <button class="btn-equipment" onclick="submitRecord('カヌー（大人）')">🛶 カヌー<br><span style="font-size:12px; font-weight:normal;">(大人)</span></button>
+            <button class="btn-equipment" onclick="submitRecord('カヌー（子ども）')">🛶 カヌー<br><span style="font-size:12px; font-weight:normal;">(子ども)</span></button>
+            <button class="btn-equipment" onclick="submitRecord('ペアカヌー（大人）')">🛶 ペアカヌー<br><span style="font-size:12px; font-weight:normal;">(大人)</span></button>
+            <button class="btn-equipment" onclick="submitRecord('ペアカヌー（子ども）')">🛶 ペアカヌー<br><span style="font-size:12px; font-weight:normal;">(子ども)</span></button>
+            <button class="btn-equipment" onclick="submitRecord('ローボート（大人）')">🚣 ローボート<br><span style="font-size:12px; font-weight:normal;">(大人)</span></button>
+            <button class="btn-equipment" onclick="submitRecord('ローボート（子ども）')">🚣 ローボート<br><span style="font-size:12px; font-weight:normal;">(子ども)</span></button>
+            <button class="btn-equipment" onclick="submitRecord('SUP')" style="grid-column: span 2;">🏄 SUP<br><span style="font-size:12px; font-weight:normal;">(メンバー限定)</span></button>
           </div>
         </div>
         <button class="btn-cancel" onclick="resetScanner()">キャンセルして戻る</button>
