@@ -108,7 +108,8 @@
             <div class="eq-item"><div class="eq-name">🛶 ペアカヌー（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-pair-kid', -1)">-</button><input type="number" id="b-pair-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-pair-kid', 1)">+</button></div></div>
             <div class="eq-item"><div class="eq-name">🚣 ローボート（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row-adult', -1)">-</button><input type="number" id="b-row-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row-adult', 1)">+</button></div></div>
             <div class="eq-item"><div class="eq-name">🚣 ローボート（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row-kid', -1)">-</button><input type="number" id="b-row-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row-kid', 1)">+</button></div></div>
-            
+            <div class="eq-item"><div class="eq-name">⛵ OPヨット（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-op-adult', -1)">-</button><input type="number" id="b-op-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-op-adult', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">⛵ OPヨット（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-op-kid', -1)">-</button><input type="number" id="b-op-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-op-kid', 1)">+</button></div></div>
             <div class="eq-item" style="background-color: #fff3f3;">
               <div class="eq-name" style="color: #666; font-size: 14px;">🏄 SUP<br><span style="font-size: 11px; color: #d9534f;">※メンバー限定の利用となります</span></div>
               <div class="qty-controls"><span style="font-size: 12px; color: #d9534f; font-weight: bold;">予約不可</span></div>
@@ -222,7 +223,9 @@
         "ペアカヌー（大人）": parseInt(document.getElementById('b-pair-adult').value) || 0,
         "ペアカヌー（子ども）": parseInt(document.getElementById('b-pair-kid').value) || 0,
         "ローボート（大人）": parseInt(document.getElementById('b-row-adult').value) || 0,
-        "ローボート（子ども）": parseInt(document.getElementById('b-row-kid').value) || 0
+        "ローボート（子ども）": parseInt(document.getElementById('b-row-kid').value) || 0,
+        "OPヨット（大人）": parseInt(document.getElementById('b-op-adult').value) || 0,   // 👈追加
+        "OPヨット（子ども）": parseInt(document.getElementById('b-op-kid').value) || 0    // 👈追加
       };
       
       let eqList = [];
