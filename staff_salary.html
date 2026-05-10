@@ -64,7 +64,7 @@
       </div>
 
       <div id="calcLoading" style="display: none; text-align: center; font-weight: bold; color: #666; padding: 20px;">
-        🔄 計算しています...
+        🔄 最新の勤怠を計算しています...
       </div>
 
       <div id="salaryCard" class="salary-card">
@@ -138,32 +138,77 @@
       }
 
       liff.init({ liffId: LIFF_ID }).then(() => {
-        if (!liff.isLoggedIn()) liff.login();
-        else liff.getProfile().then(p => verifyStaffAccess(p.userId));
+        if (!liff.isLoggedIn()) {
+          liff.login();
+        } else {
+          liff.getProfile().then(p => {
+            const uid = p.userId;
+            
+            // 💡 爆速化：キャッシュの読み込み
+            const cachedProfile = localStorage.getItem('bg_salary_profile_' + uid);
+            const defaultPeriod = `${yyyy}-${mm}`;
+            
+            if (cachedProfile) {
+              try {
+                const profile = JSON.parse(cachedProfile);
+                currentMemberId = profile.memberId;
+                document.getElementById('displayName').innerText = profile.staffName;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('appContent').style.display = 'block';
+                
+                // 現在の月のキャッシュがあれば瞬時に表示
+                const cachedData = localStorage.getItem('bg_salary_data_' + currentMemberId + '_' + defaultPeriod);
+                if (cachedData) {
+                  renderSalaryData(JSON.parse(cachedData));
+                }
+                
+                // 裏側で最新情報を同期
+                verifyStaffAccess(uid, true);
+              } catch(e) {
+                verifyStaffAccess(uid, false);
+              }
+            } else {
+              verifyStaffAccess(uid, false);
+            }
+          });
+        }
       });
     });
 
-    function verifyStaffAccess(uid) {
+    function verifyStaffAccess(uid, isBackground = false) {
       fetch(GAS_URL, { 
         method: "POST", headers: { "Content-Type": "text/plain" }, 
         body: JSON.stringify({ action: "verifyStaff", uid: uid }) 
       })
       .then(res => res.json()).then(data => {
-        document.getElementById('loading').style.display = 'none';
+        if (!isBackground) document.getElementById('loading').style.display = 'none';
+        
         if (data.status === "success") { 
           currentMemberId = data.memberId;
           document.getElementById('displayName').innerText = data.staffName;
-          document.getElementById('appContent').style.display = 'block'; 
-          fetchMySalary(); 
+          
+          // プロフィールを記憶
+          localStorage.setItem('bg_salary_profile_' + uid, JSON.stringify({
+            memberId: data.memberId, 
+            staffName: data.staffName
+          }));
+
+          if (!isBackground) {
+            document.getElementById('appContent').style.display = 'block'; 
+            fetchMySalary(); 
+          } else {
+            // 背景通信の場合、給与データも背景で最新化する
+            fetchMySalary(true);
+          }
         } else { 
-          document.getElementById('errorScreen').style.display = 'block'; 
+          if (!isBackground) document.getElementById('errorScreen').style.display = 'block'; 
         }
       });
     }
 
     function formatNumber(num) { return Number(num).toLocaleString(); }
 
-    function fetchMySalary() {
+    function fetchMySalary(isBackground = false) {
       const periodType = document.getElementById('periodType').value;
       const targetPeriod = periodType === 'month' 
         ? document.getElementById('targetMonth').value 
@@ -171,93 +216,102 @@
 
       if (!targetPeriod || !currentMemberId) return;
 
-      document.getElementById('salaryCard').style.display = 'none';
-      document.getElementById('noDataMsg').style.display = 'none';
-      document.getElementById('calcLoading').style.display = 'block';
-
-      // 💡 以前に表示した履歴テーブルがあれば消しておく（初期化）
-      const oldHistory = document.getElementById('workHistoryArea');
-      if(oldHistory) oldHistory.remove();
+      if (!isBackground) {
+        document.getElementById('salaryCard').style.display = 'none';
+        document.getElementById('noDataMsg').style.display = 'none';
+        document.getElementById('calcLoading').style.display = 'block';
+        const oldHistory = document.getElementById('workHistoryArea');
+        if(oldHistory) oldHistory.remove();
+      }
 
       fetch(GAS_URL, {
         method: "POST", headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ action: "getIndividualSalary", memberId: currentMemberId, yearMonth: targetPeriod })
       }).then(r => r.json()).then(res => {
-        document.getElementById('calcLoading').style.display = 'none';
+        if (!isBackground) document.getElementById('calcLoading').style.display = 'none';
         
         if (res.status === "success" && res.data) {
-          const st = res.data;
-          document.getElementById('salaryCard').style.display = 'block';
+          // 💡 最新の給与データを記憶
+          localStorage.setItem('bg_salary_data_' + currentMemberId + '_' + targetPeriod, JSON.stringify(res));
           
-          document.getElementById('dispTotal').innerText = `¥${formatNumber(st.totalPay)}`;
-
-          const genbaAmt = Math.floor(st.genbaHoursFloat * st.genbaWage);
-          document.getElementById('dispGenbaCalc').innerText = `${st.genbaHours} × ${formatNumber(st.genbaWage)}円`;
-          document.getElementById('dispGenbaAmt').innerText = `${formatNumber(genbaAmt)}円`;
-
-          const jimuAmt = Math.floor(st.jimuHoursFloat * st.jimuWage);
-          document.getElementById('dispJimuCalc').innerText = `${st.jimuHours} × ${formatNumber(st.jimuWage)}円`;
-          document.getElementById('dispJimuAmt').innerText = `${formatNumber(jimuAmt)}円`;
-
-          const shipUnit = st.allowanceDays > 0 ? Math.floor(st.allowance / st.allowanceDays) : 0;
-          document.getElementById('dispShipCalc').innerText = `${st.allowanceDays}日 × ${formatNumber(shipUnit)}円`;
-          document.getElementById('dispShipAmt').innerText = `${formatNumber(st.allowance)}円`;
-          
-          const errBox = document.getElementById('errorBox');
-          if (st.errors && st.errors.length > 0) {
-            errBox.style.display = 'block';
-            errBox.innerHTML = "<b>📝 勤怠の確定待ち（確認中）があります</b><br>" + st.errors.join("<br>") + "<br><small>※管理者の承認が完了するまでお待ちください</small>";
-          } else {
-            errBox.style.display = 'none';
-          }
-
-          // ==========================================
-          // 💡 追加：日次勤務履歴のテーブルを作成して表示する
-          // ==========================================
-          let historyHtml = `
-            <div id="workHistoryArea" style="margin-top:20px; background:#fff; border-radius:10px; padding:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05); border:1px solid #ddd;">
-              <h4 style="margin:0 0 10px 0; color:#0056b3; font-size:15px; border-bottom:2px solid #0056b3; padding-bottom:5px;">📅 勤務履歴</h4>
-              <table style="width:100%; border-collapse: collapse; font-size:12px;">
-                <thead>
-                  <tr style="background:#f8f9fa; border-bottom:1px solid #ddd;">
-                    <th style="padding:8px 4px; text-align:left; color:#555;">日付</th>
-                    <th style="padding:8px 4px; text-align:center; color:#555;">出勤〜退勤</th>
-                    <th style="padding:8px 4px; text-align:right; color:#555;">実働</th>
-                  </tr>
-                </thead>
-                <tbody>
-          `;
-
-          // 💡 バックエンドから送られてきた明細データを受け取る
-          const myLogs = res.dailyDetails || [];
-
-          if (myLogs.length > 0) {
-            myLogs.forEach(log => {
-              const shortDate = log.date.substring(5); // "2026/05/04" -> "05/04"
-              historyHtml += `
-                <tr style="border-bottom:1px solid #eee;">
-                  <td style="padding:8px 4px;">${shortDate}</td>
-                  <td style="padding:8px 4px; text-align:center;">${log.calcIn}〜${log.calcOut}</td>
-                  <td style="padding:8px 4px; text-align:right;">${log.actualWork}</td>
-                </tr>
-              `;
-            });
-          } else {
-            historyHtml += `<tr><td colspan="3" style="padding:15px; text-align:center; color:#999;">勤務記録がありません</td></tr>`;
-          }
-
-          historyHtml += `</tbody></table></div>`;
-
-          // salaryCardの直後に差し込む
-          document.getElementById('salaryCard').insertAdjacentHTML('afterend', historyHtml);
-
+          renderSalaryData(res);
         } else {
-          document.getElementById('noDataMsg').style.display = 'block';
+          if (!isBackground) document.getElementById('noDataMsg').style.display = 'block';
         }
       }).catch(e => {
-        document.getElementById('calcLoading').style.display = 'none';
-        alert("通信エラーが発生しました。");
+        if (!isBackground) {
+          document.getElementById('calcLoading').style.display = 'none';
+          alert("通信エラーが発生しました。");
+        }
       });
+    }
+
+    // 💡 画面描画だけを行う共通関数
+    function renderSalaryData(res) {
+      document.getElementById('calcLoading').style.display = 'none';
+      document.getElementById('noDataMsg').style.display = 'none';
+
+      const oldHistory = document.getElementById('workHistoryArea');
+      if(oldHistory) oldHistory.remove();
+
+      const st = res.data;
+      document.getElementById('salaryCard').style.display = 'block';
+      
+      document.getElementById('dispTotal').innerText = `¥${formatNumber(st.totalPay)}`;
+
+      const genbaAmt = Math.floor(st.genbaHoursFloat * st.genbaWage);
+      document.getElementById('dispGenbaCalc').innerText = `${st.genbaHours} × ${formatNumber(st.genbaWage)}円`;
+      document.getElementById('dispGenbaAmt').innerText = `${formatNumber(genbaAmt)}円`;
+
+      const jimuAmt = Math.floor(st.jimuHoursFloat * st.jimuWage);
+      document.getElementById('dispJimuCalc').innerText = `${st.jimuHours} × ${formatNumber(st.jimuWage)}円`;
+      document.getElementById('dispJimuAmt').innerText = `${formatNumber(jimuAmt)}円`;
+
+      const shipUnit = st.allowanceDays > 0 ? Math.floor(st.allowance / st.allowanceDays) : 0;
+      document.getElementById('dispShipCalc').innerText = `${st.allowanceDays}日 × ${formatNumber(shipUnit)}円`;
+      document.getElementById('dispShipAmt').innerText = `${formatNumber(st.allowance)}円`;
+      
+      const errBox = document.getElementById('errorBox');
+      if (st.errors && st.errors.length > 0) {
+        errBox.style.display = 'block';
+        errBox.innerHTML = "<b>📝 勤怠の確定待ち（確認中）があります</b><br>" + st.errors.join("<br>") + "<br><small>※管理者の承認が完了するまでお待ちください</small>";
+      } else {
+        errBox.style.display = 'none';
+      }
+
+      let historyHtml = `
+        <div id="workHistoryArea" style="margin-top:20px; background:#fff; border-radius:10px; padding:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05); border:1px solid #ddd;">
+          <h4 style="margin:0 0 10px 0; color:#0056b3; font-size:15px; border-bottom:2px solid #0056b3; padding-bottom:5px;">📅 勤務履歴</h4>
+          <table style="width:100%; border-collapse: collapse; font-size:12px;">
+            <thead>
+              <tr style="background:#f8f9fa; border-bottom:1px solid #ddd;">
+                <th style="padding:8px 4px; text-align:left; color:#555;">日付</th>
+                <th style="padding:8px 4px; text-align:center; color:#555;">出勤〜退勤</th>
+                <th style="padding:8px 4px; text-align:right; color:#555;">実働</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      const myLogs = res.dailyDetails || [];
+
+      if (myLogs.length > 0) {
+        myLogs.forEach(log => {
+          const shortDate = log.date.substring(5); // "2026/05/04" -> "05/04"
+          historyHtml += `
+            <tr style="border-bottom:1px solid #eee;">
+              <td style="padding:8px 4px;">${shortDate}</td>
+              <td style="padding:8px 4px; text-align:center;">${log.calcIn}〜${log.calcOut}</td>
+              <td style="padding:8px 4px; text-align:right;">${log.actualWork}</td>
+            </tr>
+          `;
+        });
+      } else {
+        historyHtml += `<tr><td colspan="3" style="padding:15px; text-align:center; color:#999;">勤務記録がありません</td></tr>`;
+      }
+
+      historyHtml += `</tbody></table></div>`;
+      document.getElementById('salaryCard').insertAdjacentHTML('afterend', historyHtml);
     }
   </script>
 </body>
