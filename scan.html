@@ -38,6 +38,13 @@
     <div id="appContent">
       <div id="reader"></div>
 
+      <div id="manualSearchArea" style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <p style="font-size: 14px; font-weight: bold; color: #0056b3; margin: 0 0 10px 0;">🔍 スマホ忘れ・代理チェックイン</p>
+        <input type="text" id="searchInput" placeholder="会員番号(例: 123) または 名前" oninput="searchMemberFromCache()" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background-color: #fafafa;">
+        <div id="searchResults" style="max-height: 150px; overflow-y: auto; margin-top: 10px;"></div>
+      </div>
+      <div id="resultArea">
+
       <div id="resultArea">
         <div class="member-id" id="displayId">M----</div>
         <div class="member-name" id="displayName">お名前</div>
@@ -258,7 +265,51 @@
       } else { document.getElementById('feeAlertArea').style.display = 'none'; document.getElementById('boatSelectionArea').style.display = 'block'; }
     }
 
-    function resetScanner() { startScanner(); }
+    function resetScanner() { 
+      document.getElementById('manualSearchArea').style.display = 'block'; // 💡検索窓を再表示
+      startScanner(); 
+    }
+
+    // 💡追加：キャッシュ名簿から通信ゼロで瞬間検索する機能
+    function searchMemberFromCache() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      const resultArea = document.getElementById('searchResults');
+      resultArea.innerHTML = '';
+      if (query.length < 1) return;
+
+      let count = 0;
+      // すでにスマホに保存されている名簿データを検索
+      for (const [memId, name] of Object.entries(memberCache)) {
+        // "M0012" を "12" だけでも検索できるようにする
+        const shortId = memId.replace('M', '').replace(/^0+/, ''); 
+        
+        if (memId.toLowerCase().includes(query) || shortId === query || name.toLowerCase().includes(query)) {
+          const btn = document.createElement('button');
+          btn.style.cssText = "display:block; width:100%; padding:12px; margin-bottom:5px; background:#e8f4fd; border:1px solid #b6d4fe; border-radius:6px; font-size:16px; text-align:left; color:#0056b3; font-weight:bold; cursor:pointer;";
+          btn.innerText = `${memId} : ${name.replace(' 様', '')}`;
+          
+          // タップされたら、カメラで読み込んだのと同じ処理へ進む
+          btn.onclick = () => {
+            document.getElementById('searchInput').value = '';
+            resultArea.innerHTML = '';
+            document.getElementById('manualSearchArea').style.display = 'none';
+            document.getElementById('reader').style.display = 'none';
+            
+            if (html5QrCode && html5QrCode.isScanning) {
+              html5QrCode.stop().then(() => processScannedMember(memId)).catch(() => processScannedMember(memId));
+            } else {
+              processScannedMember(memId);
+            }
+          };
+          resultArea.appendChild(btn);
+          count++;
+          if (count >= 5) break; // 画面が埋まらないよう最大5件まで
+        }
+      }
+      if (count === 0) {
+        resultArea.innerHTML = '<div style="font-size:13px; color:#666; text-align:center;">見つかりません</div>';
+      }
+    }
 
     function submitRecord(equipmentName) {
       document.getElementById('resultArea').style.display = 'none'; document.getElementById('successMessage').style.display = 'block'; document.getElementById('successText').innerText = "✅ 舟艇の受付を記録しました！";
