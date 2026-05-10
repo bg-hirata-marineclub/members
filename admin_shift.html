@@ -47,13 +47,11 @@
     document.addEventListener("DOMContentLoaded", () => {
       liff.init({ liffId: LIFF_ID }).then(() => {
         if (liff.isLoggedIn()) {
-          // 💡 爆速化：LocalStorageからキャッシュを取得
           const cachedDataStr = localStorage.getItem('bg_admin_shift_data');
           if (cachedDataStr) {
             try {
               const res = JSON.parse(cachedDataStr);
               processAndRenderData(res);
-              // 裏側で最新情報を同期する
               fetchAdminData(true);
             } catch(e) {
               fetchAdminData(false);
@@ -71,7 +69,6 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getAdminShiftData" }) })
       .then(r => r.json()).then(res => {
         if(res.status === "success") {
-          // 💡 最新データをキャッシュに保存
           localStorage.setItem('bg_admin_shift_data', JSON.stringify(res));
           processAndRenderData(res);
         } else { 
@@ -82,17 +79,18 @@
       });
     }
 
-    // 💡 画面構築処理を共通化
+    // 💡 空白やカンマ・読点の違いを吸収する賢い照合用関数
+    const normalize = (str) => String(str || "").replace(/[\s　]+/g, "").toLowerCase();
+
     function processAndRenderData(res) {
-      // フロントエンド（スマホ側）の正確な時計で「今日」の基準を作る
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // filterを使って、確実に今日以降のデータだけを残す
       masterData = res.calendar
         .filter(day => new Date(day.date) >= today) 
         .map(day => {
-          let confirmedArr = day.confirmed ? day.confirmed.split(',').map(s => s.trim()).filter(Boolean) : [];
+          // 💡 カンマと全角読点（、）の両方で分割できるように修正
+          let confirmedArr = day.confirmed ? day.confirmed.split(/[,、]/).map(s => s.trim()).filter(Boolean) : [];
           return {
             ...day,
             requests: res.requests[day.date] || [],
@@ -114,7 +112,9 @@
         let staffButtonsHtml = "";
         if (availableStaff.length > 0) {
           availableStaff.forEach(staff => {
-            const isSelected = day.selectedMembers.some(name => name === staff.name);
+            const normStaffName = normalize(staff.name);
+            // 💡 空白を無視して同一人物か判定する
+            const isSelected = day.selectedMembers.some(name => normalize(name) === normStaffName);
             const statusClass = staff.status === '⭕️' ? 'status-ok' : 'status-maybe';
             const selectedClass = isSelected ? 'selected' : '';
             
@@ -145,13 +145,16 @@
 
     function toggleStaff(dayIndex, staffName, btnElement) {
       const selectedArray = masterData[dayIndex].selectedMembers;
-      const index = selectedArray.indexOf(staffName);
+      const normStaffName = normalize(staffName);
+      
+      // 💡 削除時も空白を無視して探す
+      const index = selectedArray.findIndex(name => normalize(name) === normStaffName);
       
       if (index > -1) {
         selectedArray.splice(index, 1);
         btnElement.classList.remove('selected');
       } else {
-        if (!selectedArray.includes(staffName)) selectedArray.push(staffName);
+        selectedArray.push(staffName); // 名簿の正しい名前をpushする
         btnElement.classList.add('selected');
       }
       
@@ -168,7 +171,6 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "saveAdminShift", confirmedData: payload }) })
       .then(r => r.json()).then(res => {
         if(res.status === "success") { 
-          // 💡 提出成功時もキャッシュを更新（次回開いた時に最新状態をすぐ出すため）
           const cachedStr = localStorage.getItem('bg_admin_shift_data');
           if (cachedStr) {
             try {
@@ -182,7 +184,6 @@
               localStorage.setItem('bg_admin_shift_data', JSON.stringify(cachedRes));
             } catch(e) {}
           }
-
           alert("✅ シフトを保存しました！\n（※再修正したい場合はもう一度開き直して保存可能です）"); 
           liff.closeWindow(); 
         } 
