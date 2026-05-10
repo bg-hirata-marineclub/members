@@ -213,6 +213,7 @@
       nameEl.addEventListener('input', () => { if (!isComposing && nameEl.value === '') { kanaEl.value = ''; committedKana = ''; } });
     }
 
+    // 💡 爆速化：LIFF初期化時にキャッシュを確認する
     function initializeLiff() {
       document.getElementById('tabContainer').style.display = 'none';
       document.getElementById('registerSection').style.display = 'none';
@@ -222,7 +223,29 @@
         if (liff.isLoggedIn()) {
           liff.getProfile().then(p => { 
             document.getElementById('lineUid').value = p.userId; 
-            executeAutoLogin(p.userId); 
+            
+            // スマホの記憶（LocalStorage）を確認
+            const cachedDataStr = localStorage.getItem('myMemberCard_' + p.userId);
+            if (cachedDataStr) {
+              try {
+                // キャッシュがあれば、0秒で画面に表示する
+                const res = JSON.parse(cachedDataStr);
+                currentUserData = res.userData; 
+                currentUserData.dbLineUid = res.dbLineUid; 
+                savedProfileImage = res.imageUrl; 
+                window.currentFamilyList = res.familyList;
+                document.getElementById('loadingScreen').style.display = 'none'; 
+                displayDigitalCard(res, false);
+                
+                // その後、裏側でこっそり最新データを同期する
+                executeAutoLogin(p.userId, true);
+              } catch (e) {
+                executeAutoLogin(p.userId, false);
+              }
+            } else {
+              // キャッシュがない場合（初回など）は通常通り通信を待つ
+              executeAutoLogin(p.userId, false); 
+            }
           }).catch(() => showRegisterScreen()); 
         } else {
           if (liff.isInClient()) liff.login();
@@ -237,20 +260,34 @@
       bindFurigana('rep-mei', 'rep-kana-mei'); 
     });
 
-    function executeAutoLogin(uid) {
+    // 💡 爆速化対応：isBackground フラグを追加
+    function executeAutoLogin(uid, isBackground = false) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "autoLogin", uid: uid }) })
       .then(r => r.json()).then(res => { 
         if (res.status === "success") { 
+          // 最新データをスマホに記憶させる
+          localStorage.setItem('myMemberCard_' + uid, JSON.stringify(res));
+
           currentUserData = res.userData; 
           currentUserData.dbLineUid = res.dbLineUid; 
           savedProfileImage = res.imageUrl; 
-          window.currentFamilyList = res.familyList; // 💡追加
-          document.getElementById('loadingScreen').style.display = 'none'; 
+          window.currentFamilyList = res.familyList; 
+          
+          if (!isBackground) {
+            document.getElementById('loadingScreen').style.display = 'none'; 
+          }
+          // 最新データで画面を上書き表示
           displayDigitalCard(res, false); 
         } else {
-          showRegisterScreen(); 
+          // 会員登録が削除された場合などはキャッシュを消す
+          if (isBackground && res.message && res.message.includes("未登録")) {
+            localStorage.removeItem('myMemberCard_' + uid);
+          }
+          if (!isBackground) showRegisterScreen(); 
         }
-      }).catch(() => showRegisterScreen());
+      }).catch(() => {
+        if (!isBackground) showRegisterScreen();
+      });
     }
 
     function showRegisterScreen() { 
@@ -300,7 +337,6 @@
       
       const container = document.getElementById('familySection');
       
-      // 既存メンバーならIDを保持し、削除ボタンを隠す
       const memberIdField = isExisting ? `<input type="hidden" class="fam-id" value="${data['会員ID']}">` : `<input type="hidden" class="fam-id" value="">`;
       const removeBtn = !isExisting ? `<button type="button" class="remove-btn" onclick="removeFamilyMember(${familyCount})">×</button>` : '';
       const labelText = isExisting ? `家族メンバー${familyCount} (登録済み: ${data['会員ID']})` : `家族メンバー${familyCount}`;
@@ -336,10 +372,14 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "login", data: { loginId: "M" + String(idNum).padStart(4, '0'), birthDate: birthDate } }) })
       .then(r => r.json()).then(res => { 
         if (res.status === "success") { 
+          // 💡 ログイン成功時もキャッシュに保存
+          const uid = document.getElementById('lineUid').value;
+          if (uid) localStorage.setItem('myMemberCard_' + uid, JSON.stringify(res));
+
           currentUserData = res.userData; 
           currentUserData.dbLineUid = res.dbLineUid; 
           savedProfileImage = res.imageUrl; 
-          window.currentFamilyList = res.familyList; // 💡追加
+          window.currentFamilyList = res.familyList; 
           displayDigitalCard(res, false); 
         } else { 
           alert(res.message); btn.innerText = "表示する"; btn.disabled = false; 
@@ -371,7 +411,6 @@
         if (document.getElementById('editInfoBtn')) document.getElementById('editInfoBtn').style.display = (!isNewRegistration && currentUserData) ? 'block' : 'none';
       }
 
-      // 🌟 スタッフ用メニュー切替ボタンの表示制御
       if (currentUserData && currentUserData['権限'] === 'スタッフ') {
         document.getElementById('staffMenuControls').style.display = 'block';
       } else {
@@ -385,7 +424,6 @@
       window.scrollTo(0, 0);
     }
 
-    // 🌟 メニューの切り替えを実行する関数
     function executeToggleMenu(target) {
       const uid = document.getElementById('lineUid').value;
       if (!uid) return alert("LINE連携が完了していないため操作できません。");
@@ -412,6 +450,8 @@
       .then(r => r.json()).then(res => { 
         if (res.status === "success") { 
           alert("✅ 紐付けが完了しました！\n次回から自動でログインできます。"); 
+          // 💡 キャッシュを強制クリアして再読み込み
+          localStorage.removeItem('myMemberCard_' + document.getElementById('lineUid').value);
           location.reload(); 
         } else { 
           alert(res.message); btn.innerText = "🔗 このLINEアカウントと紐付ける"; btn.disabled = false; 
@@ -465,7 +505,6 @@
         document.getElementById('memberTypeLockMsg').style.display = 'none';
       }
       
-      // 既存の家族メンバーを展開
       const container = document.getElementById('familySection');
       container.innerHTML = '';
       familyCount = 0;
@@ -542,9 +581,9 @@
       
       const familyMembers = [];
       document.querySelectorAll('.family-member-card').forEach(card => {
-        const famIdInput = card.querySelector('.fam-id'); // 💡追加
+        const famIdInput = card.querySelector('.fam-id'); 
         familyMembers.push({ 
-          "memberId": famIdInput ? famIdInput.value : "", // 💡追加
+          "memberId": famIdInput ? famIdInput.value : "", 
           "姓": card.querySelector('.fam-sei').value, 
           "名": card.querySelector('.fam-mei').value, 
           "せい": card.querySelector('.fam-kana-sei').value, 
@@ -569,6 +608,9 @@
           
           res.dbLineUid = document.getElementById('lineUid').value;
           if (currentUserData) currentUserData.dbLineUid = res.dbLineUid;
+
+          // 💡 更新・登録成功時も最新データを記憶させる
+          localStorage.setItem('myMemberCard_' + res.dbLineUid, JSON.stringify(res));
 
           displayDigitalCard(res, true); 
         } else { 
