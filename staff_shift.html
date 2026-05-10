@@ -74,7 +74,34 @@
           liff.getProfile().then(p => {
             document.getElementById('lineUid').value = p.userId;
             document.getElementById('staffName').value = p.displayName;
-            fetchData(p.userId);
+            
+            // 💡 爆速化：LocalStorageからキャッシュを取得
+            const cachedShiftStr = localStorage.getItem('bg_shift_data_' + p.userId);
+            if (cachedShiftStr) {
+              try {
+                const cachedData = JSON.parse(cachedShiftStr);
+                calendarData = cachedData.calendar || [];
+                currentSelections = cachedData.myShifts || {};
+                
+                if(cachedData.realName) {
+                  document.getElementById('staffName').value = cachedData.realName;
+                  document.getElementById('staffNameDisplay').innerText = "👤 ログイン中: " + cachedData.realName + " さん";
+                }
+                
+                // キャッシュで瞬時に画面を描画
+                renderShiftList(); 
+                renderConfirmedList();
+                document.getElementById('loading').style.display = "none"; 
+                document.getElementById('mainContent').style.display = "block";
+                
+                // 裏側で最新情報を同期する
+                fetchData(p.userId, true);
+              } catch(e) {
+                fetchData(p.userId, false);
+              }
+            } else {
+              fetchData(p.userId, false);
+            }
           });
         } else { liff.login(); }
       }).catch(err => {
@@ -90,10 +117,13 @@
       else { document.getElementById('confirmTab').classList.add('active'); document.querySelectorAll('.tab-btn')[1].classList.add('active'); }
     }
 
-    function fetchData(uid) {
+    function fetchData(uid, isBackground = false) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getShiftData", uid: uid }) })
       .then(r => r.json()).then(res => {
         if(res.status === "success") {
+          // 💡 最新データをキャッシュに保存
+          localStorage.setItem('bg_shift_data_' + uid, JSON.stringify(res));
+
           calendarData = res.calendar || []; 
           currentSelections = res.myShifts || {};
           
@@ -108,18 +138,20 @@
           try {
             renderShiftList(); 
             renderConfirmedList();
-            document.getElementById('loading').style.display = "none"; 
-            document.getElementById('mainContent').style.display = "block";
+            if(!isBackground) {
+              document.getElementById('loading').style.display = "none"; 
+              document.getElementById('mainContent').style.display = "block";
+            }
           } catch(renderError) {
             console.error(renderError);
-            alert("画面の表示中にエラーが発生しました。");
+            if(!isBackground) alert("画面の表示中にエラーが発生しました。");
           }
         } else { 
-          alert("取得エラー: " + res.message); 
+          if(!isBackground) alert("取得エラー: " + res.message); 
         }
       }).catch(e => {
         console.error(e);
-        alert("通信エラーまたはデータエラーが発生しました");
+        if(!isBackground) alert("通信エラーまたはデータエラーが発生しました");
       });
     }
 
@@ -127,7 +159,6 @@
       const container = document.getElementById('shiftList'); container.innerHTML = "";
       calendarData.forEach(day => {
         let badgeClass = "badge-normal";
-        // 💡 修正：数値等が入っていてもエラーにならないよう強制的に文字列化
         let typeStr = String(day.type || ""); 
         if(typeStr.includes("祝日")) badgeClass = "badge-holiday";
         if(typeStr.includes("夏休み")) badgeClass = "badge-summer";
@@ -164,15 +195,13 @@
       const myNameNorm = normalize(myName);
       
       calendarData.forEach(day => {
-        // 💡 修正：確定シフトのデータを強制的に文字列化（エラー防止）
         let confirmedStr = String(day.confirmed || "");
         if (!confirmedStr) return;
         
-        // カンマと読点の両方に対応して分割
         let memberArray = confirmedStr.split(/[,、]/).map(s => s.trim()).filter(Boolean);
         if(memberArray.length === 0) return;
         
-        memberArray = [...new Set(memberArray)]; // 重複排除
+        memberArray = [...new Set(memberArray)]; 
         
         let isMyShift = memberArray.some(name => normalize(name) === myNameNorm);
         let boxClass = isMyShift ? "confirmed-box my-shift-highlight" : "confirmed-box";
@@ -222,7 +251,17 @@
       const btn = document.getElementById('saveBtn'); btn.innerText = "⏳ 保存中..."; btn.disabled = true;
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "submitShift", uid: uid, staffName: staffName, shifts: shiftsToSend }) })
       .then(r => r.json()).then(res => {
-        if(res.status === "success") { alert("✅ 保存しました！"); liff.closeWindow(); } 
+        if(res.status === "success") { 
+          // 💡 提出成功時もキャッシュを更新（画面の再描画時のズレを防ぐため）
+          const cachedStr = localStorage.getItem('bg_shift_data_' + uid);
+          if (cachedStr) {
+            let cachedData = JSON.parse(cachedStr);
+            cachedData.myShifts = currentSelections;
+            localStorage.setItem('bg_shift_data_' + uid, JSON.stringify(cachedData));
+          }
+
+          alert("✅ 保存しました！"); liff.closeWindow(); 
+        } 
         else { alert("エラー: " + res.message); }
       }).catch(e => alert("通信エラー")).finally(() => { btn.innerText = "💾 この内容で保存する"; btn.disabled = false; });
     }
