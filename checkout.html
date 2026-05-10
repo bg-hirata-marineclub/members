@@ -69,6 +69,11 @@
     details[open] .settings-summary::after { transform: rotate(180deg); }
     .settings-content { padding: 15px; border-top: 1px solid #ddd; }
     .settings-link { display: block; padding: 15px; background: #e8f4fd; color: #0056b3; text-decoration: none; border-radius: 8px; font-weight: bold; text-align: center; border: 2px dashed #0056b3; }
+
+    /* 💡 代理検索用スタイル */
+    #manualSearchArea { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 2px solid #0056b3; }
+    #searchInput { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background-color: #fafafa; }
+    #searchResults { max-height: 150px; overflow-y: auto; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -87,6 +92,12 @@
     </div>
     <div class="staff-info">👤 担当: <span id="displayStaffName"></span></div>
     
+    <div id="manualSearchArea">
+      <p style="font-size: 14px; font-weight: bold; color: #0056b3; margin: 0 0 10px 0;">🔍 メンバーの代理チェックイン・精算</p>
+      <input type="text" id="searchInput" placeholder="会員番号(例: 123) または 名前" oninput="searchMemberFromCache()">
+      <div id="searchResults"></div>
+    </div>
+
     <div id="visitorList"></div>
 
     <details class="settings-menu">
@@ -113,15 +124,15 @@
   </div>
 
   <script>
-    const LIFF_ID = "2009367368-epwEMsKs"; // 自身の精算レジ用LIFF ID
+    const LIFF_ID = "2009367368-epwEMsKs"; 
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec";
 
     let currentStaffName = "";
     let priceMaster = {};
     let visitorsData = [];
     let currentVisitor = null;
+    let memberCache = {}; // 💡 代理検索用の名簿データ
     
-    // 基本の舟艇リスト（SUPを追加）
     const BOAT_TYPES = [ "カヌー（大人）", "カヌー（子ども）", "ペアカヌー（大人）", "ペアカヌー（子ども）", "ローボート（大人）", "ローボート（子ども）", "OPヨット（大人）", "OPヨット（子ども）", "SUP" ];
 
     document.addEventListener("DOMContentLoaded", initializeApp);
@@ -129,16 +140,53 @@
     function initializeApp() {
       liff.init({ liffId: LIFF_ID }).then(() => {
         if (!liff.isLoggedIn()) liff.login();
-        else liff.getProfile().then(p => verifyStaffAccess(p.userId)).catch(err => showError("プロフィールの取得エラー"));
+        else {
+          const uid = liff.getDecodedIDToken().sub;
+          
+          // 💡 爆速化：LocalStorageからキャッシュを取得
+          const cachedDataStr = localStorage.getItem('checkoutCacheData');
+          const cachedMembersStr = localStorage.getItem('memberCacheData'); // スキャナーで保存した名簿を流用
+          
+          if (cachedMembersStr) {
+            try {
+              memberCache = JSON.parse(cachedMembersStr).memberCache || {};
+            } catch(e) {}
+          }
+
+          if (cachedDataStr) {
+            try {
+              const data = JSON.parse(cachedDataStr);
+              currentStaffName = data.staffName || "スタッフ";
+              document.getElementById('displayStaffName').innerText = currentStaffName;
+              priceMaster = data.prices || {};
+              visitorsData = data.visitors || [];
+              document.getElementById('displayVisitorSales').innerText = (data.visitorSales || 0).toLocaleString();
+              document.getElementById('displayMemberSales').innerText = (data.memberSales || 0).toLocaleString();
+              
+              document.getElementById('loading').style.display = 'none';
+              renderList(); // 0秒で表示
+              
+              verifyStaffAccess(uid, true); // 裏側で同期
+            } catch (e) {
+              verifyStaffAccess(uid, false);
+            }
+          } else {
+            verifyStaffAccess(uid, false);
+          }
+        }
       }).catch(err => showError("LIFF初期化エラー"));
     }
 
-    function verifyStaffAccess(uid) {
+    function verifyStaffAccess(uid, isBackground = false) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "verifyStaff", uid: uid }) })
       .then(res => res.json()).then(data => {
-        if (data.status === "success") { currentStaffName = data.staffName; document.getElementById('displayStaffName').innerText = currentStaffName; loadData(); } 
-        else showError(data.message);
-      }).catch(e => showError("通信エラー"));
+        if (data.status === "success") { 
+          currentStaffName = data.staffName; 
+          document.getElementById('displayStaffName').innerText = currentStaffName; 
+          loadData(isBackground); 
+        } 
+        else if (!isBackground) showError(data.message);
+      }).catch(e => { if(!isBackground) showError("通信エラー"); });
     }
 
     function showError(msg) {
@@ -147,25 +195,80 @@
       document.getElementById('errorText').innerText = msg;
     }
 
-    function loadData() {
+    function loadData(isBackground = false) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getCheckoutData" }) })
       .then(res => res.json()).then(data => {
         if (data.status === "success") { 
+          // 💡 最新データをキャッシュに保存
+          data.staffName = currentStaffName;
+          localStorage.setItem('checkoutCacheData', JSON.stringify(data));
+
           priceMaster = data.prices; 
           visitorsData = data.visitors; 
           
           document.getElementById('displayVisitorSales').innerText = (data.visitorSales || 0).toLocaleString();
           document.getElementById('displayMemberSales').innerText = (data.memberSales || 0).toLocaleString();
           
+          if (!isBackground) document.getElementById('loading').style.display = 'none';
           renderList(); 
         } 
-        else showError(data.message);
-      }).catch(e => showError("通信エラー"));
+        else if (!isBackground) showError(data.message);
+      }).catch(e => { if(!isBackground) showError("通信エラー"); });
     }
 
-    // 💡 完了済みでもクリックできるように変更
+    // 💡 代理検索機能
+    function searchMemberFromCache() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      const resultArea = document.getElementById('searchResults');
+      resultArea.innerHTML = '';
+      if (query.length < 1) return;
+
+      let count = 0;
+      for (const [memId, name] of Object.entries(memberCache)) {
+        const shortId = memId.replace('M', '').replace(/^0+/, ''); 
+        if (memId.toLowerCase().includes(query) || shortId === query || name.toLowerCase().includes(query)) {
+          const btn = document.createElement('button');
+          btn.style.cssText = "display:block; width:100%; padding:12px; margin-bottom:5px; background:#e8f4fd; border:1px solid #b6d4fe; border-radius:6px; font-size:16px; text-align:left; color:#0056b3; font-weight:bold; cursor:pointer;";
+          btn.innerText = `👑 ${memId} : ${name.replace(' 様', '')}`;
+          
+          btn.onclick = () => {
+            document.getElementById('searchInput').value = '';
+            resultArea.innerHTML = '';
+            
+            // 仮想のビジターデータを作って詳細画面を開く
+            currentVisitor = {
+              type: "member",
+              status: "未利用",
+              name: name.replace(' 様', ''),
+              memberId: memId,
+              orderData: {} // 初期状態は空
+            };
+            
+            document.getElementById('listScreen').style.display = 'none'; 
+            document.getElementById('detailScreen').style.display = 'block';
+            
+            document.getElementById('d-name').innerText = currentVisitor.name;
+            document.getElementById('d-sub').innerText = `👑 メンバー (ID: ${currentVisitor.memberId})`;
+            
+            const btnObj = document.getElementById('checkoutBtn');
+            btnObj.innerText = "直接利用を終了する";
+            btnObj.className = "checkout-btn btn-member";
+            document.getElementById('totalSection').style.display = 'none';
+            btnObj.onclick = () => processCheckout(true); // 代理モードとして送信
+            
+            renderBoats(); 
+          };
+          resultArea.appendChild(btn);
+          count++;
+          if (count >= 5) break; 
+        }
+      }
+      if (count === 0) {
+        resultArea.innerHTML = '<div style="font-size:13px; color:#666; text-align:center;">見つかりません（※スキャナーを一度開くと名簿が更新されます）</div>';
+      }
+    }
+
     function renderList() {
-      document.getElementById('loading').style.display = 'none';
       document.getElementById('listScreen').style.display = 'block';
       const listDiv = document.getElementById('visitorList');
       listDiv.innerHTML = '';
@@ -179,7 +282,7 @@
         
         const card = document.createElement('div'); 
         card.className = cardClass; 
-        card.onclick = () => openDetail(index); // 完了済でもクリック可能
+        card.onclick = () => openDetail(index); 
         
         card.innerHTML = `
           <div>
@@ -197,7 +300,6 @@
       });
     }
 
-    // 💡 修正モードかどうかでボタンの表示と機能を切り替え
     function openDetail(index) {
       currentVisitor = visitorsData[index];
       document.getElementById('listScreen').style.display = 'none'; 
@@ -221,14 +323,13 @@
       if (currentVisitor.type === "member") {
         btn.innerText = isDone ? "📝 実績を修正して保存" : "利用を終了する";
         btn.className = "checkout-btn btn-member";
-        totalSec.style.display = 'none'; // メンバーは金額非表示
+        totalSec.style.display = 'none'; 
       } else {
         btn.innerText = isDone ? "📝 実績を修正して保存" : "精算を完了する";
         btn.className = "checkout-btn";
         totalSec.style.display = 'block';
       }
 
-      // 完了済みの場合は修正用の関数を呼ぶ
       btn.onclick = isDone ? () => updateCheckout() : () => processCheckout();
 
       renderBoats(); 
@@ -246,7 +347,6 @@
       }
 
       displayBoats.forEach(boatName => {
-        // ビジターはSUPを非表示にする
         if (currentVisitor.type === "visitor" && boatName === "SUP") return;
         
         const price = priceMaster[boatName] || 0; 
@@ -282,7 +382,7 @@
     }
 
     function calcTotal() {
-      if (currentVisitor.type === "member") return; // メンバーは計算不要
+      if (currentVisitor.type === "member") return; 
       
       let total = 0;
       const inputs = document.querySelectorAll('.qty-input');
@@ -295,7 +395,8 @@
 
     function showList() { document.getElementById('detailScreen').style.display = 'none'; document.getElementById('listScreen').style.display = 'block'; }
 
-    function processCheckout() {
+    // 💡 代理モード(isManual)に対応
+    function processCheckout(isManual = false) {
       const isMember = currentVisitor.type === "member";
       const confirmMsg = isMember ? "利用を終了し、記録を保存しますか？" : "精算を完了し、売上を記録しますか？";
       if (!confirm(confirmMsg)) return;
@@ -321,18 +422,27 @@
         staffName: currentStaffName 
       };
 
-      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "processCheckout", data: payload }) })
+      // 代理検索から来た場合は、スキャナーと同じ「recordAttendance」を使って保存する
+      const actionName = isManual ? "recordAttendance" : "processCheckout";
+      const manualPayload = {
+        memberId: currentVisitor.memberId,
+        memberName: currentVisitor.name,
+        equipment: newEqList.join("、 "),
+        staffName: currentStaffName
+      };
+
+      fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: actionName, data: isManual ? manualPayload : payload }) })
       .then(res => res.json()).then(data => {
         if (data.status === "success") {
           const successMsg = isMember ? `✅ ${currentVisitor.name} 様の利用を終了しました。` : `✅ 精算完了！\n領収額: ${total.toLocaleString()}円`;
           alert(successMsg);
           btn.innerText = isMember ? "利用を終了する" : "精算を完了する"; btn.disabled = false; 
+          showList(); // 💡 代理モードの場合は一覧に戻す
           loadData(); 
         } else { alert("エラー: " + data.message); btn.disabled = false; }
       }).catch(e => { alert("通信エラー"); btn.disabled = false; });
     }
 
-    // 💡 【追加】修正データを送信する関数
     function updateCheckout() {
       if (!confirm("実績を修正して保存しますか？\n（日報が作成済みの場合は、日報データも自動更新されます）")) return;
       
@@ -351,7 +461,7 @@
       const payload = {
         type: currentVisitor.type,
         row: currentVisitor.row, 
-        dateStr: currentVisitor.dateStr, // 連動用に日付を送る
+        dateStr: currentVisitor.dateStr,
         equipment: newEqList.join("、 "), 
         orderData: newOrderData, 
         total: total
