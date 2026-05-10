@@ -131,7 +131,7 @@
     let priceMaster = {};
     let visitorsData = [];
     let currentVisitor = null;
-    let memberCache = {}; // 💡 代理検索用の名簿データ
+    let memberCache = {}; 
     
     const BOAT_TYPES = [ "カヌー（大人）", "カヌー（子ども）", "ペアカヌー（大人）", "ペアカヌー（子ども）", "ローボート（大人）", "ローボート（子ども）", "OPヨット（大人）", "OPヨット（子ども）", "SUP" ];
 
@@ -139,40 +139,41 @@
 
     function initializeApp() {
       liff.init({ liffId: LIFF_ID }).then(() => {
-        if (!liff.isLoggedIn()) liff.login();
-        else {
-          const uid = liff.getDecodedIDToken().sub;
-          
-          // 💡 爆速化：LocalStorageからキャッシュを取得
-          const cachedDataStr = localStorage.getItem('checkoutCacheData');
-          const cachedMembersStr = localStorage.getItem('memberCacheData'); // スキャナーで保存した名簿を流用
-          
-          if (cachedMembersStr) {
-            try {
-              memberCache = JSON.parse(cachedMembersStr).memberCache || {};
-            } catch(e) {}
-          }
+        if (!liff.isLoggedIn()) {
+          liff.login();
+        } else {
+          // 💡 確実にLINEのプロフィールからIDを取得する元の方法に戻しました
+          liff.getProfile().then(p => {
+            const uid = p.userId;
+            
+            const cachedDataStr = localStorage.getItem('checkoutCacheData');
+            const cachedMembersStr = localStorage.getItem('memberCacheData'); 
+            
+            if (cachedMembersStr) {
+              try { memberCache = JSON.parse(cachedMembersStr).memberCache || {}; } catch(e) {}
+            }
 
-          if (cachedDataStr) {
-            try {
-              const data = JSON.parse(cachedDataStr);
-              currentStaffName = data.staffName || "スタッフ";
-              document.getElementById('displayStaffName').innerText = currentStaffName;
-              priceMaster = data.prices || {};
-              visitorsData = data.visitors || [];
-              document.getElementById('displayVisitorSales').innerText = (data.visitorSales || 0).toLocaleString();
-              document.getElementById('displayMemberSales').innerText = (data.memberSales || 0).toLocaleString();
-              
-              document.getElementById('loading').style.display = 'none';
-              renderList(); // 0秒で表示
-              
-              verifyStaffAccess(uid, true); // 裏側で同期
-            } catch (e) {
+            if (cachedDataStr) {
+              try {
+                const data = JSON.parse(cachedDataStr);
+                currentStaffName = data.staffName || "スタッフ";
+                document.getElementById('displayStaffName').innerText = currentStaffName;
+                priceMaster = data.prices || {};
+                visitorsData = data.visitors || [];
+                document.getElementById('displayVisitorSales').innerText = (data.visitorSales || 0).toLocaleString();
+                document.getElementById('displayMemberSales').innerText = (data.memberSales || 0).toLocaleString();
+                
+                document.getElementById('loading').style.display = 'none';
+                renderList(); 
+                
+                verifyStaffAccess(uid, true); 
+              } catch (e) {
+                verifyStaffAccess(uid, false);
+              }
+            } else {
               verifyStaffAccess(uid, false);
             }
-          } else {
-            verifyStaffAccess(uid, false);
-          }
+          }).catch(err => showError("プロフィールの取得エラー"));
         }
       }).catch(err => showError("LIFF初期化エラー"));
     }
@@ -199,7 +200,6 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getCheckoutData" }) })
       .then(res => res.json()).then(data => {
         if (data.status === "success") { 
-          // 💡 最新データをキャッシュに保存
           data.staffName = currentStaffName;
           localStorage.setItem('checkoutCacheData', JSON.stringify(data));
 
@@ -216,7 +216,6 @@
       }).catch(e => { if(!isBackground) showError("通信エラー"); });
     }
 
-    // 💡 代理検索機能
     function searchMemberFromCache() {
       const query = document.getElementById('searchInput').value.trim().toLowerCase();
       const resultArea = document.getElementById('searchResults');
@@ -235,13 +234,12 @@
             document.getElementById('searchInput').value = '';
             resultArea.innerHTML = '';
             
-            // 仮想のビジターデータを作って詳細画面を開く
             currentVisitor = {
               type: "member",
               status: "未利用",
               name: name.replace(' 様', ''),
               memberId: memId,
-              orderData: {} // 初期状態は空
+              orderData: {} 
             };
             
             document.getElementById('listScreen').style.display = 'none'; 
@@ -254,7 +252,7 @@
             btnObj.innerText = "直接利用を終了する";
             btnObj.className = "checkout-btn btn-member";
             document.getElementById('totalSection').style.display = 'none';
-            btnObj.onclick = () => processCheckout(true); // 代理モードとして送信
+            btnObj.onclick = () => processCheckout(true); 
             
             renderBoats(); 
           };
@@ -264,7 +262,7 @@
         }
       }
       if (count === 0) {
-        resultArea.innerHTML = '<div style="font-size:13px; color:#666; text-align:center;">見つかりません（※スキャナーを一度開くと名簿が更新されます）</div>';
+        resultArea.innerHTML = '<div style="font-size:13px; color:#666; text-align:center;">見つかりません（※スキャナーを開くと名簿が更新されます）</div>';
       }
     }
 
@@ -395,7 +393,6 @@
 
     function showList() { document.getElementById('detailScreen').style.display = 'none'; document.getElementById('listScreen').style.display = 'block'; }
 
-    // 💡 代理モード(isManual)に対応
     function processCheckout(isManual = false) {
       const isMember = currentVisitor.type === "member";
       const confirmMsg = isMember ? "利用を終了し、記録を保存しますか？" : "精算を完了し、売上を記録しますか？";
@@ -422,7 +419,6 @@
         staffName: currentStaffName 
       };
 
-      // 代理検索から来た場合は、スキャナーと同じ「recordAttendance」を使って保存する
       const actionName = isManual ? "recordAttendance" : "processCheckout";
       const manualPayload = {
         memberId: currentVisitor.memberId,
@@ -437,7 +433,7 @@
           const successMsg = isMember ? `✅ ${currentVisitor.name} 様の利用を終了しました。` : `✅ 精算完了！\n領収額: ${total.toLocaleString()}円`;
           alert(successMsg);
           btn.innerText = isMember ? "利用を終了する" : "精算を完了する"; btn.disabled = false; 
-          showList(); // 💡 代理モードの場合は一覧に戻す
+          showList(); 
           loadData(); 
         } else { alert("エラー: " + data.message); btn.disabled = false; }
       }).catch(e => { alert("通信エラー"); btn.disabled = false; });
