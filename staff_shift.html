@@ -34,6 +34,11 @@
     .confirmed-box { background: #e2e3e5; padding: 12px; border-radius: 6px; margin-top: 10px; font-size: 14px; font-weight: bold; color: #383d41; }
     .my-shift-highlight { background: #cce5ff; border: 2px solid #80bdff; }
     .submit-btn { width: 100%; padding: 16px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    
+    /* 💡 折りたたみ用のスタイル */
+    .past-details { margin-top: 20px; margin-bottom: 20px; background: #fdfdfd; border: 1px solid #ccc; border-radius: 8px; padding: 10px; }
+    .past-summary { font-weight: bold; color: #6c757d; cursor: pointer; padding: 5px; }
+    .past-summary:hover { color: #495057; }
   </style>
 </head>
 <body>
@@ -75,7 +80,6 @@
             document.getElementById('lineUid').value = p.userId;
             document.getElementById('staffName').value = p.displayName;
             
-            // 💡 爆速化：LocalStorageからキャッシュを取得
             const cachedShiftStr = localStorage.getItem('bg_shift_data_' + p.userId);
             if (cachedShiftStr) {
               try {
@@ -88,13 +92,11 @@
                   document.getElementById('staffNameDisplay').innerText = "👤 ログイン中: " + cachedData.realName + " さん";
                 }
                 
-                // キャッシュで瞬時に画面を描画
                 renderShiftList(); 
                 renderConfirmedList();
                 document.getElementById('loading').style.display = "none"; 
                 document.getElementById('mainContent').style.display = "block";
                 
-                // 裏側で最新情報を同期する
                 fetchData(p.userId, true);
               } catch(e) {
                 fetchData(p.userId, false);
@@ -121,7 +123,6 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getShiftData", uid: uid }) })
       .then(r => r.json()).then(res => {
         if(res.status === "success") {
-          // 💡 最新データをキャッシュに保存
           localStorage.setItem('bg_shift_data_' + uid, JSON.stringify(res));
 
           calendarData = res.calendar || []; 
@@ -130,9 +131,6 @@
           if(res.realName) {
             document.getElementById('staffName').value = res.realName;
             document.getElementById('staffNameDisplay').innerText = "👤 ログイン中: " + res.realName + " さん";
-          } else {
-            document.getElementById('staffNameDisplay').innerText = "⚠️ 名簿に名前が見つかりません";
-            document.getElementById('staffNameDisplay').style.color = "red";
           }
           
           try {
@@ -143,20 +141,25 @@
               document.getElementById('mainContent').style.display = "block";
             }
           } catch(renderError) {
-            console.error(renderError);
             if(!isBackground) alert("画面の表示中にエラーが発生しました。");
           }
         } else { 
           if(!isBackground) alert("取得エラー: " + res.message); 
         }
       }).catch(e => {
-        console.error(e);
         if(!isBackground) alert("通信エラーまたはデータエラーが発生しました");
       });
     }
 
     function renderShiftList() {
       const container = document.getElementById('shiftList'); container.innerHTML = "";
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let futureHtml = "";
+      let pastHtml = "";
+
       calendarData.forEach(day => {
         let badgeClass = "badge-normal";
         let typeStr = String(day.type || ""); 
@@ -183,8 +186,26 @@
             </div>
           </div>
         `;
-        container.insertAdjacentHTML('beforeend', html);
+        
+        // 💡 過去か未来かで振り分け
+        if (new Date(day.date) < today) {
+          pastHtml += html;
+        } else {
+          futureHtml += html;
+        }
       });
+
+      // 💡 過去のデータがあれば折りたたみタグ（details）で囲んで上部に配置
+      if (pastHtml !== "") {
+        pastHtml = `
+          <details class="past-details">
+            <summary class="past-summary">📅 過去のシフト入力欄を表示する</summary>
+            <div style="margin-top: 15px;">${pastHtml}</div>
+          </details>
+        `;
+      }
+      
+      container.innerHTML = pastHtml + futureHtml;
     }
 
     function renderConfirmedList() {
@@ -193,6 +214,12 @@
       
       const normalize = (str) => String(str || "").replace(/[\s　]+/g, "").toLowerCase();
       const myNameNorm = normalize(myName);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let futureHtml = "";
+      let pastHtml = "";
       
       calendarData.forEach(day => {
         let confirmedStr = String(day.confirmed || "");
@@ -228,8 +255,25 @@
             </div>
           </div>
         `;
-        container.insertAdjacentHTML('beforeend', html);
+        
+        if (new Date(day.date) < today) {
+          pastHtml += html;
+        } else {
+          futureHtml += html;
+        }
       });
+
+      if (pastHtml !== "") {
+        pastHtml = `
+          <details class="past-details">
+            <summary class="past-summary">📅 過去の確定シフトを表示する</summary>
+            <div style="margin-top: 15px;">${pastHtml}</div>
+          </details>
+        `;
+      }
+      
+      container.innerHTML = pastHtml + futureHtml;
+      
       if (container.innerHTML === "") container.innerHTML = "<p style='text-align:center; color:#666;'>まだ確定したシフトはありません。</p>";
     }
 
@@ -252,14 +296,12 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "submitShift", uid: uid, staffName: staffName, shifts: shiftsToSend }) })
       .then(r => r.json()).then(res => {
         if(res.status === "success") { 
-          // 💡 提出成功時もキャッシュを更新（画面の再描画時のズレを防ぐため）
           const cachedStr = localStorage.getItem('bg_shift_data_' + uid);
           if (cachedStr) {
             let cachedData = JSON.parse(cachedStr);
             cachedData.myShifts = currentSelections;
             localStorage.setItem('bg_shift_data_' + uid, JSON.stringify(cachedData));
           }
-
           alert("✅ 保存しました！"); liff.closeWindow(); 
         } 
         else { alert("エラー: " + res.message); }
