@@ -24,8 +24,6 @@
     .fee-alert-success { border-color: #c3e6cb; background-color: #d4edda; }
     textarea.report-box { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 5px; resize: vertical; background-color: #fff;}
     textarea.report-box:focus { outline: none; border-color: #0056b3; background-color: #fff; }
-    
-    /* 💡 追加：業務区分セレクトボックス用スタイル */
     select.work-type-select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; font-weight: bold; background-color: #fafafa; margin-bottom: 20px; }
   </style>
 </head>
@@ -43,26 +41,6 @@
         <input type="text" id="searchInput" placeholder="会員番号(例: 123) または 名前" oninput="searchMemberFromCache()" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background-color: #fafafa;">
         <div id="searchResults" style="max-height: 150px; overflow-y: auto; margin-top: 10px;"></div>
       </div>
-      ```
-
----
-
-### ステップ2：JavaScriptの追加・修正
-
-ファイルの下の方にある `<script>` 内で、2箇所の修正・追加を行います。
-
-#### ① `resetScanner()` を上書きする
-「キャンセルして戻る」を押した時に、検索窓も元通り表示されるようにします。
-既存の `function resetScanner() { startScanner(); }` を探し、以下の内容にまるごと上書きしてください。
-
-**【上書きするコード】**
-```javascript
-    function resetScanner() { 
-      document.getElementById('manualSearchArea').style.display = 'block';
-      document.getElementById('searchInput').value = '';
-      document.getElementById('searchResults').innerHTML = '';
-      startScanner(); 
-    }
 
       <div id="resultArea">
         <div class="member-id" id="displayId">M----</div>
@@ -155,7 +133,6 @@
             const cachedMembers = localStorage.getItem('memberCacheData');
             
             if (cachedStaff && cachedMembers) {
-              // キャッシュが存在する場合は即座にメモリに展開してスキャナーを起動（待ち時間ゼロ）
               const staffData = JSON.parse(cachedStaff);
               currentStaffName = staffData.staffName;
               currentMemberId = staffData.memberId;
@@ -174,11 +151,9 @@
               html5QrCode = new Html5Qrcode("reader");
               startScanner();
               
-              // 裏側で非同期に権限と名簿の最新情報を取得してキャッシュを更新する
               verifyStaffAccess(uid, true);
               loadCache();
             } else {
-              // 初回アクセス時、またはキャッシュがない場合は通常通り同期取得
               verifyStaffAccess(uid, false);
             }
           });
@@ -186,14 +161,12 @@
       });
     });
 
-    // 権限確認（isBackgroundフラグで裏側での処理かどうかを判定）
     function verifyStaffAccess(uid, isBackground = false) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "verifyStaff", uid: uid }) })
       .then(res => res.json()).then(data => {
         if (data.status === "success") { 
           currentStaffName = data.staffName; currentMemberId = data.memberId; currentCerts = data.certs || ""; 
           
-          // 💡 取得したスタッフ情報をLocalStorageに保存
           localStorage.setItem('staffData_' + uid, JSON.stringify({ staffName: currentStaffName, memberId: currentMemberId, certs: currentCerts }));
           
           if (!isBackground) {
@@ -204,7 +177,6 @@
             });
           }
         } else {
-          // 権限が剥奪された場合など、キャッシュを消去してエラー画面を強制表示
           localStorage.removeItem('staffData_' + uid);
           document.getElementById('appContent').style.display = 'none';
           document.getElementById('errorScreen').style.display = 'block'; 
@@ -213,22 +185,17 @@
       });
     }
 
-    // 名簿データの取得とキャッシュ保存
     function loadCache(callback) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getMembers" }) })
       .then(res => res.json()).then(data => { 
         if (data.status === "success") { 
           memberCache = data.members; feeCache = data.feeStatuses; typeCache = data.memberTypes; priceMaster = data.feeMaster; repCache = data.repIds; 
-          
-          // 💡 名簿データをLocalStorageに保存
           saveCachesToLocal();
-          
           if (callback) callback(); 
         } 
       });
     }
 
-    // 💡 キャッシュ保存用の共通関数
     function saveCachesToLocal() {
       localStorage.setItem('memberCacheData', JSON.stringify({ 
         memberCache: memberCache, feeCache: feeCache, typeCache: typeCache, priceMaster: priceMaster, repCache: repCache 
@@ -240,21 +207,33 @@
       document.getElementById('timecardSelectArea').style.display = 'none'; 
       document.getElementById('timecardArea').style.display = 'none'; 
       document.getElementById('successMessage').style.display = 'none'; 
+      
       document.getElementById('reader').style.display = 'block';
-      html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 250 } }, onScanSuccess, () => {}).catch(e => console.error(e));
+      
+      // 💡 検索窓の状態も確実にリセットして表示する
+      const searchArea = document.getElementById('manualSearchArea');
+      if (searchArea) {
+        searchArea.style.display = 'block';
+        document.getElementById('searchInput').value = '';
+        document.getElementById('searchResults').innerHTML = '';
+      }
+
+      if (html5QrCode) {
+        html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 250 } }, onScanSuccess, () => {}).catch(e => console.error(e));
+      }
     }
 
     function onScanSuccess(decodedText) {
       if (!html5QrCode.isScanning) return;
       html5QrCode.stop().then(() => {
         document.getElementById('reader').style.display = 'none';
+        document.getElementById('manualSearchArea').style.display = 'none'; // 検索窓も隠す
         
         if (decodedText === "TIMECARD") {
           document.getElementById('timecardSelectArea').style.display = 'block';
           return;
         }
 
-        // キャッシュにない新規会員の場合は、強制的に最新データを取得し直す（既存の優れたフォールバック機能です）
         if (!memberCache[decodedText] && decodedText.startsWith("M")) {
           document.getElementById('loading').style.display = 'block'; document.getElementById('loading').innerText = "🔄 最新の会員データを取得中...";
           loadCache(() => { document.getElementById('loading').style.display = 'none'; processScannedMember(decodedText); });
@@ -286,9 +265,49 @@
 
     function resetScanner() { startScanner(); }
 
+    // 💡 確実に動作する元の送信機能
     function submitRecord(equipmentName) {
       document.getElementById('resultArea').style.display = 'none'; document.getElementById('successMessage').style.display = 'block'; document.getElementById('successText').innerText = "✅ 舟艇の受付を記録しました！";
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "recordAttendance", data: { memberId: document.getElementById('displayId').innerText, memberName: document.getElementById('displayName').innerText, equipment: equipmentName, staffName: currentStaffName } }) });
+    }
+
+    // 💡 代理チェックイン：検索機能
+    function searchMemberFromCache() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      const resultArea = document.getElementById('searchResults');
+      resultArea.innerHTML = '';
+      if (query.length < 1) return;
+
+      let count = 0;
+      for (const [memId, name] of Object.entries(memberCache)) {
+        const shortId = memId.replace('M', '').replace(/^0+/, ''); 
+        if (memId.toLowerCase().includes(query) || shortId === query || name.toLowerCase().includes(query)) {
+          const btn = document.createElement('button');
+          btn.style.cssText = "display:block; width:100%; padding:12px; margin-bottom:5px; background:#e8f4fd; border:1px solid #b6d4fe; border-radius:6px; font-size:16px; text-align:left; color:#0056b3; font-weight:bold; cursor:pointer;";
+          btn.innerText = `${memId} : ${name.replace(' 様', '')}`;
+          
+          btn.onclick = () => {
+            document.getElementById('searchInput').value = '';
+            resultArea.innerHTML = '';
+            document.getElementById('manualSearchArea').style.display = 'none';
+            document.getElementById('reader').style.display = 'none';
+            
+            try {
+              if (typeof html5QrCode !== 'undefined' && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(() => {});
+              }
+            } catch(e) {}
+
+            processScannedMember(memId);
+          };
+          resultArea.appendChild(btn);
+          count++;
+          if (count >= 5) break; 
+        }
+      }
+      if (count === 0) {
+        resultArea.innerHTML = '<div style="font-size:13px; color:#666; text-align:center;">見つかりません</div>';
+      }
     }
 
     function executeFeeCollection() {
@@ -299,7 +318,7 @@
       .then(res => res.json()).then(data => {
         if (data.status === "success") { 
           feeCache[memId] = "入金済"; 
-          saveCachesToLocal(); // 💡 入金処理が完了した際、ローカルのキャッシュもすぐに「入金済」として上書き保存します
+          saveCachesToLocal();
           const alertBox = document.getElementById('feeAlertArea'); alertBox.className = "fee-alert-box fee-alert-success"; alertBox.innerHTML = '<div style="color: #155724; font-weight: bold; font-size: 16px; text-align: center;">✅ 入金処理が完了しました！<br>続けて下のボタンから舟艇を選択してください。</div>'; 
         } 
         else { alert("⚠️ エラー: " + data.message); btn.innerText = "💰 現金を受領して入金済みにする"; btn.disabled = false; }
@@ -369,48 +388,6 @@
         if (data.status === "success") document.getElementById('successText').innerText = `✅ ${pendingTimecardType}を記録しました！\nお疲れ様でした。`;
         else document.getElementById('successText').innerText = "⚠️ エラー: " + data.message;
       }).catch(e => document.getElementById('successText').innerText = "⚠️ 通信エラー");
-    }
-
-  // 💡追加：キャッシュ名簿から検索し、QR読み取りと同じ処理へ繋ぐ
-    function searchMemberFromCache() {
-      const query = document.getElementById('searchInput').value.trim().toLowerCase();
-      const resultArea = document.getElementById('searchResults');
-      resultArea.innerHTML = '';
-      if (query.length < 1) return;
-
-      let count = 0;
-      for (const [memId, name] of Object.entries(memberCache)) {
-        const shortId = memId.replace('M', '').replace(/^0+/, ''); 
-        if (memId.toLowerCase().includes(query) || shortId === query || name.toLowerCase().includes(query)) {
-          const btn = document.createElement('button');
-          btn.style.cssText = "display:block; width:100%; padding:12px; margin-bottom:5px; background:#e8f4fd; border:1px solid #b6d4fe; border-radius:6px; font-size:16px; text-align:left; color:#0056b3; font-weight:bold; cursor:pointer;";
-          btn.innerText = `${memId} : ${name.replace(' 様', '')}`;
-          
-          btn.onclick = () => {
-            // 1. 検索枠をクリアして隠す
-            document.getElementById('searchInput').value = '';
-            resultArea.innerHTML = '';
-            document.getElementById('manualSearchArea').style.display = 'none';
-            
-            // 2. カメラを止めて隠す
-            document.getElementById('reader').style.display = 'none';
-            try {
-              if (typeof html5QrCode !== 'undefined' && html5QrCode.isScanning) {
-                html5QrCode.stop().catch(() => {});
-              }
-            } catch(e) {}
-
-            // 3. 💡QRコードをスキャンした時と「完全に同じ関数」に会員IDを渡す
-            processScannedMember(memId);
-          };
-          resultArea.appendChild(btn);
-          count++;
-          if (count >= 5) break; // 画面が埋まらないよう最大5件まで
-        }
-      }
-      if (count === 0) {
-        resultArea.innerHTML = '<div style="font-size:13px; color:#666; text-align:center;">見つかりません</div>';
-      }
     }
   </script>
 </body>
