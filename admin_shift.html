@@ -46,36 +46,63 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       liff.init({ liffId: LIFF_ID }).then(() => {
-        if (liff.isLoggedIn()) { fetchAdminData(); } else { liff.login(); }
+        if (liff.isLoggedIn()) {
+          // 💡 爆速化：LocalStorageからキャッシュを取得
+          const cachedDataStr = localStorage.getItem('bg_admin_shift_data');
+          if (cachedDataStr) {
+            try {
+              const res = JSON.parse(cachedDataStr);
+              processAndRenderData(res);
+              // 裏側で最新情報を同期する
+              fetchAdminData(true);
+            } catch(e) {
+              fetchAdminData(false);
+            }
+          } else {
+            fetchAdminData(false);
+          }
+        } else {
+          liff.login();
+        }
       }).catch(err => alert("LIFF初期化エラー"));
     });
 
-    function fetchAdminData() {
+    function fetchAdminData(isBackground = false) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "getAdminShiftData" }) })
       .then(r => r.json()).then(res => {
         if(res.status === "success") {
-          
-          // 💡 フロントエンド（スマホ側）の正確な時計で「今日」の基準を作る
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
+          // 💡 最新データをキャッシュに保存
+          localStorage.setItem('bg_admin_shift_data', JSON.stringify(res));
+          processAndRenderData(res);
+        } else { 
+          if(!isBackground) alert("取得エラー: " + res.message); 
+        }
+      }).catch(e => {
+        if(!isBackground) alert("通信エラー");
+      });
+    }
 
-          // 💡 filterを使って、確実に今日以降のデータだけを残す
-          masterData = res.calendar
-            .filter(day => new Date(day.date) >= today) 
-            .map(day => {
-              let confirmedArr = day.confirmed ? day.confirmed.split(',').map(s => s.trim()).filter(Boolean) : [];
-              return {
-                ...day,
-                requests: res.requests[day.date] || [],
-                selectedMembers: [...new Set(confirmedArr)]
-              };
-            });
-            
-          renderAdminList();
-          document.getElementById('loading').style.display = "none";
-          document.getElementById('saveBtn').style.display = "block";
-        } else { alert("取得エラー: " + res.message); }
-      }).catch(e => alert("通信エラー"));
+    // 💡 画面構築処理を共通化
+    function processAndRenderData(res) {
+      // フロントエンド（スマホ側）の正確な時計で「今日」の基準を作る
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // filterを使って、確実に今日以降のデータだけを残す
+      masterData = res.calendar
+        .filter(day => new Date(day.date) >= today) 
+        .map(day => {
+          let confirmedArr = day.confirmed ? day.confirmed.split(',').map(s => s.trim()).filter(Boolean) : [];
+          return {
+            ...day,
+            requests: res.requests[day.date] || [],
+            selectedMembers: [...new Set(confirmedArr)]
+          };
+        });
+        
+      renderAdminList();
+      document.getElementById('loading').style.display = "none";
+      document.getElementById('saveBtn').style.display = "block";
     }
 
     function renderAdminList() {
@@ -87,7 +114,6 @@
         let staffButtonsHtml = "";
         if (availableStaff.length > 0) {
           availableStaff.forEach(staff => {
-            // 💡 修正：名前の完全一致をチェックする
             const isSelected = day.selectedMembers.some(name => name === staff.name);
             const statusClass = staff.status === '⭕️' ? 'status-ok' : 'status-maybe';
             const selectedClass = isSelected ? 'selected' : '';
@@ -125,12 +151,10 @@
         selectedArray.splice(index, 1);
         btnElement.classList.remove('selected');
       } else {
-        // 💡 修正：万が一の重複挿入を防ぐ
         if (!selectedArray.includes(staffName)) selectedArray.push(staffName);
         btnElement.classList.add('selected');
       }
       
-      // 💡 修正：ボタンを押すたびに人数のカウントをリアルタイム更新
       document.getElementById(`count-${dayIndex}`).innerText = `計 ${selectedArray.length}名`;
     }
 
@@ -138,13 +162,30 @@
       const btn = document.getElementById('saveBtn'); btn.innerText = "⏳ 保存中..."; btn.disabled = true;
       
       const payload = masterData.map(day => {
-        // 💡 修正：保存時にも念のため重複を排除してからカンマ区切りで結合
         return { rowNum: day.rowNum, members: [...new Set(day.selectedMembers)].join(', ') };
       });
 
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "saveAdminShift", confirmedData: payload }) })
       .then(r => r.json()).then(res => {
-        if(res.status === "success") { alert("✅ シフトを保存しました！\n（※再修正したい場合はもう一度開き直して保存可能です）"); liff.closeWindow(); } 
+        if(res.status === "success") { 
+          // 💡 提出成功時もキャッシュを更新（次回開いた時に最新状態をすぐ出すため）
+          const cachedStr = localStorage.getItem('bg_admin_shift_data');
+          if (cachedStr) {
+            try {
+              let cachedRes = JSON.parse(cachedStr);
+              masterData.forEach(mDay => {
+                let target = cachedRes.calendar.find(c => c.date === mDay.date);
+                if (target) {
+                  target.confirmed = [...new Set(mDay.selectedMembers)].join(', ');
+                }
+              });
+              localStorage.setItem('bg_admin_shift_data', JSON.stringify(cachedRes));
+            } catch(e) {}
+          }
+
+          alert("✅ シフトを保存しました！\n（※再修正したい場合はもう一度開き直して保存可能です）"); 
+          liff.closeWindow(); 
+        } 
         else { alert("エラー: " + res.message); }
       }).catch(e => alert("通信エラー")).finally(() => { btn.innerText = "💾 確定シフトとして一括保存する"; btn.disabled = false; });
     }
