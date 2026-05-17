@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>カヌースクール 参加申込み</title>
+  <style>
+    :root {
+      --primary-color: #0056b3;
+      --bg-color: #f4f7f6;
+      --text-color: #333;
+      --border-color: #ccc;
+      --white: #fff;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background-color: var(--primary-color);
+      color: var(--white);
+      padding: 15px;
+      text-align: center;
+      border-radius: 8px 8px 0 0;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    .info-box {
+      background-color: #e9f5ff;
+      border: 1px solid #b8daff;
+      color: #004085;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+    .info-box ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+      background: var(--white);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      font-size: 0.95rem;
+    }
+    .required {
+      color: red;
+      font-size: 0.8rem;
+      margin-left: 5px;
+    }
+    input[type="text"],
+    input[type="tel"],
+    input[type="email"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+    }
+    .checkbox-item input[type="checkbox"] {
+      margin-right: 10px;
+      width: 18px;
+      height: 18px;
+    }
+    .btn-submit {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      background-color: var(--primary-color);
+      color: var(--white);
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background-color 0.3s;
+    }
+    .btn-submit:hover {
+      background-color: #004494;
+    }
+    .btn-submit:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+    #loadingMessage, #successMessage, #errorMessage {
+      display: none;
+      text-align: center;
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    #loadingMessage { color: var(--primary-color); }
+    #successMessage { background-color: #d4edda; color: #155724; }
+    #errorMessage { background-color: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>カヌースクール 参加申込み</h1>
+    </div>
+
+    <div class="info-box">
+      <strong>【ご案内】</strong>
+      <ul>
+        <li>料金：1,000円（当日受付にてお支払いください）</li>
+        <li>本申込みは海洋クラブメンバーへのご登録が完了している方が対象です。</li>
+      </ul>
+    </div>
+
+    <form id="applyForm">
+      <div class="form-group">
+        <label for="name">参加者氏名 <span class="required">*</span></label>
+        <input type="text" id="name" name="name" required placeholder="例: 海洋 太郎">
+      </div>
+
+      <div class="form-group">
+        <label for="phone">連絡先（電話番号） <span class="required">*</span></label>
+        <input type="tel" id="phone" name="phone" required placeholder="例: 090-1234-5678">
+      </div>
+
+      <div class="form-group">
+        <label for="email">メールアドレス <span class="required">*</span></label>
+        <input type="email" id="email" name="email" required placeholder="例: example@example.com">
+      </div>
+
+      <div class="form-group">
+        <label for="age">年令 <span class="required">*</span></label>
+        <input type="number" id="age" name="age" required min="1" max="100" placeholder="例: 25">
+      </div>
+
+      <div class="form-group">
+        <label>参加希望日程（複数選択可） <span class="required">*</span></label>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" name="dates" value="6月14日（日）※カヌー教室"> 6月14日（日）※カヌー教室
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="dates" value="6月21日（日）※カヌー教室"> 6月21日（日）※カヌー教室
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="dates" value="6月28日（日）※カヌー教室"> 6月28日（日）※カヌー教室
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="dates" value="7月5日（日）※カヌー教室"> 7月5日（日）※カヌー教室
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn-submit">申し込む</button>
+      <div id="loadingMessage">送信中...しばらくお待ちください。</div>
+      <div id="successMessage">お申込みが完了しました。ありがとうございます。</div>
+      <div id="errorMessage">送信に失敗しました。時間をおいて再度お試しください。</div>
+    </form>
+  </div>
+
+  <script>
+    // 【重要】ご自身のGASウェブアプリのURLに書き換えてください
+    const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL_HERE";
+
+    // 画面読み込み時にURLパラメータを取得してフォームに自動入力（オートフィル）
+    window.onload = function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      if(urlParams.has('name')) document.getElementById('name').value = urlParams.get('name');
+      if(urlParams.has('phone')) document.getElementById('phone').value = urlParams.get('phone');
+      if(urlParams.has('email')) document.getElementById('email').value = urlParams.get('email');
+      if(urlParams.has('age')) document.getElementById('age').value = urlParams.get('age');
+    };
+
+    document.getElementById('applyForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const dateCheckboxes = document.querySelectorAll('input[name="dates"]:checked');
+      if (dateCheckboxes.length === 0) {
+        alert("参加希望日程を少なくとも1つ選択してください。");
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      const loadingMsg = document.getElementById('loadingMessage');
+      const successMsg = document.getElementById('successMessage');
+      const errorMsg = document.getElementById('errorMessage');
+
+      submitBtn.disabled = true;
+      loadingMsg.style.display = 'block';
+      successMsg.style.display = 'none';
+      errorMsg.style.display = 'none';
+
+      const selectedDates = Array.from(dateCheckboxes).map(cb => cb.value).join(', ');
+
+      const payload = {
+        action: "school_apply",
+        name: document.getElementById('name').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        age: document.getElementById('age').value,
+        dates: selectedDates
+      };
+
+      fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(response => response.json())
+      .then(data => {
+        loadingMsg.style.display = 'none';
+        if (data.status === 'success') {
+          successMsg.style.display = 'block';
+          document.getElementById('applyForm').reset();
+        } else {
+          errorMsg.style.display = 'block';
+          submitBtn.disabled = false;
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        loadingMsg.style.display = 'none';
+        errorMsg.style.display = 'block';
+        submitBtn.disabled = false;
+      });
+    });
+  </script>
+</body>
+</html>
