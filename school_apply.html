@@ -212,7 +212,7 @@
 
   <script>
     // 【重要】必ず最新デプロイのGASウェブアプリのURLに書き換えてください
-    const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL_HERE";
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec";
 
     // 画面読み込み時にURLパラメータを取得してフォームに自動入力（オートフィル）
     window.onload = function() {
@@ -224,7 +224,7 @@
       if(urlParams.has('birthDate')) document.getElementById('birthDate').value = urlParams.get('birthDate');
     };
 
-    // 💡 既存会員の情報を取得してフォームにプリセットする関数
+    // 💡 既存会員の情報を取得してフォームにプリセットする関数（修正版）
     function loadMemberPreset() {
       const memberId = document.getElementById('memberIdInput').value.trim().toUpperCase();
       if (!memberId) {
@@ -236,7 +236,6 @@
       searchBtn.innerText = "読込中...";
       searchBtn.disabled = true;
 
-      // 既存の予約システム用会員検索エンドポイントを流用
       fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
@@ -245,25 +244,24 @@
           memberId: memberId
         })
       })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+      })
       .then(res => {
         searchBtn.innerText = "情報を読込";
         searchBtn.disabled = false;
 
-        if (res.status === "success" && res.data) {
-          // 💡 取得したデータをフォームにマッピング
-          // 既存のデータ構造（姓・名、生年月日形式）に合わせてパース処理を行います
-          const d = res.data;
-          document.getElementById('name').value = ((d['姓'] || '') + ' ' + (d['名'] || '')).trim() || d['氏名'] || '';
-          document.getElementById('phone').value = d['電話番号'] || '';
-          document.getElementById('email').value = d['メールアドレス'] || '';
+        if (res.status === "success") {
+          // 💡 取得したデータをフォームにマッピング (APIの戻り値フォーマットに完全適合)
+          document.getElementById('name').value = res.name || '';
+          document.getElementById('phone').value = res.phone || '';
+          document.getElementById('email').value = res.email || '';
+          document.getElementById('birthDate').value = res.birthDate || '';
           
-          if (d['生年月日']) {
-            document.getElementById('birthDate').value = d['生年月日'].split('T')[0];
-          }
-          alert("会員情報を読み込みました。");
+          alert("会員情報を読み込みました。そのままお申込みへお進みください。");
         } else {
-          alert("指定された会員IDが見つからないか、データが空です。: " + (res.message || ''));
+          alert("指定された会員IDが見つかりません: " + (res.message || ''));
         }
       })
       .catch(error => {
@@ -301,7 +299,10 @@
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+      })
       .then(data => {
         loadingMsg.style.display = 'none';
         if (data.status === 'success') {
