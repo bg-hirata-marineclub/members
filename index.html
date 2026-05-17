@@ -446,7 +446,7 @@
       }
     }
 
-    // 💡 修正：同じドメイン内の school_apply.html へ「相対パス」で安全に遷移させる（URL書き換え不要）
+    // 💡 修正：LIFF環境下でのドメインエラーを回避する絶対パス＆LIFF専用遷移
     function goToSchoolApply() {
       if (!currentUserData) return;
       
@@ -459,14 +459,26 @@
         birthDate = currentUserData['生年月日'].split('T')[0];
       }
 
-      // 💡 相対パス文字列で組み立てることで、LIFFのドメインブロックを確実に回避
-      const targetUrl = "school_apply.html" 
+      // ⚠️⚠️⚠️ ここを「school_apply.html」が公開されている【実際のURL（https://〜）】に書き換えてください ⚠️⚠️⚠️
+      // （※背景画像のURLから推測したURLを入れていますが、念のためご確認ください）
+      const SCHOOL_APPLY_BASE_URL = "https://bg-hirata-marineclub.github.io/members/school_apply.html"; 
+
+      const targetUrl = SCHOOL_APPLY_BASE_URL 
                       + "?name=" + encodeURIComponent(fullName.trim())
                       + "&phone=" + encodeURIComponent(phone)
                       + "&email=" + encodeURIComponent(email)
                       + "&birthDate=" + encodeURIComponent(birthDate);
 
-      window.location.href = targetUrl;
+      // LINEアプリ内（LIFF）から安全に別のWebページへ遷移させるための処理
+      if (typeof liff !== 'undefined' && liff.isInClient()) {
+        liff.openWindow({
+          url: targetUrl,
+          external: false // LINE内ブラウザのまま開く
+        });
+      } else {
+        // PC等の通常ブラウザ用
+        window.location.href = targetUrl;
+      }
     }
 
     function executeToggleMenu(target) {
