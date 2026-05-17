@@ -279,6 +279,17 @@
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec";
 
     window.onload = function() {
+      // 💡 締切チェック（2026年6月12日 23:59:59まで）
+      const deadline = new Date('2026-06-12T23:59:59+09:00');
+      const now = new Date();
+      if (now > deadline) {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerText = "申込受付は終了しました";
+        submitBtn.style.backgroundColor = "#999";
+      }
+
+      // オートフィル処理
       const urlParams = new URLSearchParams(window.location.search);
       if(urlParams.has('name')) document.getElementById('name').value = urlParams.get('name');
       if(urlParams.has('phone')) document.getElementById('phone').value = urlParams.get('phone');
@@ -337,6 +348,13 @@
 
     document.getElementById('applyForm').addEventListener('submit', function(e) {
       e.preventDefault();
+
+      // 送信時にも再度締切チェック（念のため）
+      const deadline = new Date('2026-06-12T23:59:59+09:00');
+      if (new Date() > deadline) {
+        alert("申込受付は終了しました。");
+        return;
+      }
 
       const submitBtn = document.getElementById('submitBtn');
       const loadingMsg = document.getElementById('loadingMessage');
