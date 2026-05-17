@@ -452,31 +452,7 @@
       }
     }
 
-    // 💡 スクール申込み画面へ遷移
-    function goToSchoolApply() {
-      if (!currentUserData) return;
-      
-      const fullName = (currentUserData['姓'] || '') + ' ' + (currentUserData['名'] || '');
-      const phone = currentUserData['電話番号'] || '';
-      const email = currentUserData['メールアドレス'] || '';
-      
-      let birthDate = '';
-      if (currentUserData['生年月日']) {
-        birthDate = currentUserData['生年月日'].split('T')[0];
-      }
-
-      // ⚠️⚠️⚠️ ここをご自身のカヌースクール申込画面(school_apply.html)の公開URLに変更してください ⚠️⚠️⚠️
-      const SCHOOL_APPLY_URL = "https://bg-hirata-marineclub.github.io/members/school_apply.html"; 
-      
-      const params = new URLSearchParams({
-        name: fullName.trim(),
-        phone: phone,
-        email: email,
-        birthDate: birthDate
-      });
-
-      window.location.href = SCHOOL_APPLY_URL + "?" + params.toString();
-    }
+    goToSchoolApply()
 
     function executeToggleMenu(target) {
       const uid = document.getElementById('lineUid').value;
