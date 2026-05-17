@@ -57,6 +57,10 @@
       border-radius: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
+    .preset-box {
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+    }
     label {
       display: block;
       font-weight: bold;
@@ -81,6 +85,21 @@
       font-size: 1rem;
       font-family: inherit;
     }
+    .search-flex {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-search {
+      padding: 10px 20px;
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-search:hover { background-color: #5a6268; }
     .schedule-list {
       background: #f8f9fa;
       padding: 15px;
@@ -138,6 +157,15 @@
       </ul>
     </div>
 
+    <div class="form-group preset-box">
+      <label for="memberIdInput">既にメンバーカードをお持ちの方</label>
+      <div class="search-flex">
+        <input type="text" id="memberIdInput" placeholder="例: M0001" style="text-transform: uppercase;">
+        <button type="button" id="searchBtn" class="btn-search" onclick="loadMemberPreset()">情報を読込</button>
+      </div>
+      <span style="font-size: 0.8rem; color: #856404; display: block; margin-top: 5px;">※会員ID入力をすると、登録情報が下に自動入力されます。</span>
+    </div>
+
     <form id="applyForm">
       <div class="form-group">
         <label for="name">参加者氏名 <span class="required">*</span></label>
@@ -184,7 +212,7 @@
 
   <script>
     // 【重要】必ず最新デプロイのGASウェブアプリのURLに書き換えてください
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec";
+    const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL_HERE";
 
     // 画面読み込み時にURLパラメータを取得してフォームに自動入力（オートフィル）
     window.onload = function() {
@@ -195,6 +223,56 @@
       if(urlParams.has('email')) document.getElementById('email').value = urlParams.get('email');
       if(urlParams.has('birthDate')) document.getElementById('birthDate').value = urlParams.get('birthDate');
     };
+
+    // 💡 既存会員の情報を取得してフォームにプリセットする関数
+    function loadMemberPreset() {
+      const memberId = document.getElementById('memberIdInput').value.trim().toUpperCase();
+      if (!memberId) {
+        alert("会員ID（M0001など）を入力してください。");
+        return;
+      }
+
+      const searchBtn = document.getElementById('searchBtn');
+      searchBtn.innerText = "読込中...";
+      searchBtn.disabled = true;
+
+      // 既存の予約システム用会員検索エンドポイントを流用
+      fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: "getMemberInfoForReservation",
+          memberId: memberId
+        })
+      })
+      .then(response => response.json())
+      .then(res => {
+        searchBtn.innerText = "情報を読込";
+        searchBtn.disabled = false;
+
+        if (res.status === "success" && res.data) {
+          // 💡 取得したデータをフォームにマッピング
+          // 既存のデータ構造（姓・名、生年月日形式）に合わせてパース処理を行います
+          const d = res.data;
+          document.getElementById('name').value = ((d['姓'] || '') + ' ' + (d['名'] || '')).trim() || d['氏名'] || '';
+          document.getElementById('phone').value = d['電話番号'] || '';
+          document.getElementById('email').value = d['メールアドレス'] || '';
+          
+          if (d['生年月日']) {
+            document.getElementById('birthDate').value = d['生年月日'].split('T')[0];
+          }
+          alert("会員情報を読み込みました。");
+        } else {
+          alert("指定された会員IDが見つからないか、データが空です。: " + (res.message || ''));
+        }
+      })
+      .catch(error => {
+        console.error('Preset Error:', error);
+        searchBtn.innerText = "情報を読込";
+        searchBtn.disabled = false;
+        alert("会員情報の取得に失敗しました。");
+      });
+    }
 
     document.getElementById('applyForm').addEventListener('submit', function(e) {
       e.preventDefault();
@@ -220,31 +298,23 @@
 
       fetch(GAS_WEB_APP_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain', // 💡 GASのCORS制約を回避するため text/plain に修正
-        },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
+      .then(response => response.json())
       .then(data => {
         loadingMsg.style.display = 'none';
         if (data.status === 'success') {
           successMsg.style.display = 'block';
           document.getElementById('applyForm').reset();
+          document.getElementById('memberIdInput').value = '';
         } else {
-          // GAS側で処理エラー（シートが見つからない等）が起きた場合
           console.error('GAS Error:', data.message);
           errorMsg.style.display = 'block';
           submitBtn.disabled = false;
         }
       })
       .catch(error => {
-        // 通信エラーやJSONパースエラーの場合
         console.error('Fetch Error:', error);
         loadingMsg.style.display = 'none';
         errorMsg.style.display = 'block';
