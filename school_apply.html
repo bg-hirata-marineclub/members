@@ -85,19 +85,45 @@
       font-size: 1rem;
       font-family: inherit;
     }
-    .search-flex {
+    .flex-row {
       display: flex;
       gap: 10px;
+      margin-bottom: 10px;
+    }
+    .id-input-wrapper {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background-color: #fff;
+      padding: 0 10px;
+      flex: 1;
+    }
+    .id-input-wrapper span {
+      font-weight: bold;
+      color: #555;
+      margin-right: 5px;
+      font-size: 1.1rem;
+    }
+    .id-input-wrapper input {
+      border: none;
+      padding: 10px 0;
+      width: 100%;
+      box-shadow: none;
+    }
+    .id-input-wrapper input:focus {
+      outline: none;
     }
     .btn-search {
-      padding: 10px 20px;
+      padding: 12px;
       background-color: #6c757d;
       color: white;
       border: none;
       border-radius: 4px;
       font-weight: bold;
       cursor: pointer;
-      white-space: nowrap;
+      width: 100%;
+      font-size: 1rem;
     }
     .btn-search:hover { background-color: #5a6268; }
     .schedule-list {
@@ -158,12 +184,16 @@
     </div>
 
     <div class="form-group preset-box">
-      <label for="memberIdInput">既にメンバーカードをお持ちの方</label>
-      <div class="search-flex">
-        <input type="text" id="memberIdInput" placeholder="例: M0001" style="text-transform: uppercase;">
-        <button type="button" id="searchBtn" class="btn-search" onclick="loadMemberPreset()">情報を読込</button>
+      <label>既にメンバーカードをお持ちの方</label>
+      <div class="flex-row">
+        <div class="id-input-wrapper">
+          <span>M</span>
+          <input type="tel" id="searchIdNum" maxlength="4" placeholder="0001">
+        </div>
+        <input type="date" id="searchBirthDate" style="flex: 1.2;">
       </div>
-      <span style="font-size: 0.8rem; color: #856404; display: block; margin-top: 5px;">※会員ID入力をすると、登録情報が下に自動入力されます。</span>
+      <button type="button" id="searchBtn" class="btn-search" onclick="loadMemberPreset()">会員情報を読込</button>
+      <span style="font-size: 0.8rem; color: #856404; display: block; margin-top: 8px;">※個人情報保護のため、会員ID（数字4桁）と生年月日が一致した場合のみ情報を自動入力します。</span>
     </div>
 
     <form id="applyForm">
@@ -212,26 +242,29 @@
 
   <script>
     // 【重要】必ず最新デプロイのGASウェブアプリのURLに書き換えてください
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec";
+    const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL_HERE";
 
     // 画面読み込み時にURLパラメータを取得してフォームに自動入力（オートフィル）
     window.onload = function() {
       const urlParams = new URLSearchParams(window.location.search);
-      
       if(urlParams.has('name')) document.getElementById('name').value = urlParams.get('name');
       if(urlParams.has('phone')) document.getElementById('phone').value = urlParams.get('phone');
       if(urlParams.has('email')) document.getElementById('email').value = urlParams.get('email');
       if(urlParams.has('birthDate')) document.getElementById('birthDate').value = urlParams.get('birthDate');
     };
 
-    // 💡 既存会員の情報を取得してフォームにプリセットする関数（修正版）
+    // 💡 既存会員の情報を取得してフォームにプリセットする関数（セキュリティ強化版）
     function loadMemberPreset() {
-      const memberId = document.getElementById('memberIdInput').value.trim().toUpperCase();
-      if (!memberId) {
-        alert("会員ID（M0001など）を入力してください。");
+      const idNum = document.getElementById('searchIdNum').value.trim();
+      const birthDate = document.getElementById('searchBirthDate').value;
+
+      if (!idNum || !birthDate) {
+        alert("会員ID（数字4桁）と生年月日を入力してください。");
         return;
       }
 
+      // "M"と0埋めした4桁を結合
+      const fullMemberId = "M" + String(idNum).padStart(4, '0');
       const searchBtn = document.getElementById('searchBtn');
       searchBtn.innerText = "読込中...";
       searchBtn.disabled = true;
@@ -240,8 +273,9 @@
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
-          action: "getMemberInfoForReservation",
-          memberId: memberId
+          action: "getMemberInfoForSchool", // 新設する専用のAPIアクション
+          memberId: fullMemberId,
+          birthDate: birthDate
         })
       })
       .then(response => {
@@ -249,26 +283,25 @@
         return response.json();
       })
       .then(res => {
-        searchBtn.innerText = "情報を読込";
+        searchBtn.innerText = "会員情報を読込";
         searchBtn.disabled = false;
 
         if (res.status === "success") {
-          // 💡 取得したデータをフォームにマッピング (APIの戻り値フォーマットに完全適合)
           document.getElementById('name').value = res.name || '';
           document.getElementById('phone').value = res.phone || '';
           document.getElementById('email').value = res.email || '';
           document.getElementById('birthDate').value = res.birthDate || '';
           
-          alert("会員情報を読み込みました。そのままお申込みへお進みください。");
+          alert("ご本人確認が完了しました。会員情報を入力しました。");
         } else {
-          alert("指定された会員IDが見つかりません: " + (res.message || ''));
+          alert("エラー: " + (res.message || 'IDまたは生年月日が一致しません。'));
         }
       })
       .catch(error => {
         console.error('Preset Error:', error);
-        searchBtn.innerText = "情報を読込";
+        searchBtn.innerText = "会員情報を読込";
         searchBtn.disabled = false;
-        alert("会員情報の取得に失敗しました。");
+        alert("通信に失敗しました。");
       });
     }
 
@@ -308,7 +341,8 @@
         if (data.status === 'success') {
           successMsg.style.display = 'block';
           document.getElementById('applyForm').reset();
-          document.getElementById('memberIdInput').value = '';
+          document.getElementById('searchIdNum').value = '';
+          document.getElementById('searchBirthDate').value = '';
         } else {
           console.error('GAS Error:', data.message);
           errorMsg.style.display = 'block';
