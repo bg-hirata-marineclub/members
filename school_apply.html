@@ -184,7 +184,7 @@
 
   <script>
     // 【重要】必ず最新デプロイのGASウェブアプリのURLに書き換えてください
-    const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL_HERE";
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec";
 
     // 画面読み込み時にURLパラメータを取得してフォームに自動入力（オートフィル）
     window.onload = function() {
@@ -221,23 +221,31 @@
       fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'text/plain', // 💡 GASのCORS制約を回避するため text/plain に修正
         },
         body: JSON.stringify(payload)
       })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
       .then(data => {
         loadingMsg.style.display = 'none';
         if (data.status === 'success') {
           successMsg.style.display = 'block';
           document.getElementById('applyForm').reset();
         } else {
+          // GAS側で処理エラー（シートが見つからない等）が起きた場合
+          console.error('GAS Error:', data.message);
           errorMsg.style.display = 'block';
           submitBtn.disabled = false;
         }
       })
       .catch(error => {
-        console.error('Error:', error);
+        // 通信エラーやJSONパースエラーの場合
+        console.error('Fetch Error:', error);
         loadingMsg.style.display = 'none';
         errorMsg.style.display = 'block';
         submitBtn.disabled = false;
