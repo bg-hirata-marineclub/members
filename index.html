@@ -127,11 +127,7 @@
         </div>
       </div>
       <div class="form-group">
-        <label>生年月日 
-            <span style="font-size: 12px; font-weight: normal; color: #d9534f; display: block; margin-top: 4px;">
-              ※Androidの方は左上の「年」をタップして選択
-            </span>
-        </label>
+        <label>生年月日</label>
         <input type="date" id="loginBirthDate">
       </div>
       <button type="button" id="loginBtn" onclick="executeLogin()">会員証を表示する</button>
@@ -191,6 +187,8 @@
   <script>
     let familyCount = 0; let cropper; 
     let currentUserData = null; let isUpdateMode = false; let savedProfileImage = "";
+    
+    // 【重要】既存のGASウェブアプリのURLです（変更不要）
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec"; 
 
     function switchTab(tabName) {
@@ -217,7 +215,6 @@
       nameEl.addEventListener('input', () => { if (!isComposing && nameEl.value === '') { kanaEl.value = ''; committedKana = ''; } });
     }
 
-    // 💡 爆速化：LIFF初期化時にキャッシュを確認する
     function initializeLiff() {
       document.getElementById('tabContainer').style.display = 'none';
       document.getElementById('registerSection').style.display = 'none';
@@ -228,11 +225,9 @@
           liff.getProfile().then(p => { 
             document.getElementById('lineUid').value = p.userId; 
             
-            // スマホの記憶（LocalStorage）を確認
             const cachedDataStr = localStorage.getItem('myMemberCard_' + p.userId);
             if (cachedDataStr) {
               try {
-                // キャッシュがあれば、0秒で画面に表示する
                 const res = JSON.parse(cachedDataStr);
                 currentUserData = res.userData; 
                 currentUserData.dbLineUid = res.dbLineUid; 
@@ -240,22 +235,30 @@
                 window.currentFamilyList = res.familyList;
                 document.getElementById('loadingScreen').style.display = 'none'; 
                 displayDigitalCard(res, false);
-                
-                // その後、裏側でこっそり最新データを同期する
                 executeAutoLogin(p.userId, true);
               } catch (e) {
+                console.error("Cache Error:", e);
                 executeAutoLogin(p.userId, false);
               }
             } else {
-              // キャッシュがない場合（初回など）は通常通り通信を待つ
               executeAutoLogin(p.userId, false); 
             }
-          }).catch(() => showRegisterScreen()); 
+          }).catch(e => {
+            alert("LINEプロフィールの取得に失敗しました。");
+            showRegisterScreen();
+          }); 
         } else {
-          if (liff.isInClient()) liff.login();
-          else showRegisterScreen();
+          // 💡 LINE外ブラウザで開いている場合は強制登録画面
+          if (liff.isInClient()) {
+            liff.login();
+          } else {
+            showRegisterScreen();
+          }
         }
-      }).catch(() => showRegisterScreen());
+      }).catch(e => {
+        alert("LIFF初期化エラー: " + e.message);
+        showRegisterScreen();
+      });
     }
 
     document.addEventListener("DOMContentLoaded", () => { 
@@ -264,14 +267,11 @@
       bindFurigana('rep-mei', 'rep-kana-mei'); 
     });
 
-    // 💡 爆速化対応：isBackground フラグを追加
     function executeAutoLogin(uid, isBackground = false) {
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "autoLogin", uid: uid }) })
       .then(r => r.json()).then(res => { 
         if (res.status === "success") { 
-          // 最新データをスマホに記憶させる
           localStorage.setItem('myMemberCard_' + uid, JSON.stringify(res));
-
           currentUserData = res.userData; 
           currentUserData.dbLineUid = res.dbLineUid; 
           savedProfileImage = res.imageUrl; 
@@ -280,16 +280,16 @@
           if (!isBackground) {
             document.getElementById('loadingScreen').style.display = 'none'; 
           }
-          // 最新データで画面を上書き表示
           displayDigitalCard(res, false); 
         } else {
-          // 会員登録が削除された場合などはキャッシュを消す
           if (isBackground && res.message && res.message.includes("未登録")) {
             localStorage.removeItem('myMemberCard_' + uid);
           }
           if (!isBackground) showRegisterScreen(); 
         }
-      }).catch(() => {
+      }).catch((e) => {
+        // 💡 裏側のエラーを握りつぶさずに表示する
+        alert("通信エラーが発生しました: " + e.message);
         if (!isBackground) showRegisterScreen();
       });
     }
@@ -376,7 +376,6 @@
       fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "login", data: { loginId: "M" + String(idNum).padStart(4, '0'), birthDate: birthDate } }) })
       .then(r => r.json()).then(res => { 
         if (res.status === "success") { 
-          // 💡 ログイン成功時もキャッシュに保存
           const uid = document.getElementById('lineUid').value;
           if (uid) localStorage.setItem('myMemberCard_' + uid, JSON.stringify(res));
 
@@ -391,9 +390,69 @@
       }).catch(() => { alert("通信エラー"); btn.innerText = "表示する"; btn.disabled = false; });
     }
 
-    displayDigitalCard
+    // 💡 エラー握りつぶしを解除し、安全な描画を行う版
+    function displayDigitalCard(result, isNewRegistration) {
+      try {
+        document.getElementById('confirmScreen').style.display = 'none'; 
+        document.getElementById('loginSection').style.display = 'none'; 
+        document.getElementById('registerSection').style.display = 'none'; 
+        document.getElementById('tabContainer').style.display = 'none'; 
+        document.getElementById('successScreen').style.display = 'block';
+        
+        if (isNewRegistration) { 
+          document.getElementById('successTitle').style.display = 'block'; 
+          document.getElementById('successMessage').style.display = 'block'; 
+          document.getElementById('successTitle').innerText = isUpdateMode ? "更新完了" : "登録完了"; 
+          document.getElementById('successMessage').innerHTML = isUpdateMode ? "登録情報の更新が完了しました。" : "ご入会ありがとうございます。"; 
+        } else { 
+          document.getElementById('successTitle').style.display = 'none'; 
+          document.getElementById('successMessage').style.display = 'none'; 
+        }
+        
+        const currentLine = document.getElementById('lineUid').value;
+        const dbLine = result.dbLineUid || (currentUserData ? currentUserData.dbLineUid : "");
+        
+        if (!isNewRegistration && currentLine && String(dbLine).trim() !== String(currentLine).trim()) {
+          document.getElementById('linkLineBtn').style.display = 'block'; 
+          if(document.getElementById('editInfoBtn')) document.getElementById('editInfoBtn').style.display = 'none'; 
+        } else {
+          document.getElementById('linkLineBtn').style.display = 'none';
+          if (document.getElementById('editInfoBtn')) document.getElementById('editInfoBtn').style.display = (!isNewRegistration && currentUserData) ? 'block' : 'none';
+        }
 
-    // 💡 スクール申込み画面へ遷移（オートフィル用のパラメータを付与）
+        if (currentUserData && currentUserData['権限'] === 'スタッフ') {
+          if(document.getElementById('staffMenuControls')) document.getElementById('staffMenuControls').style.display = 'block';
+        } else {
+          if(document.getElementById('staffMenuControls')) document.getElementById('staffMenuControls').style.display = 'none';
+        }
+
+        // 💡 期間限定：カヌースクール申込ボタンの表示制御
+        const schoolBtn = document.getElementById('schoolApplyBtn');
+        if (schoolBtn) {
+          const deadline = new Date('2026/06/12 23:59:59');
+          const now = new Date();
+          if (now <= deadline) {
+            schoolBtn.style.display = 'block';
+          } else {
+            schoolBtn.style.display = 'none';
+          }
+        }
+
+        if(document.getElementById('resultYear')) document.getElementById('resultYear').innerText = result.schoolYear || ''; 
+        if(document.getElementById('resultPhoto')) document.getElementById('resultPhoto').src = result.imageUrl || "data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Ccircle cx=\"50\" cy=\"50\" r=\"50\" fill=\"%23ccc\"/%3E%3C/svg%3E";
+        if(document.getElementById('resultId')) document.getElementById('resultId').innerText = result.memberId || ''; 
+        if(document.getElementById('resultName')) document.getElementById('resultName').innerText = (result.memberName || '') + ' 様'; 
+        if(document.getElementById('resultQr') && result.memberId) document.getElementById('resultQr').src = new QRious({ value: result.memberId, size: 150 }).toDataURL(); 
+        
+        window.scrollTo(0, 0);
+      } catch (e) {
+        // 💡 画面が真っ白になったり新規画面に飛ぶ前にアラートで原因を表示
+        alert("画面表示中にエラーが発生しました: " + e.message);
+        console.error("Display Error:", e);
+      }
+    }
+
+    // 💡 スクール申込み画面へ遷移
     function goToSchoolApply() {
       if (!currentUserData) return;
       
@@ -403,21 +462,19 @@
       
       let birthDate = '';
       if (currentUserData['生年月日']) {
-        // "YYYY-MM-DD"の形式で取得
         birthDate = currentUserData['生年月日'].split('T')[0];
       }
 
-      // 【重要】カヌースクール申込み画面(school_apply.html)の公開URLに置き換えてください
-      const SCHOOL_APPLY_URL = "https://bg-hirata-marineclub.github.io/members/school_apply.html"; 
+      // ⚠️⚠️⚠️ ここをご自身のカヌースクール申込画面(school_apply.html)の公開URLに変更してください ⚠️⚠️⚠️
+      const SCHOOL_APPLY_URL = "YOUR_SCHOOL_APPLY_URL_HERE"; 
       
       const params = new URLSearchParams({
         name: fullName.trim(),
         phone: phone,
         email: email,
-        birthDate: birthDate // ageから変更
+        birthDate: birthDate
       });
 
-      // 画面遷移
       window.location.href = SCHOOL_APPLY_URL + "?" + params.toString();
     }
 
@@ -447,7 +504,6 @@
       .then(r => r.json()).then(res => { 
         if (res.status === "success") { 
           alert("✅ 紐付けが完了しました！\n次回から自動でログインできます。"); 
-          // 💡 キャッシュを強制クリアして再読み込み
           localStorage.removeItem('myMemberCard_' + document.getElementById('lineUid').value);
           location.reload(); 
         } else { 
@@ -606,9 +662,7 @@
           res.dbLineUid = document.getElementById('lineUid').value;
           if (currentUserData) currentUserData.dbLineUid = res.dbLineUid;
 
-          // 💡 更新・登録成功時も最新データを記憶させる
           localStorage.setItem('myMemberCard_' + res.dbLineUid, JSON.stringify(res));
-
           displayDigitalCard(res, true); 
         } else { 
           alert(res.message); btn.innerText = "送信する"; btn.disabled = false; btn.style.backgroundColor = "#06C755"; 
