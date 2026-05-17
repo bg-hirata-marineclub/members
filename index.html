@@ -181,6 +181,10 @@
       <button type="button" id="editInfoBtn" onclick="openEditForm()" style="display:none; width: 100%; padding: 15px; background-color: #ffc107; color: #333; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px;">
         📝 登録情報の確認・変更
       </button>
+
+      <button type="button" id="schoolApplyBtn" onclick="goToSchoolApply()" style="display:none; width: 100%; padding: 15px; background-color: #17a2b8; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        🛶 続けてカヌースクールに申し込む
+      </button>
     </div>
   </div>
 
@@ -417,11 +421,49 @@
         document.getElementById('staffMenuControls').style.display = 'none';
       }
 
+      // 常にスクール申込ボタンを表示する（必要に応じて条件分岐を追加可能）
+      if (document.getElementById('schoolApplyBtn')) {
+        document.getElementById('schoolApplyBtn').style.display = 'block';
+      }
+
       document.getElementById('resultYear').innerText = result.schoolYear; 
       document.getElementById('resultPhoto').src = result.imageUrl || "data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Ccircle cx=\"50\" cy=\"50\" r=\"50\" fill=\"%23ccc\"/%3E%3C/svg%3E";
       document.getElementById('resultId').innerText = result.memberId; document.getElementById('resultName').innerText = result.memberName + ' 様'; 
       document.getElementById('resultQr').src = new QRious({ value: result.memberId, size: 150 }).toDataURL(); 
       window.scrollTo(0, 0);
+    }
+
+    // 💡 スクール申込み画面へ遷移（オートフィル用のパラメータを付与）
+    function goToSchoolApply() {
+      if (!currentUserData) return;
+      
+      const fullName = (currentUserData['姓'] || '') + ' ' + (currentUserData['名'] || '');
+      const phone = currentUserData['電話番号'] || '';
+      const email = currentUserData['メールアドレス'] || '';
+      
+      let age = '';
+      if (currentUserData['生年月日']) {
+        const birthDate = new Date(currentUserData['生年月日']);
+        const today = new Date();
+        age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+      }
+
+      // 【重要】カヌースクール申込み画面(school_apply.html)の公開URLに置き換えてください
+      const SCHOOL_APPLY_URL = "YOUR_SCHOOL_APPLY_URL_HERE"; 
+      
+      const params = new URLSearchParams({
+        name: fullName.trim(),
+        phone: phone,
+        email: email,
+        age: age
+      });
+
+      // 画面遷移
+      window.location.href = SCHOOL_APPLY_URL + "?" + params.toString();
     }
 
     function executeToggleMenu(target) {
