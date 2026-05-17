@@ -71,7 +71,7 @@
     input[type="text"],
     input[type="tel"],
     input[type="email"],
-    input[type="number"],
+    input[type="date"],
     textarea {
       width: 100%;
       padding: 10px;
@@ -155,8 +155,8 @@
       </div>
 
       <div class="form-group">
-        <label for="age">年令 <span class="required">*</span></label>
-        <input type="number" id="age" name="age" required min="1" max="100" placeholder="例: 25">
+        <label for="birthDate">生年月日 <span class="required">*</span></label>
+        <input type="date" id="birthDate" name="birthDate" required>
       </div>
 
       <div class="form-group">
@@ -183,7 +183,7 @@
   </div>
 
   <script>
-    // 【重要】ご自身のGASウェブアプリのURLに書き換えてください
+    // 【重要】必ず最新デプロイのGASウェブアプリのURLに書き換えてください
     const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL_HERE";
 
     // 画面読み込み時にURLパラメータを取得してフォームに自動入力（オートフィル）
@@ -193,7 +193,7 @@
       if(urlParams.has('name')) document.getElementById('name').value = urlParams.get('name');
       if(urlParams.has('phone')) document.getElementById('phone').value = urlParams.get('phone');
       if(urlParams.has('email')) document.getElementById('email').value = urlParams.get('email');
-      if(urlParams.has('age')) document.getElementById('age').value = urlParams.get('age');
+      if(urlParams.has('birthDate')) document.getElementById('birthDate').value = urlParams.get('birthDate');
     };
 
     document.getElementById('applyForm').addEventListener('submit', function(e) {
@@ -214,7 +214,7 @@
         name: document.getElementById('name').value,
         phone: document.getElementById('phone').value,
         email: document.getElementById('email').value,
-        age: document.getElementById('age').value,
+        birthDate: document.getElementById('birthDate').value,
         notes: document.getElementById('notes').value
       };
 
