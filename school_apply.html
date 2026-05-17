@@ -71,27 +71,24 @@
     input[type="text"],
     input[type="tel"],
     input[type="email"],
-    input[type="number"] {
+    input[type="number"],
+    textarea {
       width: 100%;
       padding: 10px;
       border: 1px solid var(--border-color);
       border-radius: 4px;
       box-sizing: border-box;
       font-size: 1rem;
+      font-family: inherit;
     }
-    .checkbox-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .checkbox-item {
-      display: flex;
-      align-items: center;
-    }
-    .checkbox-item input[type="checkbox"] {
-      margin-right: 10px;
-      width: 18px;
-      height: 18px;
+    .schedule-list {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid #eee;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: #555;
     }
     .btn-submit {
       display: block;
@@ -163,21 +160,19 @@
       </div>
 
       <div class="form-group">
-        <label>参加希望日程（複数選択可） <span class="required">*</span></label>
-        <div class="checkbox-group">
-          <label class="checkbox-item">
-            <input type="checkbox" name="dates" value="6月14日（日）※カヌー教室"> 6月14日（日）※カヌー教室
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" name="dates" value="6月21日（日）※カヌー教室"> 6月21日（日）※カヌー教室
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" name="dates" value="6月28日（日）※カヌー教室"> 6月28日（日）※カヌー教室
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" name="dates" value="7月5日（日）※カヌー教室"> 7月5日（日）※カヌー教室
-          </label>
+        <label>プログラム日程（全4回）</label>
+        <div class="schedule-list">
+          ・6月14日（日） カヌー教室<br>
+          ・6月21日（日） カヌー教室<br>
+          ・6月28日（日） カヌー教室<br>
+          ・7月5日（日） カヌー教室<br>
+          <span style="font-size: 0.85rem; color: #d9534f; display: block; margin-top: 8px;">※全4回での実施となります。参加が難しい日程がある場合は、柔軟に振替・調整を行いますので下記にご記入ください。</span>
         </div>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">お休み・振替の希望（任意）</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="例：6月21日は用事があるため休む予定です（振替希望）"></textarea>
       </div>
 
       <button type="submit" id="submitBtn" class="btn-submit">申し込む</button>
@@ -204,12 +199,6 @@
     document.getElementById('applyForm').addEventListener('submit', function(e) {
       e.preventDefault();
 
-      const dateCheckboxes = document.querySelectorAll('input[name="dates"]:checked');
-      if (dateCheckboxes.length === 0) {
-        alert("参加希望日程を少なくとも1つ選択してください。");
-        return;
-      }
-
       const submitBtn = document.getElementById('submitBtn');
       const loadingMsg = document.getElementById('loadingMessage');
       const successMsg = document.getElementById('successMessage');
@@ -220,15 +209,13 @@
       successMsg.style.display = 'none';
       errorMsg.style.display = 'none';
 
-      const selectedDates = Array.from(dateCheckboxes).map(cb => cb.value).join(', ');
-
       const payload = {
         action: "school_apply",
         name: document.getElementById('name').value,
         phone: document.getElementById('phone').value,
         email: document.getElementById('email').value,
         age: document.getElementById('age').value,
-        dates: selectedDates
+        notes: document.getElementById('notes').value
       };
 
       fetch(GAS_WEB_APP_URL, {
