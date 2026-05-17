@@ -441,15 +441,10 @@
       const phone = currentUserData['電話番号'] || '';
       const email = currentUserData['メールアドレス'] || '';
       
-      let age = '';
+      let birthDate = '';
       if (currentUserData['生年月日']) {
-        const birthDate = new Date(currentUserData['生年月日']);
-        const today = new Date();
-        age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
+        // "YYYY-MM-DD"の形式で取得
+        birthDate = currentUserData['生年月日'].split('T')[0];
       }
 
       // 【重要】カヌースクール申込み画面(school_apply.html)の公開URLに置き換えてください
@@ -459,7 +454,7 @@
         name: fullName.trim(),
         phone: phone,
         email: email,
-        age: age
+        birthDate: birthDate // ageから変更
       });
 
       // 画面遷移
