@@ -61,6 +61,14 @@
       background-color: #fff3cd;
       border: 1px solid #ffeeba;
     }
+    .new-member-box {
+      background-color: #e2f0d9;
+      border: 1px solid #c5e1a5;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
     label {
       display: block;
       font-weight: bold;
@@ -126,6 +134,25 @@
       font-size: 1rem;
     }
     .btn-search:hover { background-color: #5a6268; }
+    
+    .btn-line-register {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background-color: #06C755;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      box-sizing: border-box;
+      margin-top: 5px;
+    }
+    .btn-line-register:hover { background-color: #05b04b; }
+
     .schedule-list {
       background: #f8f9fa;
       padding: 15px;
@@ -193,7 +220,14 @@
         <input type="date" id="searchBirthDate" style="flex: 1.2;">
       </div>
       <button type="button" id="searchBtn" class="btn-search" onclick="loadMemberPreset()">会員情報を読込</button>
-      <span style="font-size: 0.8rem; color: #856404; display: block; margin-top: 8px;">※個人情報保護のため、会員ID（数字4桁）と生年月日が一致した場合のみ情報を自動入力します。</span>
+    </div>
+
+    <div class="new-member-box">
+      <label style="color: #2e7d32;">初めてご利用の方（メンバー未登録の方）</label>
+      <span style="font-size: 0.85rem; color: #3e8e41; display: block; margin-bottom: 10px;">
+        スクールに参加するには海洋クラブへのメンバー登録が必要です。下記のボタンからLINEで1分で登録できます。登録完了後、この画面に入力データが自動で引き継がれます。
+      </span>
+      <a href="https://line.me/R/ti/p/@YOUR_LINE_ACCOUNT" class="btn-line-register">💚 LINEでメンバー登録をする</a>
     </div>
 
     <form id="applyForm">
@@ -241,10 +275,8 @@
   </div>
 
   <script>
-    // 【重要】必ず最新デプロイのGASウェブアプリのURLに書き換えてください
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec";
 
-    // 画面読み込み時にURLパラメータを取得してフォームに自動入力（オートフィル）
     window.onload = function() {
       const urlParams = new URLSearchParams(window.location.search);
       if(urlParams.has('name')) document.getElementById('name').value = urlParams.get('name');
@@ -253,7 +285,6 @@
       if(urlParams.has('birthDate')) document.getElementById('birthDate').value = urlParams.get('birthDate');
     };
 
-    // 💡 既存会員の情報を取得してフォームにプリセットする関数（セキュリティ強化版）
     function loadMemberPreset() {
       const idNum = document.getElementById('searchIdNum').value.trim();
       const birthDate = document.getElementById('searchBirthDate').value;
@@ -263,7 +294,6 @@
         return;
       }
 
-      // "M"と0埋めした4桁を結合
       const fullMemberId = "M" + String(idNum).padStart(4, '0');
       const searchBtn = document.getElementById('searchBtn');
       searchBtn.innerText = "読込中...";
@@ -273,7 +303,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
-          action: "getMemberInfoForSchool", // 新設する専用のAPIアクション
+          action: "getMemberInfoForSchool",
           memberId: fullMemberId,
           birthDate: birthDate
         })
@@ -291,7 +321,6 @@
           document.getElementById('phone').value = res.phone || '';
           document.getElementById('email').value = res.email || '';
           document.getElementById('birthDate').value = res.birthDate || '';
-          
           alert("ご本人確認が完了しました。会員情報を入力しました。");
         } else {
           alert("エラー: " + (res.message || 'IDまたは生年月日が一致しません。'));
