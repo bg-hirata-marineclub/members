@@ -188,7 +188,6 @@
     let familyCount = 0; let cropper; 
     let currentUserData = null; let isUpdateMode = false; let savedProfileImage = "";
     
-    // 【重要】既存のGASウェブアプリのURLです（変更不要）
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec"; 
 
     function switchTab(tabName) {
@@ -248,7 +247,6 @@
             showRegisterScreen();
           }); 
         } else {
-          // 💡 LINE外ブラウザで開いている場合は強制登録画面
           if (liff.isInClient()) {
             liff.login();
           } else {
@@ -288,7 +286,6 @@
           if (!isBackground) showRegisterScreen(); 
         }
       }).catch((e) => {
-        // 💡 裏側のエラーを握りつぶさずに表示する
         alert("通信エラーが発生しました: " + e.message);
         if (!isBackground) showRegisterScreen();
       });
@@ -390,7 +387,6 @@
       }).catch(() => { alert("通信エラー"); btn.innerText = "表示する"; btn.disabled = false; });
     }
 
-    // 💡 エラー握りつぶしを解除し、安全な描画を行う版
     function displayDigitalCard(result, isNewRegistration) {
       try {
         document.getElementById('confirmScreen').style.display = 'none'; 
@@ -426,7 +422,6 @@
           if(document.getElementById('staffMenuControls')) document.getElementById('staffMenuControls').style.display = 'none';
         }
 
-        // 💡 期間限定：カヌースクール申込ボタンの表示制御
         const schoolBtn = document.getElementById('schoolApplyBtn');
         if (schoolBtn) {
           const deadline = new Date('2026/06/12 23:59:59');
@@ -446,13 +441,33 @@
         
         window.scrollTo(0, 0);
       } catch (e) {
-        // 💡 画面が真っ白になったり新規画面に飛ぶ前にアラートで原因を表示
         alert("画面表示中にエラーが発生しました: " + e.message);
         console.error("Display Error:", e);
       }
     }
 
-    goToSchoolApply()
+    // 💡 修正：同じドメイン内の school_apply.html へ「相対パス」で安全に遷移させる（URL書き換え不要）
+    function goToSchoolApply() {
+      if (!currentUserData) return;
+      
+      const fullName = (currentUserData['姓'] || '') + ' ' + (currentUserData['名'] || '');
+      const phone = currentUserData['電話番号'] || '';
+      const email = currentUserData['メールアドレス'] || '';
+      
+      let birthDate = '';
+      if (currentUserData['生年月日']) {
+        birthDate = currentUserData['生年月日'].split('T')[0];
+      }
+
+      // 💡 相対パス文字列で組み立てることで、LIFFのドメインブロックを確実に回避
+      const targetUrl = "school_apply.html" 
+                      + "?name=" + encodeURIComponent(fullName.trim())
+                      + "&phone=" + encodeURIComponent(phone)
+                      + "&email=" + encodeURIComponent(email)
+                      + "&birthDate=" + encodeURIComponent(birthDate);
+
+      window.location.href = targetUrl;
+    }
 
     function executeToggleMenu(target) {
       const uid = document.getElementById('lineUid').value;
