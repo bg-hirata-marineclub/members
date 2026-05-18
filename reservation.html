@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -24,7 +23,7 @@
     .slot-toggle-btn { flex: 1; text-align: center; background: #fff; border: 2px solid #ccc; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; transition: all 0.2s; box-sizing: border-box; color: #333; -webkit-tap-highlight-color: transparent; }
     .slot-toggle-btn.active { background: #e8f4fd; border-color: #0056b3; color: #0056b3; }
     
-    /* HTML標準のdisabled属性。iOS・LINE内WebViewであってもOSネイティブレベルで完全物理遮断 */
+    /* HTML標準のdisabled属性。LINE内WebViewであっても100%完全物理遮断 */
     .slot-toggle-btn:disabled { background: #f0f0f0 !important; border-color: #e0e0e0 !important; color: #aaa !important; cursor: not-allowed; text-decoration: line-through; pointer-events: none; }
     
     .eq-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
@@ -39,12 +38,6 @@
     button.submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
     
     #infantAlert { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 10px; }
-    
-    /* 予約満杯ボードのデザイン */
-    #bookedListBoard { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #d9534f; padding: 15px; border-radius: 8px; font-size: 14px; margin-bottom: 15px; }
-    #bookedListBoard ul { margin: 10px 0 0 0; padding-left: 20px; font-weight: bold; }
-    #bookedListBoard li { margin-bottom: 5px; }
-    
     #blockInfo { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #d9534f; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 10px; text-align: center; }
     #successScreen { display: none; text-align: center; padding: 30px 10px; }
     
@@ -82,16 +75,21 @@
         <div class="form-group">
           <label class="field-label">利用日時・団体情報</label>
           
-          <div id="bookedListBoard">
-            <strong>🚫 現在の予約満杯状況（受付不可）</strong>
-            <ul id="bookedListUl"></ul>
+          <div id="userDateContainer">
+            <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold;">利用予定日を選択（必須）</div>
+            <select id="resDateSelect" style="margin-bottom: 15px;">
+              <option value="">予約状況を読み込み中...</option>
+            </select>
+          </div>
+          
+          <div id="adminDateContainer" style="display: none;">
+            <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold;">【スタッフ専用】利用予定日</div>
+            <input type="date" id="resDateCalendar" style="margin-bottom: 15px;">
           </div>
 
-          <input type="date" id="resDate" style="margin-bottom: 15px;">
           <div id="blockInfo"></div>
 
           <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold;">① 利用する枠を選択（必須）</div>
-          
           <div class="slot-btn-container" id="slotGroup">
             <button type="button" id="btn-am" class="slot-toggle-btn" onclick="selectSlot('AM')">午前</button>
             <button type="button" id="btn-pm" class="slot-toggle-btn" onclick="selectSlot('PM')">午後</button>
@@ -186,9 +184,16 @@
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('staff') === '1') {
         document.getElementById('adminSection').style.display = 'block';
-      } else {
+        document.getElementById('userDateContainer').style.display = 'none';
+        document.getElementById('adminDateContainer').style.display = 'block';
+        
+        // スタッフ用カレンダーの最小値設定とイベント登録
         const todayStr = new Date().toLocaleDateString('sv-SE'); 
-        document.getElementById('resDate').min = todayStr;
+        document.getElementById('resDateCalendar').min = todayStr;
+        document.getElementById('resDateCalendar').addEventListener('change', checkSlotAvailability);
+      } else {
+        // 一般ユーザー用：LINE内ブラウザで100%動くセレクトボックスのイベント登録
+        document.getElementById('resDateSelect').addEventListener('change', checkSlotAvailability);
       }
       fetchBookedSlots();
     });
@@ -197,7 +202,7 @@
       const cached = localStorage.getItem("bookedSlotsCache");
       if (cached) {
         bookedSlotsCache = JSON.parse(cached);
-        renderBookedList(bookedSlotsCache);
+        buildDateDropdown(bookedSlotsCache);
         checkSlotAvailability();
       }
       fetch(GAS_URL, {
@@ -207,52 +212,63 @@
         if (res.status === "success") {
           bookedSlotsCache = res.bookedSlots;
           localStorage.setItem("bookedSlotsCache", JSON.stringify(bookedSlotsCache));
-          renderBookedList(bookedSlotsCache);
+          buildDateDropdown(bookedSlotsCache);
           checkSlotAvailability();
         }
       }).catch(e => console.log("予約状況同期エラー"));
     }
 
-    function renderBookedList(slots) {
-      const board = document.getElementById('bookedListBoard');
-      const ul = document.getElementById('bookedListUl');
-      ul.innerHTML = '';
+    // 💡 【重要】本日〜90日後までの選択肢を動的に生成し、空き状況を文字で直撃させる
+    function buildDateDropdown(slots) {
+      const select = document.getElementById('resDateSelect');
+      if (!select) return;
       
-      let hasBookings = false;
-      const todayStr = new Date().toLocaleDateString('sv-SE');
-      const sortedDates = Object.keys(slots).sort();
+      select.innerHTML = '<option value="">利用日を選択してください...</option>';
       
-      sortedDates.forEach(date => {
-        if (date < todayStr) return; 
+      const today = new Date();
+      const weeks = ["日", "月", "火", "水", "木", "金", "土"];
+      
+      for (let i = 0; i < 90; i++) {
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + i);
         
-        const blocks = slots[date];
-        if (blocks.length === 0) return;
+        const yyyy = targetDate.getFullYear();
+        const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(targetDate.getDate()).padStart(2, '0');
+        const dateStr = `${yyyy}-${mm}-${dd}`; 
         
-        hasBookings = true;
-        let timeText = [];
-        if (blocks.includes("AM") && blocks.includes("PM")) {
-          timeText.push("終日満杯");
+        const weekStr = weeks[targetDate.getDay()];
+        const displayDate = `${yyyy}/${mm}/${dd}(${weekStr})`;
+        
+        const opt = document.createElement('option');
+        opt.value = dateStr;
+        
+        const blocks = slots[dateStr] || [];
+        
+        // 💡 選択肢自体のテキストに状態を明記し、満杯日は物理的に選択不可にする
+        if (blocks.includes('AM') && blocks.includes('PM')) {
+          opt.disabled = true; // LINE内でも絶対にタップできなくなる
+          opt.text = `${displayDate} ❌満杯 (受付不可)`;
+        } else if (blocks.includes('AM')) {
+          opt.text = `${displayDate} ⚠️午後のみ空き`;
+        } else if (blocks.includes('PM')) {
+          opt.text = `${displayDate} ⚠️午前のみ空き`;
         } else {
-          if (blocks.includes("AM")) timeText.push("午前満杯");
-          if (blocks.includes("PM")) timeText.push("午後満杯");
+          opt.text = `${displayDate} ◯空きあり`;
         }
         
-        const li = document.createElement('li');
-        li.innerText = `${date.replace(/-/g, '/')} (${timeText.join('・')})`;
-        ul.appendChild(li);
-      });
-      
-      board.style.display = hasBookings ? 'block' : 'none';
+        select.appendChild(opt);
+      }
     }
 
-    // LINE内カレンダー対策でchange, input, blurをすべて監視
-    document.getElementById('resDate').addEventListener('change', checkSlotAvailability);
-    document.getElementById('resDate').addEventListener('input', checkSlotAvailability);
-    document.getElementById('resDate').addEventListener('blur', checkSlotAvailability);
+    // 💡 動的に日付の入力元を判別するヘルパー
+    function getSelectedDate() {
+      const isStaff = document.getElementById('adminSection').style.display === 'block';
+      return isStaff ? document.getElementById('resDateCalendar').value : document.getElementById('resDateSelect').value;
+    }
 
     function checkSlotAvailability() {
-      const dateInput = document.getElementById('resDate');
-      const dateVal = dateInput.value;
+      const dateVal = getSelectedDate();
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
       const blockInfo = document.getElementById('blockInfo');
       
@@ -267,25 +283,18 @@
       if (!dateVal || isAdminVisible || !bookedSlotsCache[dateVal]) return;
 
       const blocks = bookedSlotsCache[dateVal];
-      let fullBooked = false;
 
+      // 午前・午後個別のボタン無効化処理（ネイティブボタン属性なのでLINEでも100%効く）
       if (blocks.includes('AM')) { document.getElementById('btn-am').disabled = true; }
       if (blocks.includes('PM')) { document.getElementById('btn-pm').disabled = true; }
-      if (blocks.includes('AM') && blocks.includes('PM')) { fullBooked = true; }
 
-      if (fullBooked) {
-        alert(`選択された日付（${dateVal.replace(/-/g, '/')}）は、午前・午後ともに予約確定データが存在するため受付できません。\n別の空いている日程を選択してください。`);
-        dateInput.value = ''; 
-        ['am', 'pm'].forEach(id => { document.getElementById(`btn-${id}`).disabled = false; });
-      } else {
-        blockInfo.style.display = 'block';
-        blockInfo.innerText = `⚠️ この日は「${blocks.includes('AM') ? '午前' : '午後'}」が予約済みのため選択できません。`;
-      }
+      blockInfo.style.display = 'block';
+      blockInfo.innerText = `⚠️ この日は「${blocks.includes('AM') ? '午前' : '午後'}」が既に予約済みです。`;
     }
 
     function selectSlot(val) {
       const targetBtn = document.getElementById(`btn-${val.toLowerCase()}`);
-      if (targetBtn.disabled) return; // ネイティブガード
+      if (targetBtn.disabled) return; 
 
       document.getElementById('timeSlot').value = val;
       
@@ -315,7 +324,8 @@
     }
 
     function submitReservation() {
-      if (!document.getElementById('resDate').value) return alert("利用予定日を入力してください。");
+      const resDateStr = getSelectedDate();
+      if (!resDateStr) return alert("利用予定日を選択してください。");
       
       const slotVal = document.getElementById('timeSlot').value;
       if (!slotVal) return alert("利用する枠（午前・午後）を選択してください。");
@@ -330,7 +340,6 @@
       const email = document.getElementById('repEmail').value.trim();
       if (!email || !email.includes('@')) return alert("正しいメールアドレスを入力してください。");
 
-      const resDateStr = document.getElementById('resDate').value;
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
 
       if (!isAdminVisible) {
