@@ -84,7 +84,7 @@
           </div>
 
           <input type="date" id="resDate" style="margin-bottom: 15px;">
-          <div id="blockInfo">⚠️ 選択された日時は既に一部予約済みです。</div>
+          <div id="blockInfo"></div>
 
           <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold;">① 利用する枠を選択（必須）</div>
           <div class="radio-group" id="slotGroup">
@@ -144,7 +144,7 @@
             <div class="eq-item"><div class="eq-name">⛵ OPヨット（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-op-adult', -1)">-</button><input type="number" id="b-op-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-op-adult', 1)">+</button></div></div>
             <div class="eq-item"><div class="eq-name">⛵ OPヨット（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-op-kid', -1)">-</button><input type="number" id="b-op-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-op-kid', 1)">+</button></div></div>
             <div class="eq-item" style="background-color: #fff3f3;">
-              <div class="eq-name" style="color: #666; font-size: 14px;">🏄 SUP<br><span style="font-size: 11px; color: #d9534f;">※メンバー限定 of 利用となります</span></div>
+              <div class="eq-name" style="color: #666; font-size: 14px;">🏄 SUP<br><span style="font-size: 11px; color: #d9534f;">※メンバー限定の利用となります</span></div>
               <div class="qty-controls"><span style="font-size: 12px; color: #d9534f; font-weight: bold;">予約不可</span></div>
             </div>
           </div>
@@ -189,16 +189,16 @@
         document.getElementById('resDate').min = todayStr;
       }
       
-      // 💡 【最重要：iOSバグ対策】
-      // ボタンエリア全体のタップイベントを、ブラウザ処理が走る前の「キャプチャフェーズ」で捕まえる。
-      // 無効化（disabled）されているボタンの場合は、即座にイベントを完全抹殺し一切の選択を阻止する。
+      // 💡 【iOSバグ完全遮断コード】
+      // 親のコンテナをタップした時点で、無効化されている場合はブラウザに処理が渡る前に完全に息の根を止めます
       document.getElementById('slotGroup').addEventListener('click', (e) => {
         const targetBtn = e.target.closest('.radio-btn');
         if (targetBtn && targetBtn.classList.contains('disabled')) {
           e.preventDefault();
           e.stopPropagation();
+          return false;
         }
-      }, true); // ← 第3引数を true にしてキャプチャフェーズで実行
+      }, true); 
 
       fetchBookedSlots();
     });
@@ -255,7 +255,9 @@
       board.style.display = hasBookings ? 'block' : 'none';
     }
 
+    // 💡 iPhone（iOS）のドラムロール追従のため「input」イベントも同時に監視させる
     document.getElementById('resDate').addEventListener('change', checkSlotAvailability);
+    document.getElementById('resDate').addEventListener('input', checkSlotAvailability);
 
     function checkSlotAvailability() {
       const dateInput = document.getElementById('resDate');
@@ -263,6 +265,7 @@
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
       const blockInfo = document.getElementById('blockInfo');
       
+      // 状態のリセット
       ['am', 'pm'].forEach(id => {
         const lbl = document.getElementById(`lbl-${id}`);
         const input = lbl.querySelector('input');
@@ -306,16 +309,28 @@
     }
 
     function updateSlotUI() {
+      const dateVal = document.getElementById('resDate').value;
+      const slotRadio = document.querySelector('input[name="timeSlot"]:checked');
+      
+      // 💡 【iOS貫通バグに対する最終チェックガード】
+      // 万が一タップイベントがすり抜けてラジオボタンにチェックが入ってしまった場合、
+      // ここでキャッシュを直読みしてその瞬間にチェックを強制剥奪し弾き返します
+      if (slotRadio && dateVal && bookedSlotsCache[dateVal]) {
+        if (bookedSlotsCache[dateVal].includes(slotRadio.value)) {
+          alert("⚠️ 申し訳ありません。この時間枠はすでに予約が埋まっています。");
+          slotRadio.checked = false;
+          document.querySelectorAll('.radio-btn').forEach(lbl => lbl.classList.remove('selected'));
+          checkSlotAvailability(); // UIを再同期
+          return;
+        }
+      }
+
       document.querySelectorAll('.radio-btn').forEach(lbl => {
         const radio = lbl.querySelector('input');
-        
-        // 💡 【防衛ロジックの追加】disabled の場合は絶対に強制クリア
         if (radio.disabled) {
-          radio.checked = false;
           lbl.classList.remove('selected');
           return;
         }
-        
         if (radio.checked) lbl.classList.add('selected');
         else lbl.classList.remove('selected');
       });
