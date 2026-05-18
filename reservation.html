@@ -3,6 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  
   <title>B&G 平田海洋クラブ - 団体予約・問合せ受付</title>
   <style>
     body { font-family: sans-serif; background-color: #f0f2f5; padding: 10px; margin: 0; color: #333; }
@@ -14,12 +19,12 @@
     input:focus, select:focus, textarea:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px;} .flex-row > div { flex: 1; }
     
-    /* 💡 選択ボタンのデザイン（通常の単なるボタン要素） */
+    /* 選択ボタンのデザイン（通常の単なるボタン要素） */
     .slot-btn-container { display: flex; gap: 10px; margin-bottom: 15px; }
     .slot-toggle-btn { flex: 1; text-align: center; background: #fff; border: 2px solid #ccc; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; transition: all 0.2s; box-sizing: border-box; color: #333; -webkit-tap-highlight-color: transparent; }
     .slot-toggle-btn.active { background: #e8f4fd; border-color: #0056b3; color: #0056b3; }
     
-    /* 💡 HTML標準のdisabled属性。iOSであってもOSネイティブレベルで完全物理遮断されます */
+    /* HTML標準のdisabled属性。iOS・LINE内WebViewであってもOSネイティブレベルで完全物理遮断 */
     .slot-toggle-btn:disabled { background: #f0f0f0 !important; border-color: #e0e0e0 !important; color: #aaa !important; cursor: not-allowed; text-decoration: line-through; pointer-events: none; }
     
     .eq-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
@@ -240,7 +245,7 @@
       board.style.display = hasBookings ? 'block' : 'none';
     }
 
-    // 💡 iOSのドラムロール確定漏れを防ぐため、change, input, blur の3重でトリガーをひく
+    // LINE内カレンダー対策でchange, input, blurをすべて監視
     document.getElementById('resDate').addEventListener('change', checkSlotAvailability);
     document.getElementById('resDate').addEventListener('input', checkSlotAvailability);
     document.getElementById('resDate').addEventListener('blur', checkSlotAvailability);
@@ -251,12 +256,11 @@
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
       const blockInfo = document.getElementById('blockInfo');
       
-      // ボタンUIと隠し値を完全リセット
       document.getElementById('timeSlot').value = '';
       ['am', 'pm'].forEach(id => {
         const btn = document.getElementById(`btn-${id}`);
         btn.classList.remove('active');
-        btn.disabled = false; // 標準属性の解放
+        btn.disabled = false; 
       });
       blockInfo.style.display = 'none';
 
@@ -279,21 +283,16 @@
       }
     }
 
-    // 💡 ボタンクリック時の排他・トグル制御
     function selectSlot(val) {
-      // 万が一disabledボタンを押すロジックが走っても直前で弾く（防衛）
       const targetBtn = document.getElementById(`btn-${val.toLowerCase()}`);
-      if (targetBtn.disabled) return;
+      if (targetBtn.disabled) return; // ネイティブガード
 
       document.getElementById('timeSlot').value = val;
       
       ['AM', 'PM'].forEach(v => {
         const btn = document.getElementById(`btn-${v.toLowerCase()}`);
-        if (v === val) {
-          btn.classList.add('active');
-        } else {
-          btn.classList.remove('active');
-        }
+        if (v === val) btn.classList.add('active');
+        else btn.classList.remove('active');
       });
     }
 
@@ -318,7 +317,6 @@
     function submitReservation() {
       if (!document.getElementById('resDate').value) return alert("利用予定日を入力してください。");
       
-      // 💡 隠しフィールドから選択された枠（AM/PM）を取得
       const slotVal = document.getElementById('timeSlot').value;
       if (!slotVal) return alert("利用する枠（午前・午後）を選択してください。");
       
@@ -351,7 +349,7 @@
         if (sTime >= eTime) return alert("エラー：開始時間と終了時間が正しくありません。");
         
         if (bookedSlotsCache[resDateStr] && bookedSlotsCache[resDateStr].includes(slotVal)) {
-          return alert("エラー：選択された時間枠は既に別の予約で埋まっています。画面をリロードして空き状況を確認してください。");
+          return alert("エラー：選択された時間枠は既に別の予約で埋まっています。");
         }
       }
 
