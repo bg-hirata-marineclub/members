@@ -19,7 +19,9 @@
     .radio-btn { flex: 1; text-align: center; background: #fff; border: 2px solid #ccc; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; transition: all 0.2s; box-sizing: border-box;}
     .radio-btn input[type="radio"] { display: none; }
     .radio-btn.selected { background: #e8f4fd; border-color: #0056b3; color: #0056b3; }
-    .radio-btn.disabled { background: #f0f0f0; border-color: #e0e0e0; color: #aaa; cursor: not-allowed; text-decoration: line-through; }
+    
+    /* ⚠️ pointer-events: none; により、ブラウザレベルでクリック・タップを完全物理遮断 */
+    .radio-btn.disabled { background: #f0f0f0; border-color: #e0e0e0; color: #aaa; cursor: not-allowed; text-decoration: line-through; pointer-events: none; }
     
     .eq-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
     .eq-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; background: #fafafa; }
@@ -82,7 +84,7 @@
           </div>
 
           <input type="date" id="resDate" style="margin-bottom: 15px;">
-          <div id="blockInfo">⚠️ 選択された時間帯は予約済みです。</div>
+          <div id="blockInfo">⚠️ 選択された日時は既に一部予約済みです。</div>
 
           <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold;">① 利用する枠を選択（必須）</div>
           <div class="radio-group" id="slotGroup">
@@ -227,10 +229,10 @@
         hasBookings = true;
         let timeText = [];
         if (blocks.includes("AM") && blocks.includes("PM")) {
-          timeText.push("終日");
+          timeText.push("終日満杯");
         } else {
-          if (blocks.includes("AM")) timeText.push("午前");
-          if (blocks.includes("PM")) timeText.push("午後");
+          if (blocks.includes("AM")) timeText.push("午前満杯");
+          if (blocks.includes("PM")) timeText.push("午後満杯");
         }
         
         const li = document.createElement('li');
@@ -243,18 +245,19 @@
 
     document.getElementById('resDate').addEventListener('change', checkSlotAvailability);
 
-    // 💡 強制クリア＆アラート処理の実装
     function checkSlotAvailability() {
       const dateInput = document.getElementById('resDate');
       const dateVal = dateInput.value;
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
       const blockInfo = document.getElementById('blockInfo');
       
-      // UI初期化
+      // 💡 状態のリセット（選択クラスも含めて確実に初期化）
       ['am', 'pm'].forEach(id => {
         const lbl = document.getElementById(`lbl-${id}`);
-        lbl.classList.remove('disabled');
-        lbl.querySelector('input').disabled = false;
+        const input = lbl.querySelector('input');
+        lbl.classList.remove('disabled', 'selected');
+        input.disabled = false;
+        input.checked = false;
       });
       blockInfo.style.display = 'none';
 
@@ -268,19 +271,18 @@
       if (blocks.includes('AM') && blocks.includes('PM')) { fullBooked = true; }
 
       if (fullBooked) {
-        // ユーザーが「終日満杯」の日を選んだ場合、即座にアラートを出して日付を消去する
-        alert(`選択された日付（${dateVal.replace(/-/g, '/')}）は、すでに予約で埋まっています。\n一覧ボードをご確認の上、別の日付をご検討ください。`);
-        dateInput.value = ''; // 強制クリア
+        alert(`選択された日付（${dateVal.replace(/-/g, '/')}）は、午前・午後ともに予約確定データが存在するため受付できません。\n別の空いている日程を選択してください。`);
+        dateInput.value = ''; // 💡 日付入力を強制消去
         
-        // クリアしたのでボタン等の非活性状態も元に戻す
+        // 消去に連動してUIの無効化もクリア
         ['am', 'pm'].forEach(id => {
           const lbl = document.getElementById(`lbl-${id}`);
           lbl.classList.remove('disabled');
           lbl.querySelector('input').disabled = false;
         });
       } else {
-        // 片方だけ空いている場合は警告メッセージだけ出す
         blockInfo.style.display = 'block';
+        blockInfo.innerText = `⚠️ この日は「${blocks.includes('AM') ? '午前' : '午後'}」が予約済みのため選択できません。`;
       }
     }
 
@@ -289,16 +291,17 @@
       const radio = lbl.querySelector('input');
       lbl.classList.add('disabled');
       radio.disabled = true;
-      if (radio.checked) {
-        radio.checked = false;
-        updateSlotUI();
-      }
+      radio.checked = false;
+      lbl.classList.remove('selected'); // 💡 selectedクラスを確実に剥がす
     }
 
     function updateSlotUI() {
       document.querySelectorAll('.radio-btn').forEach(lbl => {
         const radio = lbl.querySelector('input');
-        if (radio.disabled) return;
+        if (radio.disabled) {
+          lbl.classList.remove('selected');
+          return;
+        }
         if (radio.checked) lbl.classList.add('selected');
         else lbl.classList.remove('selected');
       });
@@ -355,6 +358,11 @@
           return alert("エラー：予約可能な時間は 9:00 から 16:00 までです。");
         }
         if (sTime >= eTime) return alert("エラー：開始時間と終了時間が正しくありません。");
+        
+        // 💡 送信前の最終防衛チェック
+        if (bookedSlotsCache[resDateStr] && bookedSlotsCache[resDateStr].includes(slotRadio.value)) {
+          return alert("エラー：選択された時間枠は既に別の予約で埋まっています。画面をリロードして空き状況を確認してください。");
+        }
       }
 
       const btn = document.getElementById('submitBtn');
