@@ -14,14 +14,13 @@
     input:focus, select:focus, textarea:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px;} .flex-row > div { flex: 1; }
     
-    /* AM/PM選択ボタンのデザイン */
-    .radio-group { display: flex; gap: 10px; margin-bottom: 15px; }
-    .radio-btn { flex: 1; text-align: center; background: #fff; border: 2px solid #ccc; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; transition: all 0.2s; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    .radio-btn input[type="radio"] { display: none; }
-    .radio-btn.selected { background: #e8f4fd; border-color: #0056b3; color: #0056b3; }
+    /* 💡 選択ボタンのデザイン（通常の単なるボタン要素） */
+    .slot-btn-container { display: flex; gap: 10px; margin-bottom: 15px; }
+    .slot-toggle-btn { flex: 1; text-align: center; background: #fff; border: 2px solid #ccc; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; transition: all 0.2s; box-sizing: border-box; color: #333; -webkit-tap-highlight-color: transparent; }
+    .slot-toggle-btn.active { background: #e8f4fd; border-color: #0056b3; color: #0056b3; }
     
-    /* pointer-events: none; に加え、iOSでのタップ誤動作を防ぐスタイル */
-    .radio-btn.disabled { background: #f0f0f0; border-color: #e0e0e0; color: #aaa; cursor: not-allowed; text-decoration: line-through; pointer-events: none; -webkit-user-select: none; user-select: none; }
+    /* 💡 HTML標準のdisabled属性。iOSであってもOSネイティブレベルで完全物理遮断されます */
+    .slot-toggle-btn:disabled { background: #f0f0f0 !important; border-color: #e0e0e0 !important; color: #aaa !important; cursor: not-allowed; text-decoration: line-through; pointer-events: none; }
     
     .eq-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
     .eq-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; background: #fafafa; }
@@ -87,14 +86,12 @@
           <div id="blockInfo"></div>
 
           <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold;">① 利用する枠を選択（必須）</div>
-          <div class="radio-group" id="slotGroup">
-            <label class="radio-btn" id="lbl-am">
-              <input type="radio" name="timeSlot" value="AM" onchange="updateSlotUI()">午前
-            </label>
-            <label class="radio-btn" id="lbl-pm">
-              <input type="radio" name="timeSlot" value="PM" onchange="updateSlotUI()">午後
-            </label>
+          
+          <div class="slot-btn-container" id="slotGroup">
+            <button type="button" id="btn-am" class="slot-toggle-btn" onclick="selectSlot('AM')">午前</button>
+            <button type="button" id="btn-pm" class="slot-toggle-btn" onclick="selectSlot('PM')">午後</button>
           </div>
+          <input type="hidden" id="timeSlot" value="">
 
           <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold;">② 希望利用時間（9:00〜16:00）</div>
           <div class="flex-row" style="margin-bottom: 15px;">
@@ -188,18 +185,6 @@
         const todayStr = new Date().toLocaleDateString('sv-SE'); 
         document.getElementById('resDate').min = todayStr;
       }
-      
-      // 💡 【iOSバグ完全遮断コード】
-      // 親のコンテナをタップした時点で、無効化されている場合はブラウザに処理が渡る前に完全に息の根を止めます
-      document.getElementById('slotGroup').addEventListener('click', (e) => {
-        const targetBtn = e.target.closest('.radio-btn');
-        if (targetBtn && targetBtn.classList.contains('disabled')) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-      }, true); 
-
       fetchBookedSlots();
     });
 
@@ -255,9 +240,10 @@
       board.style.display = hasBookings ? 'block' : 'none';
     }
 
-    // 💡 iPhone（iOS）のドラムロール追従のため「input」イベントも同時に監視させる
+    // 💡 iOSのドラムロール確定漏れを防ぐため、change, input, blur の3重でトリガーをひく
     document.getElementById('resDate').addEventListener('change', checkSlotAvailability);
     document.getElementById('resDate').addEventListener('input', checkSlotAvailability);
+    document.getElementById('resDate').addEventListener('blur', checkSlotAvailability);
 
     function checkSlotAvailability() {
       const dateInput = document.getElementById('resDate');
@@ -265,13 +251,12 @@
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
       const blockInfo = document.getElementById('blockInfo');
       
-      // 状態のリセット
+      // ボタンUIと隠し値を完全リセット
+      document.getElementById('timeSlot').value = '';
       ['am', 'pm'].forEach(id => {
-        const lbl = document.getElementById(`lbl-${id}`);
-        const input = lbl.querySelector('input');
-        lbl.classList.remove('disabled', 'selected');
-        input.disabled = false;
-        input.checked = false;
+        const btn = document.getElementById(`btn-${id}`);
+        btn.classList.remove('active');
+        btn.disabled = false; // 標準属性の解放
       });
       blockInfo.style.display = 'none';
 
@@ -280,59 +265,35 @@
       const blocks = bookedSlotsCache[dateVal];
       let fullBooked = false;
 
-      if (blocks.includes('AM')) { disableSlotBtn('am'); }
-      if (blocks.includes('PM')) { disableSlotBtn('pm'); }
+      if (blocks.includes('AM')) { document.getElementById('btn-am').disabled = true; }
+      if (blocks.includes('PM')) { document.getElementById('btn-pm').disabled = true; }
       if (blocks.includes('AM') && blocks.includes('PM')) { fullBooked = true; }
 
       if (fullBooked) {
         alert(`選択された日付（${dateVal.replace(/-/g, '/')}）は、午前・午後ともに予約確定データが存在するため受付できません。\n別の空いている日程を選択してください。`);
         dateInput.value = ''; 
-        
-        ['am', 'pm'].forEach(id => {
-          const lbl = document.getElementById(`lbl-${id}`);
-          lbl.classList.remove('disabled');
-          lbl.querySelector('input').disabled = false;
-        });
+        ['am', 'pm'].forEach(id => { document.getElementById(`btn-${id}`).disabled = false; });
       } else {
         blockInfo.style.display = 'block';
         blockInfo.innerText = `⚠️ この日は「${blocks.includes('AM') ? '午前' : '午後'}」が予約済みのため選択できません。`;
       }
     }
 
-    function disableSlotBtn(id) {
-      const lbl = document.getElementById(`lbl-${id}`);
-      const radio = lbl.querySelector('input');
-      lbl.classList.add('disabled');
-      radio.disabled = true;
-      radio.checked = false;
-      lbl.classList.remove('selected'); 
-    }
+    // 💡 ボタンクリック時の排他・トグル制御
+    function selectSlot(val) {
+      // 万が一disabledボタンを押すロジックが走っても直前で弾く（防衛）
+      const targetBtn = document.getElementById(`btn-${val.toLowerCase()}`);
+      if (targetBtn.disabled) return;
 
-    function updateSlotUI() {
-      const dateVal = document.getElementById('resDate').value;
-      const slotRadio = document.querySelector('input[name="timeSlot"]:checked');
+      document.getElementById('timeSlot').value = val;
       
-      // 💡 【iOS貫通バグに対する最終チェックガード】
-      // 万が一タップイベントがすり抜けてラジオボタンにチェックが入ってしまった場合、
-      // ここでキャッシュを直読みしてその瞬間にチェックを強制剥奪し弾き返します
-      if (slotRadio && dateVal && bookedSlotsCache[dateVal]) {
-        if (bookedSlotsCache[dateVal].includes(slotRadio.value)) {
-          alert("⚠️ 申し訳ありません。この時間枠はすでに予約が埋まっています。");
-          slotRadio.checked = false;
-          document.querySelectorAll('.radio-btn').forEach(lbl => lbl.classList.remove('selected'));
-          checkSlotAvailability(); // UIを再同期
-          return;
+      ['AM', 'PM'].forEach(v => {
+        const btn = document.getElementById(`btn-${v.toLowerCase()}`);
+        if (v === val) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
         }
-      }
-
-      document.querySelectorAll('.radio-btn').forEach(lbl => {
-        const radio = lbl.querySelector('input');
-        if (radio.disabled) {
-          lbl.classList.remove('selected');
-          return;
-        }
-        if (radio.checked) lbl.classList.add('selected');
-        else lbl.classList.remove('selected');
       });
     }
 
@@ -357,8 +318,9 @@
     function submitReservation() {
       if (!document.getElementById('resDate').value) return alert("利用予定日を入力してください。");
       
-      const slotRadio = document.querySelector('input[name="timeSlot"]:checked');
-      if (!slotRadio) return alert("利用する枠（午前・午後）を選択してください。");
+      // 💡 隠しフィールドから選択された枠（AM/PM）を取得
+      const slotVal = document.getElementById('timeSlot').value;
+      if (!slotVal) return alert("利用する枠（午前・午後）を選択してください。");
       
       const sTime = document.getElementById('startTime').value;
       const eTime = document.getElementById('endTime').value;
@@ -388,7 +350,7 @@
         }
         if (sTime >= eTime) return alert("エラー：開始時間と終了時間が正しくありません。");
         
-        if (bookedSlotsCache[resDateStr] && bookedSlotsCache[resDateStr].includes(slotRadio.value)) {
+        if (bookedSlotsCache[resDateStr] && bookedSlotsCache[resDateStr].includes(slotVal)) {
           return alert("エラー：選択された時間枠は既に別の予約で埋まっています。画面をリロードして空き状況を確認してください。");
         }
       }
@@ -396,7 +358,6 @@
       const btn = document.getElementById('submitBtn');
       btn.innerText = "送信中..."; btn.disabled = true;
 
-      const slotVal = slotRadio.value;
       const slotName = slotVal === "AM" ? "午前" : "午後";
       const combinedTimeStr = `${slotName} (${sTime}〜${eTime})`;
 
