@@ -9,17 +9,23 @@
     .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); box-sizing: border-box; }
     h2 { text-align: center; font-size: 22px; margin-bottom: 20px; color: #0056b3; border-bottom: 2px solid #e8f4fd; padding-bottom: 10px; }
     .form-group { margin-bottom: 20px; }
-    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; background: #e8f4fd; padding: 5px 10px; border-left: 4px solid #0056b3; }
+    label.field-label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; background: #e8f4fd; padding: 5px 10px; border-left: 4px solid #0056b3; }
     input[type="text"], input[type="tel"], input[type="email"], input[type="date"], input[type="time"], select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; margin-bottom: 10px; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px;} .flex-row > div { flex: 1; }
+    
+    /* 💡 AM/PM選択ボタンのデザイン */
+    .radio-group { display: flex; gap: 10px; margin-bottom: 15px; }
+    .radio-btn { flex: 1; text-align: center; background: #fff; border: 2px solid #ccc; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; transition: all 0.2s; box-sizing: border-box;}
+    .radio-btn input[type="radio"] { display: none; }
+    .radio-btn.selected { background: #e8f4fd; border-color: #0056b3; color: #0056b3; }
+    .radio-btn.disabled { background: #f0f0f0; border-color: #e0e0e0; color: #aaa; cursor: not-allowed; text-decoration: line-through; }
     
     .eq-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
     .eq-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; background: #fafafa; }
     .eq-name { font-size: 14px; font-weight: bold; color: #444; }
     .qty-controls { display: flex; align-items: center; gap: 10px; }
     .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: #e4e6eb; font-size: 18px; font-weight: bold; cursor: pointer; }
-    
     .qty-input { width: 50px; text-align: center; font-size: 18px; font-weight: bold; border: none; background: transparent; }
     input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     input[type="number"] { -moz-appearance: textfield; }
@@ -27,6 +33,7 @@
     button.submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
     
     #infantAlert { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 10px; }
+    #blockInfo { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #d9534f; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 10px; text-align: center; }
     #successScreen { display: none; text-align: center; padding: 30px 10px; }
     
     #adminSection { display: none; background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
@@ -61,15 +68,31 @@
         </div>
 
         <div class="form-group">
-          <label>利用日時・団体情報</label>
-          <div class="flex-row">
-            <div><input type="date" id="resDate"></div>
+          <label class="field-label">利用日時・団体情報</label>
+          
+          <input type="date" id="resDate" style="margin-bottom: 15px;">
+          <div id="blockInfo">⚠️ この日はすべての枠が予約済みです。</div>
+
+          <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold;">① 利用する枠を選択（必須）</div>
+          <div class="radio-group" id="slotGroup">
+            <label class="radio-btn" id="lbl-am">
+              <input type="radio" name="timeSlot" value="AM" onchange="updateSlotUI()">午前
+            </label>
+            <label class="radio-btn" id="lbl-pm">
+              <input type="radio" name="timeSlot" value="PM" onchange="updateSlotUI()">午後
+            </label>
+            <label class="radio-btn" id="lbl-full">
+              <input type="radio" name="timeSlot" value="FULL" onchange="updateSlotUI()">終日
+            </label>
           </div>
+
+          <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold;">② 希望利用時間（9:00〜16:00）</div>
           <div class="flex-row" style="margin-bottom: 15px;">
             <div><input type="time" id="startTime"></div>
             <div style="flex: 0 0 20px; text-align: center; font-weight: bold; color: #666;">〜</div>
             <div><input type="time" id="endTime"></div>
           </div>
+
           <input type="text" id="groupName" placeholder="団体名 (例: 〇〇小学校, 〇〇スポ少)">
           <select id="groupType">
             <option value="">利用区分を選択...</option>
@@ -81,14 +104,14 @@
         </div>
 
         <div class="form-group">
-          <label>代表者情報</label>
+          <label class="field-label">代表者情報</label>
           <input type="text" id="repName" placeholder="代表者 氏名">
           <input type="tel" id="repPhone" placeholder="連絡先 電話番号">
           <input type="email" id="repEmail" placeholder="連絡先 メールアドレス（必須）">
         </div>
 
         <div class="form-group">
-          <label>人数内訳（学年分布）</label>
+          <label class="field-label">人数内訳（学年分布）</label>
           <div id="infantAlert">⚠️ 幼児が含まれています。安全のため、ローボート等の配備を検討してください。</div>
           <div class="eq-list">
             <div class="eq-item"><div class="eq-name">👨👩 大人（高校生〜）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('q-adult', -1)">-</button><input type="number" id="q-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('q-adult', 1)">+</button></div></div>
@@ -100,7 +123,7 @@
         </div>
 
         <div class="form-group">
-          <label>利用予定の舟艇</label>
+          <label class="field-label">利用予定の舟艇</label>
           <div class="eq-list">
             <div class="eq-item"><div class="eq-name">🛶 カヌー（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-adult', -1)">-</button><input type="number" id="b-canoe-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-adult', 1)">+</button></div></div>
             <div class="eq-item"><div class="eq-name">🛶 カヌー（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-kid', -1)">-</button><input type="number" id="b-canoe-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-canoe-kid', 1)">+</button></div></div>
@@ -118,12 +141,12 @@
         </div>
 
         <div class="form-group">
-          <label>備考・連絡事項</label>
+          <label class="field-label">備考・連絡事項</label>
           <textarea id="notes" rows="3" placeholder="質問事項、特別な配慮事項など"></textarea>
         </div>
         
         <div class="form-group">
-          <label style="background: #f8f9fa; border-left: 4px solid #6c757d;">クラブ会員の方へ</label>
+          <label class="field-label" style="background: #f8f9fa; border-left: 4px solid #6c757d;">クラブ会員の方へ</label>
           <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">代表者が当クラブの会員である場合は、会員番号を入力してください。</p>
           <div style="display: flex; align-items: center; border: 1px solid #ccc; border-radius: 8px; background-color: #fafafa; padding: 0 15px;">
             <span style="font-size: 18px; font-weight: bold; color: #555; margin-right: 5px;">M</span>
@@ -145,6 +168,7 @@
 
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec";
+    let bookedSlotsCache = {};
 
     document.addEventListener("DOMContentLoaded", () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -154,7 +178,78 @@
         const todayStr = new Date().toLocaleDateString('sv-SE'); 
         document.getElementById('resDate').min = todayStr;
       }
+      fetchBookedSlots();
     });
+
+    // 💡 予約枠ブロック情報の取得とキャッシュ管理
+    function fetchBookedSlots() {
+      const cached = localStorage.getItem("bookedSlotsCache");
+      if (cached) {
+        bookedSlotsCache = JSON.parse(cached);
+        checkSlotAvailability();
+      }
+      fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "getBookedSlots" })
+      }).then(r => r.json()).then(res => {
+        if (res.status === "success") {
+          bookedSlotsCache = res.bookedSlots;
+          localStorage.setItem("bookedSlotsCache", JSON.stringify(bookedSlotsCache));
+          checkSlotAvailability();
+        }
+      }).catch(e => console.log("予約状況同期エラー"));
+    }
+
+    // 💡 日付変更時にブロック判定を実行
+    document.getElementById('resDate').addEventListener('change', checkSlotAvailability);
+
+    function checkSlotAvailability() {
+      const dateVal = document.getElementById('resDate').value;
+      const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
+      const blockInfo = document.getElementById('blockInfo');
+      
+      // UI初期化
+      ['am', 'pm', 'full'].forEach(id => {
+        const lbl = document.getElementById(`lbl-${id}`);
+        lbl.classList.remove('disabled');
+        lbl.querySelector('input').disabled = false;
+      });
+      blockInfo.style.display = 'none';
+
+      if (!dateVal || isAdminVisible || !bookedSlotsCache[dateVal]) return;
+
+      const blocks = bookedSlotsCache[dateVal];
+      let fullBooked = false;
+
+      // 該当するボタンを非活性化
+      if (blocks.includes('AM')) { disableSlotBtn('am'); disableSlotBtn('full'); }
+      if (blocks.includes('PM')) { disableSlotBtn('pm'); disableSlotBtn('full'); }
+      if (blocks.includes('AM') && blocks.includes('PM')) { fullBooked = true; }
+
+      if (fullBooked) {
+        blockInfo.style.display = 'block';
+      }
+    }
+
+    function disableSlotBtn(id) {
+      const lbl = document.getElementById(`lbl-${id}`);
+      const radio = lbl.querySelector('input');
+      lbl.classList.add('disabled');
+      radio.disabled = true;
+      if (radio.checked) {
+        radio.checked = false;
+        updateSlotUI();
+      }
+    }
+
+    function updateSlotUI() {
+      document.querySelectorAll('.radio-btn').forEach(lbl => {
+        const radio = lbl.querySelector('input');
+        if (radio.disabled) return; // 無効化されていればスキップ
+        if (radio.checked) lbl.classList.add('selected');
+        else lbl.classList.remove('selected');
+      });
+    }
 
     function changeQty(id, delta) {
       const input = document.getElementById(id);
@@ -175,47 +270,47 @@
     }
 
     function submitReservation() {
-      // 必須チェック
       if (!document.getElementById('resDate').value) return alert("利用予定日を入力してください。");
+      
+      const slotRadio = document.querySelector('input[name="timeSlot"]:checked');
+      if (!slotRadio) return alert("利用する枠（午前・午後・終日）を選択してください。");
+      
+      const sTime = document.getElementById('startTime').value;
+      const eTime = document.getElementById('endTime').value;
+      if (!sTime || !eTime) return alert("希望利用時間（開始・終了）を入力してください。");
+
       if (!document.getElementById('groupName').value) return alert("団体名を入力してください。");
       if (!document.getElementById('repName').value) return alert("代表者氏名を入力してください。");
 
       const email = document.getElementById('repEmail').value.trim();
       if (!email || !email.includes('@')) return alert("正しいメールアドレスを入力してください。");
 
-      // 日付と時間のチェック
       const resDateStr = document.getElementById('resDate').value;
-      const sTime = document.getElementById('startTime').value;
-      const eTime = document.getElementById('endTime').value;
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
 
       if (!isAdminVisible) {
-        // 過去日付チェック
         const today = new Date();
         today.setHours(0, 0, 0, 0); 
         const inputDate = new Date(resDateStr);
-        if (inputDate < today) {
-          return alert("エラー：過去の日付で予約することはできません。");
-        }
+        if (inputDate < today) return alert("エラー：過去の日付で予約することはできません。");
 
-        // 営業時間チェック（9:00〜16:00）
-        if (!sTime || !eTime) {
-          return alert("利用時間（開始・終了）を両方入力してください。");
-        }
         const sHour = parseInt(sTime.split(':')[0], 10);
         const eHour = parseInt(eTime.split(':')[0], 10);
         const eMin = parseInt(eTime.split(':')[1], 10);
 
         if (sHour < 9 || eHour > 16 || (eHour === 16 && eMin > 0)) {
-          return alert("エラー：予約可能な時間は 9:00 から 16:00 までです。\n時間を修正してください。");
+          return alert("エラー：予約可能な時間は 9:00 から 16:00 までです。");
         }
-        if (sTime >= eTime) {
-          return alert("エラー：開始時間と終了時間が正しくありません。");
-        }
+        if (sTime >= eTime) return alert("エラー：開始時間と終了時間が正しくありません。");
       }
 
       const btn = document.getElementById('submitBtn');
       btn.innerText = "送信中..."; btn.disabled = true;
+
+      // 💡 利用時間テキストの生成：「午前 (09:30〜12:00)」の形式
+      const slotVal = slotRadio.value;
+      let slotName = slotVal === "AM" ? "午前" : (slotVal === "PM" ? "午後" : "終日");
+      const combinedTimeStr = `${slotName} (${sTime}〜${eTime})`;
 
       const orderData = {
         "カヌー（大人）": parseInt(document.getElementById('b-canoe-adult').value) || 0,
@@ -224,8 +319,8 @@
         "ペアカヌー（子ども）": parseInt(document.getElementById('b-pair-kid').value) || 0,
         "ローボート（大人）": parseInt(document.getElementById('b-row-adult').value) || 0,
         "ローボート（子ども）": parseInt(document.getElementById('b-row-kid').value) || 0,
-        "OPヨット（大人）": parseInt(document.getElementById('b-op-adult').value) || 0,   // 👈追加
-        "OPヨット（子ども）": parseInt(document.getElementById('b-op-kid').value) || 0    // 👈追加
+        "OPヨット（大人）": parseInt(document.getElementById('b-op-adult').value) || 0,
+        "OPヨット（子ども）": parseInt(document.getElementById('b-op-kid').value) || 0
       };
       
       let eqList = [];
@@ -233,10 +328,8 @@
         if (val > 0) eqList.push(`${key}×${val}`);
       }
 
-      const resTime = (sTime && eTime) ? (sTime + "〜" + eTime) : "";
       const memIdNum = document.getElementById('memberIdNum').value.trim();
       const memIdToSave = memIdNum ? "M" + String(memIdNum).padStart(4, '0') : "";
-
       const statusVal = isAdminVisible ? document.getElementById('status').value : "問合せ";
       const routeVal  = isAdminVisible ? document.getElementById('route').value : "WEB";
 
@@ -244,12 +337,12 @@
         status: statusVal,
         route: routeVal,
         date: resDateStr,
-        time: resTime,
+        time: combinedTimeStr, // 👈 生成した文字列を送信
         groupName: document.getElementById('groupName').value,
         groupType: document.getElementById('groupType').value,
         memberId: memIdToSave,
         repName: document.getElementById('repName').value,
-        phone: document.getElementById('repPhone').value,
+        phone: document.getElementById('repPhone').value, // そのまま送信（GAS側で処理）
         adults: document.getElementById('q-adult').value,
         juniorHigh: document.getElementById('q-jh').value,
         elemHigh: document.getElementById('q-eh').value,
