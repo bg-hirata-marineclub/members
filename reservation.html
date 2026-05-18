@@ -16,12 +16,12 @@
     
     /* AM/PM選択ボタンのデザイン */
     .radio-group { display: flex; gap: 10px; margin-bottom: 15px; }
-    .radio-btn { flex: 1; text-align: center; background: #fff; border: 2px solid #ccc; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; transition: all 0.2s; box-sizing: border-box;}
+    .radio-btn { flex: 1; text-align: center; background: #fff; border: 2px solid #ccc; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; transition: all 0.2s; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     .radio-btn input[type="radio"] { display: none; }
     .radio-btn.selected { background: #e8f4fd; border-color: #0056b3; color: #0056b3; }
     
-    /* ⚠️ pointer-events: none; により、ブラウザレベルでクリック・タップを完全物理遮断 */
-    .radio-btn.disabled { background: #f0f0f0; border-color: #e0e0e0; color: #aaa; cursor: not-allowed; text-decoration: line-through; pointer-events: none; }
+    /* pointer-events: none; に加え、iOSでのタップ誤動作を防ぐスタイル */
+    .radio-btn.disabled { background: #f0f0f0; border-color: #e0e0e0; color: #aaa; cursor: not-allowed; text-decoration: line-through; pointer-events: none; -webkit-user-select: none; user-select: none; }
     
     .eq-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
     .eq-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; background: #fafafa; }
@@ -144,7 +144,7 @@
             <div class="eq-item"><div class="eq-name">⛵ OPヨット（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-op-adult', -1)">-</button><input type="number" id="b-op-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-op-adult', 1)">+</button></div></div>
             <div class="eq-item"><div class="eq-name">⛵ OPヨット（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-op-kid', -1)">-</button><input type="number" id="b-op-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-op-kid', 1)">+</button></div></div>
             <div class="eq-item" style="background-color: #fff3f3;">
-              <div class="eq-name" style="color: #666; font-size: 14px;">🏄 SUP<br><span style="font-size: 11px; color: #d9534f;">※メンバー限定の利用となります</span></div>
+              <div class="eq-name" style="color: #666; font-size: 14px;">🏄 SUP<br><span style="font-size: 11px; color: #d9534f;">※メンバー限定 of 利用となります</span></div>
               <div class="qty-controls"><span style="font-size: 12px; color: #d9534f; font-weight: bold;">予約不可</span></div>
             </div>
           </div>
@@ -188,6 +188,18 @@
         const todayStr = new Date().toLocaleDateString('sv-SE'); 
         document.getElementById('resDate').min = todayStr;
       }
+      
+      // 💡 【最重要：iOSバグ対策】
+      // ボタンエリア全体のタップイベントを、ブラウザ処理が走る前の「キャプチャフェーズ」で捕まえる。
+      // 無効化（disabled）されているボタンの場合は、即座にイベントを完全抹殺し一切の選択を阻止する。
+      document.getElementById('slotGroup').addEventListener('click', (e) => {
+        const targetBtn = e.target.closest('.radio-btn');
+        if (targetBtn && targetBtn.classList.contains('disabled')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, true); // ← 第3引数を true にしてキャプチャフェーズで実行
+
       fetchBookedSlots();
     });
 
@@ -251,7 +263,6 @@
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
       const blockInfo = document.getElementById('blockInfo');
       
-      // 💡 状態のリセット（選択クラスも含めて確実に初期化）
       ['am', 'pm'].forEach(id => {
         const lbl = document.getElementById(`lbl-${id}`);
         const input = lbl.querySelector('input');
@@ -272,9 +283,8 @@
 
       if (fullBooked) {
         alert(`選択された日付（${dateVal.replace(/-/g, '/')}）は、午前・午後ともに予約確定データが存在するため受付できません。\n別の空いている日程を選択してください。`);
-        dateInput.value = ''; // 💡 日付入力を強制消去
+        dateInput.value = ''; 
         
-        // 消去に連動してUIの無効化もクリア
         ['am', 'pm'].forEach(id => {
           const lbl = document.getElementById(`lbl-${id}`);
           lbl.classList.remove('disabled');
@@ -292,16 +302,20 @@
       lbl.classList.add('disabled');
       radio.disabled = true;
       radio.checked = false;
-      lbl.classList.remove('selected'); // 💡 selectedクラスを確実に剥がす
+      lbl.classList.remove('selected'); 
     }
 
     function updateSlotUI() {
       document.querySelectorAll('.radio-btn').forEach(lbl => {
         const radio = lbl.querySelector('input');
+        
+        // 💡 【防衛ロジックの追加】disabled の場合は絶対に強制クリア
         if (radio.disabled) {
+          radio.checked = false;
           lbl.classList.remove('selected');
           return;
         }
+        
         if (radio.checked) lbl.classList.add('selected');
         else lbl.classList.remove('selected');
       });
@@ -359,7 +373,6 @@
         }
         if (sTime >= eTime) return alert("エラー：開始時間と終了時間が正しくありません。");
         
-        // 💡 送信前の最終防衛チェック
         if (bookedSlotsCache[resDateStr] && bookedSlotsCache[resDateStr].includes(slotRadio.value)) {
           return alert("エラー：選択された時間枠は既に別の予約で埋まっています。画面をリロードして空き状況を確認してください。");
         }
