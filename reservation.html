@@ -14,7 +14,7 @@
     input:focus, select:focus, textarea:focus { outline: none; border-color: #0056b3; background-color: #fff; }
     .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px;} .flex-row > div { flex: 1; }
     
-    /* 💡 AM/PM選択ボタンのデザイン */
+    /* AM/PM選択ボタンのデザイン */
     .radio-group { display: flex; gap: 10px; margin-bottom: 15px; }
     .radio-btn { flex: 1; text-align: center; background: #fff; border: 2px solid #ccc; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; transition: all 0.2s; box-sizing: border-box;}
     .radio-btn input[type="radio"] { display: none; }
@@ -33,6 +33,12 @@
     button.submit-btn { width: 100%; padding: 18px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
     
     #infantAlert { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 10px; }
+    
+    /* 予約満杯ボードのデザイン */
+    #bookedListBoard { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #d9534f; padding: 15px; border-radius: 8px; font-size: 14px; margin-bottom: 15px; }
+    #bookedListBoard ul { margin: 10px 0 0 0; padding-left: 20px; font-weight: bold; }
+    #bookedListBoard li { margin-bottom: 5px; }
+    
     #blockInfo { display: none; background: #fff3f3; color: #d9534f; border: 1px solid #d9534f; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 10px; text-align: center; }
     #successScreen { display: none; text-align: center; padding: 30px 10px; }
     
@@ -70,6 +76,11 @@
         <div class="form-group">
           <label class="field-label">利用日時・団体情報</label>
           
+          <div id="bookedListBoard">
+            <strong>🚫 現在の予約満杯状況（受付不可）</strong>
+            <ul id="bookedListUl"></ul>
+          </div>
+
           <input type="date" id="resDate" style="margin-bottom: 15px;">
           <div id="blockInfo">⚠️ この日はすべての枠が予約済みです。</div>
 
@@ -80,9 +91,6 @@
             </label>
             <label class="radio-btn" id="lbl-pm">
               <input type="radio" name="timeSlot" value="PM" onchange="updateSlotUI()">午後
-            </label>
-            <label class="radio-btn" id="lbl-full">
-              <input type="radio" name="timeSlot" value="FULL" onchange="updateSlotUI()">終日
             </label>
           </div>
 
@@ -181,11 +189,12 @@
       fetchBookedSlots();
     });
 
-    // 💡 予約枠ブロック情報の取得とキャッシュ管理
+    // 💡 予約枠情報の取得と、予約満杯ボードへの即時描画
     function fetchBookedSlots() {
       const cached = localStorage.getItem("bookedSlotsCache");
       if (cached) {
         bookedSlotsCache = JSON.parse(cached);
+        renderBookedList(bookedSlotsCache);
         checkSlotAvailability();
       }
       fetch(GAS_URL, {
@@ -195,12 +204,45 @@
         if (res.status === "success") {
           bookedSlotsCache = res.bookedSlots;
           localStorage.setItem("bookedSlotsCache", JSON.stringify(bookedSlotsCache));
+          renderBookedList(bookedSlotsCache);
           checkSlotAvailability();
         }
       }).catch(e => console.log("予約状況同期エラー"));
     }
 
-    // 💡 日付変更時にブロック判定を実行
+    // 💡 リストをHTMLに描画する処理
+    function renderBookedList(slots) {
+      const board = document.getElementById('bookedListBoard');
+      const ul = document.getElementById('bookedListUl');
+      ul.innerHTML = '';
+      
+      let hasBookings = false;
+      const todayStr = new Date().toLocaleDateString('sv-SE');
+      const sortedDates = Object.keys(slots).sort();
+      
+      sortedDates.forEach(date => {
+        if (date < todayStr) return; // 過去の満杯日はリストから除外
+        
+        const blocks = slots[date];
+        if (blocks.length === 0) return;
+        
+        hasBookings = true;
+        let timeText = [];
+        if (blocks.includes("AM") && blocks.includes("PM")) {
+          timeText.push("終日");
+        } else {
+          if (blocks.includes("AM")) timeText.push("午前");
+          if (blocks.includes("PM")) timeText.push("午後");
+        }
+        
+        const li = document.createElement('li');
+        li.innerText = `${date.replace(/-/g, '/')} (${timeText.join('・')})`;
+        ul.appendChild(li);
+      });
+      
+      board.style.display = hasBookings ? 'block' : 'none';
+    }
+
     document.getElementById('resDate').addEventListener('change', checkSlotAvailability);
 
     function checkSlotAvailability() {
@@ -209,7 +251,7 @@
       const blockInfo = document.getElementById('blockInfo');
       
       // UI初期化
-      ['am', 'pm', 'full'].forEach(id => {
+      ['am', 'pm'].forEach(id => {
         const lbl = document.getElementById(`lbl-${id}`);
         lbl.classList.remove('disabled');
         lbl.querySelector('input').disabled = false;
@@ -221,9 +263,8 @@
       const blocks = bookedSlotsCache[dateVal];
       let fullBooked = false;
 
-      // 該当するボタンを非活性化
-      if (blocks.includes('AM')) { disableSlotBtn('am'); disableSlotBtn('full'); }
-      if (blocks.includes('PM')) { disableSlotBtn('pm'); disableSlotBtn('full'); }
+      if (blocks.includes('AM')) { disableSlotBtn('am'); }
+      if (blocks.includes('PM')) { disableSlotBtn('pm'); }
       if (blocks.includes('AM') && blocks.includes('PM')) { fullBooked = true; }
 
       if (fullBooked) {
@@ -245,7 +286,7 @@
     function updateSlotUI() {
       document.querySelectorAll('.radio-btn').forEach(lbl => {
         const radio = lbl.querySelector('input');
-        if (radio.disabled) return; // 無効化されていればスキップ
+        if (radio.disabled) return;
         if (radio.checked) lbl.classList.add('selected');
         else lbl.classList.remove('selected');
       });
@@ -273,7 +314,7 @@
       if (!document.getElementById('resDate').value) return alert("利用予定日を入力してください。");
       
       const slotRadio = document.querySelector('input[name="timeSlot"]:checked');
-      if (!slotRadio) return alert("利用する枠（午前・午後・終日）を選択してください。");
+      if (!slotRadio) return alert("利用する枠（午前・午後）を選択してください。");
       
       const sTime = document.getElementById('startTime').value;
       const eTime = document.getElementById('endTime').value;
@@ -307,9 +348,8 @@
       const btn = document.getElementById('submitBtn');
       btn.innerText = "送信中..."; btn.disabled = true;
 
-      // 💡 利用時間テキストの生成：「午前 (09:30〜12:00)」の形式
       const slotVal = slotRadio.value;
-      let slotName = slotVal === "AM" ? "午前" : (slotVal === "PM" ? "午後" : "終日");
+      const slotName = slotVal === "AM" ? "午前" : "午後";
       const combinedTimeStr = `${slotName} (${sTime}〜${eTime})`;
 
       const orderData = {
@@ -337,12 +377,12 @@
         status: statusVal,
         route: routeVal,
         date: resDateStr,
-        time: combinedTimeStr, // 👈 生成した文字列を送信
+        time: combinedTimeStr,
         groupName: document.getElementById('groupName').value,
         groupType: document.getElementById('groupType').value,
         memberId: memIdToSave,
         repName: document.getElementById('repName').value,
-        phone: document.getElementById('repPhone').value, // そのまま送信（GAS側で処理）
+        phone: document.getElementById('repPhone').value,
         adults: document.getElementById('q-adult').value,
         juniorHigh: document.getElementById('q-jh').value,
         elemHigh: document.getElementById('q-eh').value,
