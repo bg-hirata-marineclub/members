@@ -82,7 +82,7 @@
           </div>
 
           <input type="date" id="resDate" style="margin-bottom: 15px;">
-          <div id="blockInfo">⚠️ この日はすべての枠が予約済みです。</div>
+          <div id="blockInfo">⚠️ 選択された時間帯は予約済みです。</div>
 
           <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: bold;">① 利用する枠を選択（必須）</div>
           <div class="radio-group" id="slotGroup">
@@ -189,7 +189,6 @@
       fetchBookedSlots();
     });
 
-    // 💡 予約枠情報の取得と、予約満杯ボードへの即時描画
     function fetchBookedSlots() {
       const cached = localStorage.getItem("bookedSlotsCache");
       if (cached) {
@@ -210,7 +209,6 @@
       }).catch(e => console.log("予約状況同期エラー"));
     }
 
-    // 💡 リストをHTMLに描画する処理
     function renderBookedList(slots) {
       const board = document.getElementById('bookedListBoard');
       const ul = document.getElementById('bookedListUl');
@@ -221,7 +219,7 @@
       const sortedDates = Object.keys(slots).sort();
       
       sortedDates.forEach(date => {
-        if (date < todayStr) return; // 過去の満杯日はリストから除外
+        if (date < todayStr) return; 
         
         const blocks = slots[date];
         if (blocks.length === 0) return;
@@ -245,8 +243,10 @@
 
     document.getElementById('resDate').addEventListener('change', checkSlotAvailability);
 
+    // 💡 強制クリア＆アラート処理の実装
     function checkSlotAvailability() {
-      const dateVal = document.getElementById('resDate').value;
+      const dateInput = document.getElementById('resDate');
+      const dateVal = dateInput.value;
       const isAdminVisible = document.getElementById('adminSection').style.display === 'block';
       const blockInfo = document.getElementById('blockInfo');
       
@@ -268,6 +268,18 @@
       if (blocks.includes('AM') && blocks.includes('PM')) { fullBooked = true; }
 
       if (fullBooked) {
+        // ユーザーが「終日満杯」の日を選んだ場合、即座にアラートを出して日付を消去する
+        alert(`選択された日付（${dateVal.replace(/-/g, '/')}）は、すでに予約で埋まっています。\n一覧ボードをご確認の上、別の日付をご検討ください。`);
+        dateInput.value = ''; // 強制クリア
+        
+        // クリアしたのでボタン等の非活性状態も元に戻す
+        ['am', 'pm'].forEach(id => {
+          const lbl = document.getElementById(`lbl-${id}`);
+          lbl.classList.remove('disabled');
+          lbl.querySelector('input').disabled = false;
+        });
+      } else {
+        // 片方だけ空いている場合は警告メッセージだけ出す
         blockInfo.style.display = 'block';
       }
     }
