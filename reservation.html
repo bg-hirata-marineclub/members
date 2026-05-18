@@ -142,7 +142,7 @@
             <div class="eq-item"><div class="eq-name">🚣 ローボート（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row-adult', -1)">-</button><input type="number" id="b-row-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row-adult', 1)">+</button></div></div>
             <div class="eq-item"><div class="eq-name">🚣 ローボート（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-row-kid', -1)">-</button><input type="number" id="b-row-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-row-kid', 1)">+</button></div></div>
             <div class="eq-item"><div class="eq-name">⛵ OPヨット（大人）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-op-adult', -1)">-</button><input type="number" id="b-op-adult" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-op-adult', 1)">+</button></div></div>
-            <div class="eq-item"><div class="eq-name">⛵ OPヨット（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-op-kid', -1)">-</button><input type="number" id="b-op-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-op-kid', 1)">+</button></div></div>
+            <div class="eq-item"><div class="eq-name">⛵ OPヨット（子ども）</div><div class="qty-controls"><button type="button" class="qty-btn" onclick="changeQty('b-op-kid', -1)', 1)">-</button><input type="number" id="b-op-kid" class="qty-input" value="0" inputmode="numeric" onchange="validateQty(this)"><button type="button" class="qty-btn" onclick="changeQty('b-op-kid', 1)">+</button></div></div>
             <div class="eq-item" style="background-color: #fff3f3;">
               <div class="eq-name" style="color: #666; font-size: 14px;">🏄 SUP<br><span style="font-size: 11px; color: #d9534f;">※メンバー限定の利用となります</span></div>
               <div class="qty-controls"><span style="font-size: 12px; color: #d9534f; font-weight: bold;">予約不可</span></div>
@@ -187,12 +187,10 @@
         document.getElementById('userDateContainer').style.display = 'none';
         document.getElementById('adminDateContainer').style.display = 'block';
         
-        // スタッフ用カレンダーの最小値設定とイベント登録
         const todayStr = new Date().toLocaleDateString('sv-SE'); 
         document.getElementById('resDateCalendar').min = todayStr;
         document.getElementById('resDateCalendar').addEventListener('change', checkSlotAvailability);
       } else {
-        // 一般ユーザー用：LINE内ブラウザで100%動くセレクトボックスのイベント登録
         document.getElementById('resDateSelect').addEventListener('change', checkSlotAvailability);
       }
       fetchBookedSlots();
@@ -218,12 +216,14 @@
       }).catch(e => console.log("予約状況同期エラー"));
     }
 
-    // 💡 【重要】本日〜90日後までの選択肢を動的に生成し、空き状況を文字で直撃させる
+    // 💡 【ヨコ幅スッキリ最適化】
+    // 〇月〇日の漢字をスラッシュ（/）にし、余分なスペースを排除した超軽量フォーマット。
+    // スマホのピッカー画面でも絶対に改行されず、美しく並びます。
     function buildDateDropdown(slots) {
       const select = document.getElementById('resDateSelect');
       if (!select) return;
       
-      select.innerHTML = '<option value="">利用日を選択してください...</option>';
+      select.innerHTML = '<option value="">選択してください (月日 AM PM)</option>';
       
       const today = new Date();
       const weeks = ["日", "月", "火", "水", "木", "金", "土"];
@@ -233,35 +233,37 @@
         targetDate.setDate(today.getDate() + i);
         
         const yyyy = targetDate.getFullYear();
-        const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(targetDate.getDate()).padStart(2, '0');
+        const m = targetDate.getMonth() + 1;
+        const d = targetDate.getDate();
+        const mm = String(m).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
         const dateStr = `${yyyy}-${mm}-${dd}`; 
         
         const weekStr = weeks[targetDate.getDay()];
-        const displayDate = `${yyyy}/${mm}/${dd}(${weekStr})`;
+        
+        // 1桁の月日の場合も、幅をできるだけ揃えるためにドットやスペースを最小化
+        const displayDate = `${m}/${d}(${weekStr})`;
         
         const opt = document.createElement('option');
         opt.value = dateStr;
         
         const blocks = slots[dateStr] || [];
         
-        // 💡 選択肢自体のテキストに状態を明記し、満杯日は物理的に選択不可にする
+        // ユーザー指定の「〇」「✖」記号をヨコ幅を壊さない間隔で配置
+        const amSign = blocks.includes('AM') ? '✖' : '〇';
+        const pmSign = blocks.includes('PM') ? '✖' : '〇';
+        
+        opt.text = `${displayDate.padEnd(10, ' ')} AM:${amSign} PM:${pmSign}`;
+        
+        // 両方埋まっている（終日不可）日はセレクトボックス内で物理的に選択させない
         if (blocks.includes('AM') && blocks.includes('PM')) {
-          opt.disabled = true; // LINE内でも絶対にタップできなくなる
-          opt.text = `${displayDate} ❌満杯 (受付不可)`;
-        } else if (blocks.includes('AM')) {
-          opt.text = `${displayDate} ⚠️午後のみ空き`;
-        } else if (blocks.includes('PM')) {
-          opt.text = `${displayDate} ⚠️午前のみ空き`;
-        } else {
-          opt.text = `${displayDate} ◯空きあり`;
+          opt.disabled = true;
         }
         
         select.appendChild(opt);
       }
     }
 
-    // 💡 動的に日付の入力元を判別するヘルパー
     function getSelectedDate() {
       const isStaff = document.getElementById('adminSection').style.display === 'block';
       return isStaff ? document.getElementById('resDateCalendar').value : document.getElementById('resDateSelect').value;
@@ -284,7 +286,6 @@
 
       const blocks = bookedSlotsCache[dateVal];
 
-      // 午前・午後個別のボタン無効化処理（ネイティブボタン属性なのでLINEでも100%効く）
       if (blocks.includes('AM')) { document.getElementById('btn-am').disabled = true; }
       if (blocks.includes('PM')) { document.getElementById('btn-pm').disabled = true; }
 
