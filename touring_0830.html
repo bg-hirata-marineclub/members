@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>8/30 月山湖ツーリング 参加申込み</title>
   <style>
-    /* CSSは既存のスクール用と全く同じものを流用します */
     :root {
       --primary-color: #0056b3;
       --bg-color: #f4f7f6;
@@ -57,7 +56,11 @@
         <li>参加費：1,000円（保険料込み。当日受付にてお支払いください）</li>
         <li>備考：小雨決行 / 荒天時は中止となります。</li>
         <li>本申込みは海洋クラブメンバーへのご登録が完了している方が対象です。</li>
-        <li style="color: #d9534f; margin-top: 5px;">※先着順となりますが、コースの特性上、申込者の技量によりお断りする場合がございます。あらかじめご了承ください。</li>
+        <li style="color: #d9534f; margin-top: 5px; font-weight: bold;">
+          ※本申込みの完了をもって「参加決定」ではございません。<br>
+          先着順となりますが、コースの特性上、申込者の技量により参加をご遠慮いただく場合がございます。<br>
+          参加の可否（決定通知）につきましては、後日改めて別途メールにてご案内いたします。
+        </li>
       </ul>
     </div>
 
@@ -121,7 +124,7 @@
 
       <button type="submit" id="submitBtn" class="btn-submit">申し込む</button>
       <div id="loadingMessage">送信中...しばらくお待ちください。</div>
-      <div id="successMessage">お申込みが完了しました。ありがとうございます。</div>
+      <div id="successMessage">お申込みの受付が完了しました。詳細は自動返信メールをご確認ください。</div>
       <div id="errorMessage">送信に失敗しました。時間をおいて再度お試しください。</div>
     </form>
   </div>
@@ -167,7 +170,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
-          action: "getMemberInfoForSchool", // 会員情報取得は既存の機能をそのまま利用
+          action: "getMemberInfoForSchool", 
           memberId: fullMemberId,
           birthDate: birthDate
         })
@@ -218,7 +221,7 @@
       errorMsg.style.display = 'none';
 
       const payload = {
-        action: "touring_0830_apply", // 💡 ここを新しいイベント名に変更
+        action: "touring_0830_apply",
         name: document.getElementById('name').value,
         phone: document.getElementById('phone').value,
         email: document.getElementById('email').value,
