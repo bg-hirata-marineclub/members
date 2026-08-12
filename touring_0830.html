@@ -57,7 +57,8 @@
       <strong>【ご案内】</strong>
       <ul>
         <li>開催日：8月30日（日）</li>
-        <li>参加費：1名につき1,000円（保険料込み。当日受付にてお支払いください）</li>
+        <!-- 💡 参加費の内容を修正しました -->
+        <li>参加費：1名につき1,000円（イベント保険、飲み物付き、昼食無し。当日受付にてお支払いください）</li>
         <li>備考：小雨決行 / 荒天時は中止となります。</li>
         <li>本申込みは海洋クラブメンバーへのご登録が完了している方が対象です。</li>
         <li style="color: #d9534f; margin-top: 5px; font-weight: bold;">
@@ -190,7 +191,6 @@
       if(urlParams.has('birthDate')) document.getElementById('birthDate').value = urlParams.get('birthDate');
     };
 
-    // 参加人数に応じて同伴者入力欄の表示/非表示を切り替える関数
     function toggleCompanions() {
       const count = document.getElementById('participantsCount').value;
       const group = document.getElementById('companionsGroup');
@@ -199,7 +199,7 @@
       if (count === "1") {
         group.style.display = "none";
         info.removeAttribute('required');
-        info.value = ""; // 1名に戻した場合はクリア
+        info.value = ""; 
       } else {
         group.style.display = "block";
         info.setAttribute('required', 'required');
@@ -304,7 +304,7 @@
           document.getElementById('applyForm').reset();
           document.getElementById('searchIdNum').value = '';
           document.getElementById('searchBirthDate').value = '';
-          toggleCompanions(); // リセット時に同伴者枠を閉じる
+          toggleCompanions(); 
         } else {
           console.error('GAS Error:', data.message);
           errorMsg.style.display = 'block';
