@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; }
+    .dash-card { background: #fff; max-width: 500px; margin: 0 auto; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .section-title { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 14px; }
+    .required { color: white; background: #e74c3c; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+    input[type="text"], input[type="tel"], input[type="email"], input[type="number"], textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    .checkbox-group label, .flex-inputs label { font-weight: normal; margin-bottom: 8px; display: block; }
+    .flex-inputs { display: flex; gap: 16px; }
+    .flex-inputs label { flex: 1; }
+    .btn-primary { background: #3498db; color: #fff; border: none; padding: 12px 20px; font-size: 16px; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold; }
+    .btn-primary:disabled { background: #95a5a6; }
+    .form-message { margin-top: 16px; font-weight: bold; padding: 10px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="dash-card">
+  <h3 class="section-title">秋の締めくくりイベント 参加申込み</h3>
+  
+  <form id="eventForm">
+    <div class="form-group">
+      <label>お名前 <span class="required">必須</span></label>
+      <input type="text" id="entryName" required placeholder="平田 海太郎">
+    </div>
+    
+    <div class="form-group">
+      <label>電話番号（当日連絡がつく番号） <span class="required">必須</span></label>
+      <input type="tel" id="entryPhone" required placeholder="090-0000-0000">
+    </div>
+
+    <div class="form-group">
+      <label>メールアドレス <span class="required">必須</span></label>
+      <input type="email" id="entryEmail" required placeholder="example@hirata-bg.com">
+    </div>
+
+    <div class="form-group">
+      <label>参加するイベント <span class="required">必須</span></label>
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="eventCheck" value="9/20 日本海ツーリング＆海SUP"> 9月20日（日） 日本海ツーリング ＆ 海SUP体験</label>
+        <label><input type="checkbox" name="eventCheck" value="9/27 芋煮会＆艇庫納め"> 9月27日（日） 芋煮会 ＆ 艇庫納め</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>参加人数</label>
+      <div class="flex-inputs">
+        <label>大人（大学生以上）<input type="number" id="adultCount" min="0" value="1" required> 名</label>
+        <label>子ども（高校生以下）<input type="number" id="childCount" min="0" value="0" required> 名</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>備考（アレルギー、移動手段の相談など）</label>
+      <textarea id="entryNotes" rows="3"></textarea>
+    </div>
+
+    <button type="submit" id="submitBtn" class="btn-primary">申し込む</button>
+    <p id="formMessage" class="form-message" style="display:none;"></p>
+  </form>
+</div>
+
+<script>
+document.getElementById('eventForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  
+  const submitBtn = document.getElementById('submitBtn');
+  const messageEl = document.getElementById('formMessage');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '送信中...';
+
+  const eventChecks = document.querySelectorAll('input[name="eventCheck"]:checked');
+  const events = Array.from(eventChecks).map(cb => cb.value);
+
+  if (events.length === 0) {
+    alert('参加するイベントを少なくとも1つ選択してください。');
+    submitBtn.disabled = false;
+    submitBtn.textContent = '申し込む';
+    return;
+  }
+
+  const payload = {
+    name: document.getElementById('entryName').value,
+    phone: document.getElementById('entryPhone').value,
+    email: document.getElementById('entryEmail').value,
+    events: events,
+    adults: document.getElementById('adultCount').value,
+    children: document.getElementById('childCount').value,
+    notes: document.getElementById('entryNotes').value
+  };
+
+  google.script.run
+    .withSuccessHandler((result) => {
+      if (result.status === 'success') {
+        messageEl.textContent = '申込みが完了しました！当日はよろしくお願いします。';
+        messageEl.style.color = '#155724';
+        messageEl.style.backgroundColor = '#d4edda';
+        messageEl.style.display = 'block';
+        document.getElementById('eventForm').reset();
+      } else {
+        messageEl.textContent = 'エラー: ' + result.message;
+        messageEl.style.color = '#721c24';
+        messageEl.style.backgroundColor = '#f8d7da';
+        messageEl.style.display = 'block';
+      }
+      submitBtn.disabled = false;
+      submitBtn.textContent = '申し込む';
+    })
+    .withFailureHandler((error) => {
+      messageEl.textContent = '通信エラーが発生しました。時間をおいて再度お試しください。';
+      messageEl.style.color = '#721c24';
+      messageEl.style.backgroundColor = '#f8d7da';
+      messageEl.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = '申し込む';
+    })
+    .processAutumnEventApplication(payload);
+});
+</script>
+
+</body>
+</html>
