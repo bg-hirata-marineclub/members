@@ -9,11 +9,11 @@
     .dash-card { background: #fff; max-width: 600px; margin: 0 auto; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     .section-title { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
     
-    /* スケジュール案内用のスタイル */
     .event-info { background-color: #eaf2f8; padding: 16px; border-radius: 6px; margin-bottom: 24px; font-size: 14px; }
     .event-info h4 { margin-top: 0; color: #2980b9; margin-bottom: 8px; }
     .event-info p { margin: 4px 0; font-weight: bold; }
     .event-info ul { margin: 8px 0; padding-left: 20px; }
+    .warning-text { color: #c0392b; font-weight: bold; border: 1px solid #e74c3c; padding: 10px; border-radius: 4px; background: #fadbd8; margin-bottom: 16px; line-height: 1.5; }
     
     .form-group { margin-bottom: 16px; }
     label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 14px; }
@@ -24,7 +24,7 @@
     .flex-inputs label { flex: 1; }
     .btn-primary { background: #3498db; color: #fff; border: none; padding: 12px 20px; font-size: 16px; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold; }
     .btn-primary:disabled { background: #95a5a6; }
-    .form-message { margin-top: 16px; font-weight: bold; padding: 10px; border-radius: 4px; }
+    .form-message { margin-top: 16px; font-weight: bold; padding: 10px; border-radius: 4px; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -32,7 +32,12 @@
 <div class="dash-card">
   <h3 class="section-title">秋の締めくくりイベント 参加申込み</h3>
   
-  <!-- スケジュールのご案内（修正版） -->
+  <!-- 注意書きを追加 -->
+  <div class="warning-text">
+    ⚠️ 本フォームは「参加申込み」の受付であり、参加確定ではありません。<br>
+    安全確保のため、申込者の皆様の技量等を勘案して参加の可否を判断いたします。後日、スタッフからの確定連絡をもって参加決定となりますので予めご了承ください。
+  </div>
+  
   <div class="event-info">
     <h4>■ 9月20日（日）日本海ツーリング ＆ 海SUP体験</h4>
     <p>会費：大人2,000円 / 高校生以下1,000円（保険・飲み物・昼食込）</p>
@@ -130,10 +135,9 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
     }
   };
 
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec'; 
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwz7-0pGSLfx9OEHOkWQsSA5kZ_y12bdm7rwGYZ-OYT/exec'; 
 
   try {
-    // 💡 mode: 'no-cors' を追加してCORSエラーを回避
     await fetch(GAS_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -143,9 +147,8 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
       body: JSON.stringify(payload)
     });
     
-    // no-cors の仕様上、GASからの返事（成功・失敗）は読み取れないため、
-    // ここまでエラーで止まらなければ「送信完了」として処理します
-    messageEl.textContent = '申込みが完了しました！当日はよろしくお願いします。';
+    // 💡 送信完了メッセージも「参加確定ではない」旨に修正
+    messageEl.innerHTML = '申込みを受け付けました。ご登録のメールアドレスに受付完了メールを送信しました。<br><br>※後日、スタッフからの確定連絡をお待ちください。';
     messageEl.style.color = '#155724';
     messageEl.style.backgroundColor = '#d4edda';
     messageEl.style.display = 'block';
