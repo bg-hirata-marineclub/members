@@ -18,13 +18,20 @@
     .form-group { margin-bottom: 16px; }
     label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 14px; }
     .required { color: white; background: #e74c3c; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
-    .optional { color: #fff; background: #95a5a6; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
     
     input[type="text"], input[type="tel"], input[type="email"], input[type="number"], textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    .checkbox-group label, .flex-inputs label { font-weight: normal; margin-bottom: 8px; display: block; }
-    .flex-inputs { display: flex; gap: 16px; }
-    .flex-inputs label { flex: 1; }
-    .btn-primary { background: #3498db; color: #fff; border: none; padding: 12px 20px; font-size: 16px; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold; }
+    .flex-inputs { display: flex; gap: 16px; margin-top: 8px; }
+    .flex-inputs label { flex: 1; font-weight: normal; }
+    
+    /* イベントごとの入力ブロック */
+    .event-block { background: #fdfefe; border: 1px solid #e1e8ed; padding: 16px; border-radius: 6px; margin-bottom: 16px; }
+    .event-block .event-header { display: flex; align-items: center; font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 12px; }
+    .event-block .event-header input { width: auto; margin-right: 8px; transform: scale(1.2); }
+    .inner-fields { padding-left: 24px; border-left: 3px solid #3498db; margin-left: 6px; }
+    .inner-fields .field-row { margin-bottom: 12px; }
+    .inner-fields .field-row:last-child { margin-bottom: 0; }
+
+    .btn-primary { background: #3498db; color: #fff; border: none; padding: 12px 20px; font-size: 16px; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold; margin-top: 8px; }
     .btn-primary:disabled { background: #95a5a6; }
     .form-message { margin-top: 16px; font-weight: bold; padding: 10px; border-radius: 4px; line-height: 1.5; }
   </style>
@@ -78,28 +85,42 @@
       <input type="email" id="entryEmail" required placeholder="example@hirata-bg.com">
     </div>
 
-    <div class="form-group">
-      <label>参加するイベント <span class="required">必須</span></label>
-      <div class="checkbox-group">
-        <label><input type="checkbox" name="eventCheck" value="9/20 日本海ツーリング＆海SUP"> 9月20日（日） 日本海ツーリング ＆ 海SUP体験</label>
-        <label><input type="checkbox" name="eventCheck" value="9/27 芋煮会＆艇庫納め"> 9月27日（日） 芋煮会 ＆ 艇庫納め</label>
+    <!-- ツーリング専用ブロック -->
+    <div class="event-block">
+      <label class="event-header">
+        <input type="checkbox" name="eventCheck" value="9/20 日本海ツーリング＆海SUP"> 9月20日（日） ツーリング＆海SUP
+      </label>
+      <div class="inner-fields">
+        <div class="field-row">
+          <label style="font-size: 13px;">参加人数</label>
+          <div class="flex-inputs" style="margin-top: 4px;">
+            <label>大人<input type="number" id="touringAdults" min="0" value="0">名</label>
+            <label>子ども<input type="number" id="touringChildren" min="0" value="0">名</label>
+          </div>
+        </div>
+        <div class="field-row">
+          <label style="font-size: 13px;">希望舟艇</label>
+          <div class="flex-inputs" style="margin-top: 4px;">
+            <label>カヌー<input type="number" id="boatSingle" min="0" value="0">艇</label>
+            <label>ペアカヌー<input type="number" id="boatPair" min="0" value="0">艇</label>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="form-group">
-      <label>参加人数 <span class="required">必須</span></label>
-      <div class="flex-inputs">
-        <label>大人（大学生以上）<input type="number" id="adultCount" min="0" value="1" required> 名</label>
-        <label>子ども（高校生以下）<input type="number" id="childCount" min="0" value="0" required> 名</label>
-      </div>
-    </div>
-
-    <!-- 新規追加：希望舟艇種と数量 -->
-    <div class="form-group">
-      <label>希望舟艇種と数量 <span class="optional">ツーリング参加者のみ</span></label>
-      <div class="flex-inputs">
-        <label>カヌー<input type="number" id="boatSingle" min="0" value="0"> 艇</label>
-        <label>ペアカヌー<input type="number" id="boatPair" min="0" value="0"> 艇</label>
+    <!-- 芋煮会専用ブロック -->
+    <div class="event-block">
+      <label class="event-header">
+        <input type="checkbox" name="eventCheck" value="9/27 芋煮会＆艇庫納め"> 9月27日（日） 芋煮会＆艇庫納め
+      </label>
+      <div class="inner-fields">
+        <div class="field-row">
+          <label style="font-size: 13px;">参加人数</label>
+          <div class="flex-inputs" style="margin-top: 4px;">
+            <label>大人<input type="number" id="imoniAdults" min="0" value="0">名</label>
+            <label>子ども<input type="number" id="imoniChildren" min="0" value="0">名</label>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -126,7 +147,7 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
   const events = Array.from(eventChecks).map(cb => cb.value);
 
   if (events.length === 0) {
-    alert('参加するイベントを少なくとも1つ選択してください。');
+    alert('参加するイベントのチェックボックスを少なくとも1つ選択してください。');
     submitBtn.disabled = false;
     submitBtn.textContent = '申し込む';
     return;
@@ -139,10 +160,12 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
       phone: document.getElementById('entryPhone').value,
       email: document.getElementById('entryEmail').value,
       events: events,
-      adults: document.getElementById('adultCount').value,
-      children: document.getElementById('childCount').value,
-      boatSingle: document.getElementById('boatSingle').value, // 舟艇データの追加
-      boatPair: document.getElementById('boatPair').value,     // 舟艇データの追加
+      touringAdults: document.getElementById('touringAdults').value,
+      touringChildren: document.getElementById('touringChildren').value,
+      boatSingle: document.getElementById('boatSingle').value,
+      boatPair: document.getElementById('boatPair').value,
+      imoniAdults: document.getElementById('imoniAdults').value,
+      imoniChildren: document.getElementById('imoniChildren').value,
       notes: document.getElementById('entryNotes').value
     }
   };
