@@ -135,7 +135,8 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
     }
   };
 
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwz7-0pGSLfx9OEHOkWQsSA5kZ_y12bdm7rwGYZ-OYT/exec'; 
+  // いただいた正しい本番URLを確実にセットしました
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec'; 
 
   try {
     await fetch(GAS_URL, {
@@ -147,7 +148,7 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
       body: JSON.stringify(payload)
     });
     
-    // 💡 送信完了メッセージも「参加確定ではない」旨に修正
+    // 送信完了メッセージも「参加確定ではない」旨に修正
     messageEl.innerHTML = '申込みを受け付けました。ご登録のメールアドレスに受付完了メールを送信しました。<br><br>※後日、スタッフからの確定連絡をお待ちください。';
     messageEl.style.color = '#155724';
     messageEl.style.backgroundColor = '#d4edda';
