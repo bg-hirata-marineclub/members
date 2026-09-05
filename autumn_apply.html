@@ -18,6 +18,8 @@
     .form-group { margin-bottom: 16px; }
     label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 14px; }
     .required { color: white; background: #e74c3c; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+    .optional { color: #fff; background: #95a5a6; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+    
     input[type="text"], input[type="tel"], input[type="email"], input[type="number"], textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
     .checkbox-group label, .flex-inputs label { font-weight: normal; margin-bottom: 8px; display: block; }
     .flex-inputs { display: flex; gap: 16px; }
@@ -32,7 +34,6 @@
 <div class="dash-card">
   <h3 class="section-title">秋の締めくくりイベント 参加申込み</h3>
   
-  <!-- 注意書きを追加 -->
   <div class="warning-text">
     ⚠️ 本フォームは「参加申込み」の受付であり、参加確定ではありません。<br>
     安全確保のため、申込者の皆様の技量等を勘案して参加の可否を判断いたします。後日、スタッフからの確定連絡をもって参加決定となりますので予めご了承ください。
@@ -86,10 +87,19 @@
     </div>
 
     <div class="form-group">
-      <label>参加人数</label>
+      <label>参加人数 <span class="required">必須</span></label>
       <div class="flex-inputs">
         <label>大人（大学生以上）<input type="number" id="adultCount" min="0" value="1" required> 名</label>
         <label>子ども（高校生以下）<input type="number" id="childCount" min="0" value="0" required> 名</label>
+      </div>
+    </div>
+
+    <!-- 新規追加：希望舟艇種と数量 -->
+    <div class="form-group">
+      <label>希望舟艇種と数量 <span class="optional">ツーリング参加者のみ</span></label>
+      <div class="flex-inputs">
+        <label>カヌー<input type="number" id="boatSingle" min="0" value="0"> 艇</label>
+        <label>ペアカヌー<input type="number" id="boatPair" min="0" value="0"> 艇</label>
       </div>
     </div>
 
@@ -131,11 +141,12 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
       events: events,
       adults: document.getElementById('adultCount').value,
       children: document.getElementById('childCount').value,
+      boatSingle: document.getElementById('boatSingle').value, // 舟艇データの追加
+      boatPair: document.getElementById('boatPair').value,     // 舟艇データの追加
       notes: document.getElementById('entryNotes').value
     }
   };
 
-  // いただいた正しい本番URLを確実にセットしました
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl4FLjodkVWNxBMY0QLZSwCozM4ehEJY6IJI_A2OmVKzcPDjGW-GRC6UbUgsrDQryLFA/exec'; 
 
   try {
@@ -148,7 +159,6 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
       body: JSON.stringify(payload)
     });
     
-    // 送信完了メッセージも「参加確定ではない」旨に修正
     messageEl.innerHTML = '申込みを受け付けました。ご登録のメールアドレスに受付完了メールを送信しました。<br><br>※後日、スタッフからの確定連絡をお待ちください。';
     messageEl.style.color = '#155724';
     messageEl.style.backgroundColor = '#d4edda';
