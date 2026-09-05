@@ -32,7 +32,7 @@
 <div class="dash-card">
   <h3 class="section-title">秋の締めくくりイベント 参加申込み</h3>
   
-  <!-- スケジュールのご案内 -->
+  <!-- スケジュールのご案内（修正版） -->
   <div class="event-info">
     <h4>■ 9月20日（日）日本海ツーリング ＆ 海SUP体験</h4>
     <p>会費：大人2,000円 / 高校生以下1,000円（保険・飲み物・昼食込）</p>
@@ -40,7 +40,9 @@
       <li>09:00 集合（由良海岸）</li>
       <li>09:30 ツーリング開始</li>
       <li>10:00 三瀬海岸着（海でSUP体験！）</li>
-      <li>12:00 観光物産館まで移動、平田牧場で昼食</li>
+      <li>10:45 三瀬海岸発</li>
+      <li>11:30 由良海岸着、片付け終了</li>
+      <li>12:00 観光物産館まで移動して平田牧場で昼食</li>
       <li>13:30 解散</li>
     </ul>
     
@@ -115,7 +117,6 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
     return;
   }
 
-  // V1のdoPost用のデータ構造
   const payload = {
     action: 'autumn_event_apply',
     data: {
@@ -129,29 +130,27 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
     }
   };
 
-  // ★ここに正しいGAS_URLをセット済みです★
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbwz7-0pGSLfx9OEHOkWQsSA5kZ_y12bdm7rwGYZ-OYT/exec'; 
 
   try {
-    const response = await fetch(GAS_URL, {
+    // 💡 mode: 'no-cors' を追加してCORSエラーを回避
+    await fetch(GAS_URL, {
       method: 'POST',
+      mode: 'no-cors',
       headers: {
-         'Content-Type': 'text/plain', // GASへのCORS回避のためtext/plain
+         'Content-Type': 'text/plain',
       },
       body: JSON.stringify(payload)
     });
     
-    const result = await response.json();
+    // no-cors の仕様上、GASからの返事（成功・失敗）は読み取れないため、
+    // ここまでエラーで止まらなければ「送信完了」として処理します
+    messageEl.textContent = '申込みが完了しました！当日はよろしくお願いします。';
+    messageEl.style.color = '#155724';
+    messageEl.style.backgroundColor = '#d4edda';
+    messageEl.style.display = 'block';
+    document.getElementById('eventForm').reset();
     
-    if (result.status === 'success') {
-      messageEl.textContent = '申込みが完了しました！当日はよろしくお願いします。';
-      messageEl.style.color = '#155724';
-      messageEl.style.backgroundColor = '#d4edda';
-      messageEl.style.display = 'block';
-      document.getElementById('eventForm').reset();
-    } else {
-      throw new Error(result.message);
-    }
   } catch (error) {
     messageEl.textContent = '通信エラーが発生しました。時間をおいて再度お試しください。';
     messageEl.style.color = '#721c24';
